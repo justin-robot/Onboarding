@@ -11,8 +11,8 @@ export const dataProvider: DataProvider = {
     }
 
     const { pagination, sort, filter } = params;
-    const { page, perPage } = pagination;
-    const { field, order } = sort;
+    const { page = 1, perPage = 10 } = pagination || {};
+    const { field, order } = sort || {};
 
     const queryParams = new URLSearchParams({
       limit: perPage.toString(),
@@ -21,7 +21,7 @@ export const dataProvider: DataProvider = {
 
     if (field) {
       queryParams.append("sortBy", field);
-      queryParams.append("sortDirection", order.toLowerCase());
+      queryParams.append("sortDirection", (order || "ASC").toLowerCase());
     }
 
     if (filter?.q) {
@@ -187,7 +187,7 @@ export const dataProvider: DataProvider = {
       throw new Error(error.message || `HTTP error! status: ${response.status}`);
     }
 
-    return { data: { id: params.id } };
+    return { data: { id: params.id } as any };
   },
 
   deleteMany: async (resource, params) => {
@@ -196,7 +196,7 @@ export const dataProvider: DataProvider = {
     }
 
     await Promise.all(
-      params.ids.map((id) => dataProvider.delete(resource, { id, previousData: {} }))
+      params.ids.map((id) => dataProvider.delete(resource, { id, previousData: {} as any }))
     );
 
     return { data: params.ids };

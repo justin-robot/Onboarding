@@ -1,15 +1,68 @@
 import "server-only";
+import { match } from "@formatjs/intl-localematcher";
+import Negotiator from "negotiator";
+import type { NextRequest } from "next/server";
 
-// Internationalization is optional - only English is supported by default
-// To enable additional locales, add locale JSON files and configure LANGUINE_PROJECT_ID
-export const locales = ["en"] as const;
+export const locales = ["en", "es", "fr", "de", "it", "pt", "ja", "ko", "zh"] as const;
+export type Locale = (typeof locales)[number];
 
+export const defaultLocale: Locale = "en";
 
-export const getDictionary = async (_locale?: string): Promise<any> => {
-  // Internationalization is optional - returns empty object by default
-  // To enable i18n:
-  // 1. Configure LANGUINE_PROJECT_ID environment variable
-  // 2. Add locale JSON files to dictionaries/ directory
-  // 3. Update this function to load and return dictionary data
-  return {};
+/**
+ * Locale direction mapping for RTL support
+ */
+export const localeDirection: Record<Locale, "ltr" | "rtl"> = {
+  en: "ltr",
+  es: "ltr",
+  fr: "ltr",
+  de: "ltr",
+  it: "ltr",
+  pt: "ltr",
+  ja: "ltr",
+  ko: "ltr",
+  zh: "ltr",
+  // Add RTL languages here:
+  // ar: "rtl",
+  // he: "rtl",
 };
+
+/**
+ * Get locale from Accept-Language header
+ */
+export const getLocaleFromRequest = (request: NextRequest): Locale => {
+  const headers = {
+    "accept-language": request.headers.get("accept-language") ?? undefined,
+  };
+
+  const languages = new Negotiator({ headers }).languages();
+  const matchedLocale = match(languages, Array.from(locales), defaultLocale);
+
+  return matchedLocale as Locale;
+};
+
+/**
+ * Get locale direction (LTR or RTL)
+ */
+export const getLocaleDirection = (locale: Locale): "ltr" | "rtl" => {
+  return localeDirection[locale] ?? "ltr";
+};
+
+/**
+ * Validate if a locale is supported
+ */
+export const isValidLocale = (locale: string): locale is Locale => {
+  return locales.includes(locale as Locale);
+};
+
+/**
+ * Get locale with fallback
+ */
+export const getLocale = (locale?: string | null): Locale => {
+  if (locale && isValidLocale(locale)) {
+    return locale;
+  }
+  return defaultLocale;
+};
+
+// Client-side exports (must be in separate file due to "use client")
+export * from "./client";

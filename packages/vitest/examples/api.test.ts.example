@@ -1,0 +1,51 @@
+/**
+ * Example: Testing API endpoints
+ * 
+ * For Next.js API routes or server actions
+ */
+
+import { describe, it, expect, vi } from "vitest";
+import { waitFor } from "@repo/vitest";
+
+// Mock fetch for testing
+global.fetch = vi.fn();
+
+describe("API endpoints", () => {
+  it("should fetch data from API", async () => {
+    const mockData = { id: 1, name: "Test" };
+    
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockData,
+    });
+
+    const response = await fetch("/api/test");
+    const data = await response.json();
+
+    expect(data).toEqual(mockData);
+    expect(global.fetch).toHaveBeenCalledWith("/api/test");
+  });
+
+  it("should handle API errors", async () => {
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+    });
+
+    const response = await fetch("/api/nonexistent");
+    expect(response.ok).toBe(false);
+    expect(response.status).toBe(404);
+  });
+
+  it("should wait for async operations", async () => {
+    let isComplete = false;
+
+    setTimeout(() => {
+      isComplete = true;
+    }, 200);
+
+    await waitFor(() => isComplete, { timeout: 1000 });
+    expect(isComplete).toBe(true);
+  });
+});
+

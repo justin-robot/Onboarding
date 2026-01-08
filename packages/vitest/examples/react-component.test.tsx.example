@@ -1,0 +1,42 @@
+/**
+ * Example: Testing React components
+ * 
+ * Create vitest.config.ts in your package:
+ * 
+ * import { mergeConfig } from "vitest/config";
+ * import { browserConfig } from "@repo/vitest/config";
+ * 
+ * export default mergeConfig(browserConfig, {});
+ * 
+ * Install additional dependencies:
+ * pnpm add -D @testing-library/react @testing-library/jest-dom jsdom
+ */
+
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import "@testing-library/jest-dom";
+
+// Example component
+const Button = ({ children, onClick }: { children: React.ReactNode; onClick: () => void }) => (
+  <button onClick={onClick}>{children}</button>
+);
+
+describe("Button component", () => {
+  it("should render children", () => {
+    render(<Button onClick={() => {}}>Click me</Button>);
+    expect(screen.getByText("Click me")).toBeInTheDocument();
+  });
+
+  it("should call onClick when clicked", () => {
+    let clicked = false;
+    const handleClick = () => {
+      clicked = true;
+    };
+
+    render(<Button onClick={handleClick}>Click me</Button>);
+    screen.getByText("Click me").click();
+    
+    expect(clicked).toBe(true);
+  });
+});
+

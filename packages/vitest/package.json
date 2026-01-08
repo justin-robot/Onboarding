@@ -1,0 +1,25 @@
+{
+  "name": "@repo/vitest",
+  "version": "0.0.0",
+  "main": "./config.ts",
+  "types": "./config.ts",
+  "scripts": {
+    "clean": "git clean -xdf .cache .turbo dist node_modules coverage",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+  },
+  "dependencies": {
+    "@vitest/ui": "^3.0.0",
+    "msw": "^2.6.8",
+    "vitest": "^3.0.0"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "24.10.1",
+    "typescript": "^5.9.3"
+  }
+}
+

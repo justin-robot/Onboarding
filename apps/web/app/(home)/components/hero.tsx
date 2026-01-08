@@ -2,20 +2,20 @@
 
 import { Button } from "@repo/design/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { FlowingPixelsCanvas } from "./flowing";
 
 export function Hero() {
   return (
     <main className="relative z-10 pt-32 pb-20 px-6 overflow-hidden">
       {/* Dot gradient background */}
       <div 
-        className="absolute inset-0 opacity-70"
+        className="absolute inset-0 opacity-40 md:opacity-70 bg-gradient-to-br from-background to-muted/20"
         style={{
-          backgroundImage: `radial-gradient(circle, var(--special) 1.5px, transparent 1.5px)`,
-          backgroundSize: '32px 32px',
-          maskImage: 'linear-gradient(to top right, transparent 0%, transparent 30%, black 80%)',
-          WebkitMaskImage: 'linear-gradient(to top right, transparent 0%, transparent 30%, black 80%)',
-        }}
-      />
+          maskImage: 'linear-gradient(to right, transparent 0%, transparent 20%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,1) 80%, rgba(0,0,0,1) 100%)',
+          WebkitMaskImage: 'linear-gradient(to right, transparent 0%, transparent 20%, rgba(0,0,0,0.3) 50%, rgba(0,0,0,1) 80%, rgba(0,0,0,1) 100%)',
+        }}>
+        <FlowingPixelsCanvas />
+      </div>
       
       <div className="max-w-6xl mx-auto animate-fade-in relative z-10">
         <div className="max-w-3xl">
@@ -33,7 +33,7 @@ export function Hero() {
               <ArrowRight className="w-[18px] h-[18px]" />
             </Button>
             <Button variant="outline">
-              Contact Sales
+              Contact
             </Button>
           </div>
         </div>

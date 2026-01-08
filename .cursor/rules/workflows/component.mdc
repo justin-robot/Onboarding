@@ -1,0 +1,642 @@
+---
+description: Component development workflow from UI design to API integration
+alwaysApply: false
+---
+
+# Component Development Workflow
+
+This rule defines the structured workflow for building features from UI design through API integration. Follow these steps to ensure consistent, maintainable, and testable components.
+
+## Development Process Overview
+
+The component development process follows this order:
+
+1. **API Route with Mock Data** - Create Next.js API route that returns mock data
+2. **UI Component** - Build the component that fetches from your API endpoint
+3. **Implement Real Data** - Replace mock data with real database queries (component unchanged)
+4. **Testing** - Use MSW to test component behavior
+
+**Key Principles:** 
+- Always create Next.js API routes (not MSW) for your own APIs
+- MSW is only for external APIs you don't control or for testing
+- No environment variables needed - just update the API route code
+- Component code never changes when switching from mock to real data
+
+## Phase 1: Create API Route with Mock Data
+
+Start by creating a Next.js API route that returns mock data. This is the standard approach for all your internal APIs.
+
+### Step 1.1: Create Next.js API Route
+
+```typescript
+// Good: app/api/users/[id]/route.ts - Start with mock data
+import { NextRequest, NextResponse } from "next/server";
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  // Mock data for initial development
+  const mockUser = {
+    id: params.id,
+    name: "John Doe",
+    email: "john@example.com",
+    avatar: "/avatars/john.jpg",
+    role: "Admin",
+    createdAt: new Date().toISOString(),
+  };
+
+  // Optional: Add realistic delay to simulate network
+  // await new Promise(resolve => setTimeout(resolve, 500));
+
+  return NextResponse.json(mockUser);
+}
+```
+
+**When to Use MSW Instead:**
+- ❌ Never for your own APIs - always create API routes
+- ✅ Only for external APIs you don't control (e.g., `api.stripe.com`, `api.github.com`)
+- ✅ Automatically in tests (already configured in `@repo/vitest`)
+
+### Step 1.2: Include Edge Cases in Mock Data
+
+Create handlers for different scenarios:
+
+```typescript
+// Good: Multiple scenarios in API route
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  // Simulate error for testing
+  if (params.id === "error") {
+    return NextResponse.json(
+      { error: "User not found" },
+      { status: 404 }
+    );
+  }
+
+  // Simulate slow response for testing
+  if (params.id === "slow") {
+    await new Promise(resolve => setTimeout(resolve, 3000));
+  }
+
+  // Return mock data
+  const mockUser = {
+    id: params.id,
+    name: params.id === "long" 
+      ? "Very Long Name That Might Break The Layout Design" 
+      : "John Doe",
+    email: "john@example.com",
+    avatar: "/avatars/john.jpg",
+    role: "Admin",
+  };
+
+  return NextResponse.json(mockUser);
+}
+```
+
+## Phase 2: Build UI Component
+
+Now build the UI component that fetches from your API endpoint. The component remains unchanged whether using mock or real data.
+
+### Step 2.1: Create Component with API Integration
+
+```typescript
+// Good: Component fetches from API endpoint from the start
+interface UserProfileProps {
+  userId: string;
+}
+
+export function UserProfile({ userId }: UserProfileProps) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/users/${userId}`);
+        
+        if (!response.ok) {
+          throw new Error("Failed to fetch user");
+        }
+        
+        const data = await response.json();
+        setUser(data);
+      } catch (err) {
+        setError(err as Error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchUser();
+  }, [userId]);
+
+  // Handle all states...
+  if (loading) return <Skeleton />;
+  if (error) return <ErrorMessage error={error} />;
+  if (!user) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{user.name}</CardTitle>
+        <CardDescription>{user.email}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center gap-4">
+          <Avatar>
+            <AvatarImage src={user.avatar} />
+            <AvatarFallback>{user.name[0]}</AvatarFallback>
+          </Avatar>
+          <div>
+            <p className="text-sm font-medium">{user.role}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+### Step 2.2: Design All UI States
+
+Build UI for all possible states using the API:
+
+```typescript
+// Good: All states handled, data comes from API
+export function UserList() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    fetch("/api/users")
+      .then(res => res.json())
+      .then(setUsers)
+      .catch(setError)
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return <TableSkeleton />;
+  }
+
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>
+          Failed to load users. Please try again.
+        </AlertDescription>
+        <Button onClick={() => window.location.reload()} className="mt-2">
+          Retry
+        </Button>
+      </Alert>
+    );
+  }
+
+  if (users.length === 0) {
+    return (
+      <EmptyState 
+        icon={<UsersIcon />}
+        title="No users yet"
+        description="Get started by creating your first user"
+        action={<Button>Create User</Button>}
+      />
+    );
+  }
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {users.map((user) => (
+        <UserCard key={user.id} user={user} />
+      ))}
+    </div>
+  );
+}
+```
+
+### Step 2.3: Style and Refine
+
+- Focus on visual design and UX
+- Test responsiveness at different screen sizes
+- Verify dark mode appearance
+- Ensure accessibility (keyboard navigation, ARIA labels)
+- Extract reusable sub-components
+- Test with different mock scenarios (use `?id=long`, `?id=error`, etc.)
+
+```typescript
+// Good: Extracted sub-components
+function UserCard({ user }: { user: User }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{user.name}</CardTitle>
+      </CardHeader>
+    </Card>
+  );
+}
+
+function UserList({ users }: { users: User[] }) {
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {users.map((user) => (
+        <UserCard key={user.id} user={user} />
+      ))}
+    </div>
+  );
+}
+```
+
+## Phase 3: Implement Real Data
+
+Simply replace the mock data in your API route with real database queries. **The component code stays exactly the same.**
+
+### Step 3.1: Update API Route with Database
+
+```typescript
+// Before: Mock data
+export async function GET(request: NextRequest) {
+  const mockUsers = [
+    { id: "1", name: "John Doe", email: "john@example.com" },
+    { id: "2", name: "Jane Smith", email: "jane@example.com" },
+  ];
+  
+  return NextResponse.json(mockUsers);
+}
+
+// After: Real database query - Component unchanged!
+import { database } from "@repo/database";
+
+export async function GET(request: NextRequest) {
+  try {
+    const users = await database
+      .selectFrom("user")
+      .select(["id", "name", "email", "role", "created_at"])
+      .where("deleted_at", "is", null)
+      .orderBy("created_at", "desc")
+      .execute();
+
+    return NextResponse.json(users);
+  } catch (error) {
+    console.error("Failed to fetch users:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch users" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+That's it! No component changes, no environment variables, no configuration. Just update the API route.
+
+### Step 3.2: Add Mutations
+
+```typescript
+// POST endpoint with real database
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    
+    const newUser = await database
+      .insertInto("user")
+      .values({
+        name: body.name,
+        email: body.email,
+        role: body.role || "user",
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    return NextResponse.json(newUser, { status: 201 });
+  } catch (error) {
+    console.error("Failed to create user:", error);
+    return NextResponse.json(
+      { error: "Failed to create user" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+### Step 3.3: Use Server Components When Possible
+
+For Next.js apps, prefer Server Components for data fetching:
+
+```typescript
+// Good: Server Component with direct data fetching
+export async function UserProfile({ userId }: UserProfileProps) {
+  const user = await database
+    .selectFrom("user")
+    .selectAll()
+    .where("id", "=", userId)
+    .executeTakeFirst();
+
+  if (!user) {
+    return <Alert>User not found</Alert>;
+  }
+
+  return <Card>{user.name}</Card>;
+}
+```
+
+### External APIs Only
+
+If you're consuming an external API you don't control (like Stripe, GitHub, etc.):
+
+```typescript
+// Your component still uses your API route
+export function StripeCustomer({ customerId }: Props) {
+  const { data } = useSWR(`/api/stripe/customers/${customerId}`);
+  return <Card>{data.name}</Card>;
+}
+
+// Your API route proxies to external API
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  // Call external API
+  const response = await fetch(
+    `https://api.stripe.com/v1/customers/${params.id}`,
+    {
+      headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` },
+    }
+  );
+  
+  const customer = await response.json();
+  return NextResponse.json(customer);
+}
+```
+
+MSW only needed for testing external APIs (already configured in `@repo/vitest`).
+
+## Phase 4: Testing
+
+Write tests to verify your components work correctly. Use MSW to mock API route responses in tests.
+
+### Step 4.1: Test UI States with MSW
+
+MSW intercepts your API routes in tests, so you can control responses without changing the component:
+
+```typescript
+// Good: Test all UI states using MSW
+import { describe, it, expect } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { server, http, HttpResponse } from "@repo/vitest";
+import { UserProfile } from "./UserProfile";
+
+describe("UserProfile", () => {
+  it("shows loading state initially", () => {
+    render(<UserProfile userId="1" />);
+    expect(screen.getByTestId("skeleton")).toBeInTheDocument();
+  });
+
+  it("shows user data when loaded", async () => {
+    // MSW intercepts /api/users/1 call
+    server.use(
+      http.get("/api/users/1", () => {
+        return HttpResponse.json({
+          id: "1",
+          name: "John Doe",
+          email: "john@example.com",
+        });
+      })
+    );
+
+    render(<UserProfile userId="1" />);
+    
+    expect(await screen.findByText("John Doe")).toBeInTheDocument();
+    expect(screen.getByText("john@example.com")).toBeInTheDocument();
+  });
+
+  it("shows error state on failure", async () => {
+    // MSW returns error response
+    server.use(
+      http.get("/api/users/1", () => {
+        return new HttpResponse(null, { status: 500 });
+      })
+    );
+
+    render(<UserProfile userId="1" />);
+    
+    expect(await screen.findByText(/error/i)).toBeInTheDocument();
+  });
+});
+```
+
+**Note:** MSW is configured in `@repo/vitest` and automatically intercepts requests in tests. You don't need any setup - just use `server.use()` to override responses.
+
+### Step 4.2: Test Interactions
+
+```typescript
+// Good: Test user interactions
+import { userEvent } from "@testing-library/user-event";
+
+it("creates new user on form submit", async () => {
+  const user = userEvent.setup();
+  
+  server.use(
+    http.post("/api/users", async ({ request }) => {
+      const body = await request.json();
+      return HttpResponse.json({ id: "new-id", ...body }, { status: 201 });
+    })
+  );
+
+  render(<UserForm />);
+  
+  await user.type(screen.getByLabelText("Name"), "John Doe");
+  await user.type(screen.getByLabelText("Email"), "john@example.com");
+  await user.click(screen.getByRole("button", { name: /submit/i }));
+
+  expect(await screen.findByText("User created successfully")).toBeInTheDocument();
+});
+```
+
+## Best Practices
+
+### UI Development
+
+- **Do:**
+  - Create Next.js API route with mock data first
+  - Build components that fetch from real endpoints
+  - Design all states (loading, error, empty, success) upfront
+  - Use shadcn/ui components from `@repo/design`
+  - Test responsiveness and dark mode early
+  - Extract reusable sub-components
+
+- **Don't:**
+  - Hardcode mock data directly in components
+  - Use MSW for your own APIs (use Next.js API routes)
+  - Forget to handle loading and error states
+  - Skip empty state design
+
+### API Development
+
+- **Do:**
+  - Always use Next.js API routes for your own APIs
+  - Start with mock data, switch to database when ready
+  - Add proper error handling and validation
+  - Return appropriate HTTP status codes
+  - Use TypeScript for request/response types
+
+- **Don't:**
+  - Use MSW for internal APIs (only for external APIs)
+  - Use environment variables to switch between mock/real data
+  - Skip input validation
+  - Return sensitive data in API responses
+  - Use GET requests for mutations
+
+### Integration
+
+- **Do:**
+  - Handle all possible states in the UI
+  - Show loading indicators during fetches
+  - Provide retry functionality for errors
+  - Use Server Components when possible
+  - Implement optimistic updates for better UX
+
+- **Don't:**
+  - Ignore loading states
+  - Show technical error messages to users
+  - Make multiple redundant API calls
+  - Forget to clean up side effects
+
+## Common Patterns
+
+### Pattern: List with Create
+
+```typescript
+// 1. Create API route with mock data - app/api/users/route.ts
+export async function GET() {
+  // Start with mock data
+  return NextResponse.json([
+    { id: "1", name: "John Doe", email: "john@example.com" },
+    { id: "2", name: "Jane Smith", email: "jane@example.com" },
+  ]);
+}
+
+// 2. Build component that fetches from API
+export function UserList() {
+  const { data: users, loading, error } = useSWR("/api/users");
+  
+  if (loading) return <Skeleton />;
+  if (error) return <ErrorMessage />;
+  
+  return (
+    <div className="grid gap-4">
+      {users.map(u => <UserCard key={u.id} user={u} />)}
+    </div>
+  );
+}
+
+// 3. Replace with real data - Component unchanged!
+export async function GET() {
+  const users = await database.selectFrom("user").selectAll().execute();
+  return NextResponse.json(users);
+}
+```
+
+### Pattern: Form with Submission
+
+```typescript
+// 1. Create API route with mock - app/api/users/route.ts
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  
+  // Return mock success response
+  return NextResponse.json(
+    { id: crypto.randomUUID(), ...body },
+    { status: 201 }
+  );
+}
+
+// 2. Build form component that posts to API
+export function CreateUserForm() {
+  const [loading, setLoading] = useState(false);
+  
+  const handleSubmit = async (data: FormData) => {
+    setLoading(true);
+    try {
+      await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      toast.success("User created!");
+    } catch (error) {
+      toast.error("Failed to create user");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return <Form onSubmit={handleSubmit} loading={loading}>{/* fields */}</Form>;
+}
+
+// 3. Add real database - Component unchanged!
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  const user = await database
+    .insertInto("user")
+    .values(body)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+    
+  return NextResponse.json(user, { status: 201 });
+}
+```
+
+## Troubleshooting
+
+### Issue: Component doesn't update after API call
+
+**Solution:** Ensure you're updating state or revalidating data after mutations
+
+```typescript
+// Good: Revalidate after mutation
+const { mutate } = useSWR("/api/users");
+
+async function createUser(data: FormData) {
+  await fetch("/api/users", { method: "POST", body: JSON.stringify(data) });
+  mutate(); // Revalidate the data
+}
+```
+
+### Issue: MSW handlers not working
+
+**Solution:** Ensure handlers are defined and server is started
+
+```typescript
+// Check: handlers are exported
+export const handlers = [/* ... */];
+
+// Check: setup.ts starts the server
+beforeAll(() => server.listen());
+```
+
+### Issue: Loading state flickers
+
+**Solution:** Add minimum display time for loading states
+
+```typescript
+// Good: Prevent flash of loading state
+const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+  const fetchData = async () => {
+    const [data] = await Promise.all([
+      fetch("/api/data"),
+      new Promise(resolve => setTimeout(resolve, 300)), // Min 300ms
+    ]);
+    setData(data);
+    setLoading(false);
+  };
+  
+  fetchData();
+}, []);
+```

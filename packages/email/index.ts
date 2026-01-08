@@ -7,6 +7,7 @@ export const resend = new Resend(process.env.RESEND_TOKEN);
 
 export * from "./templates/verify-email";
 export * from "./templates/reset-password";
+export * from "./templates/contact";
 
 // Email sending helpers
 export const sendVerificationEmail = async ({

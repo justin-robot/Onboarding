@@ -37,6 +37,13 @@ Platform comes with a comprehensive set of features:
 - **Administration** — Admin dashboard with ra-core
 - **SEO** — Metadata management, sitemaps, and JSON-LD
 - **AI** — AI integration utilities with OpenAI
+- **Payments** — Payment processing with [Polar](https://polar.sh) (checkout, subscriptions)
+- **Notifications** — In-app notifications with [Knock](https://knock.app)
+- **Realtime** — Real-time messaging and pub/sub with [Ably](https://ably.com)
+- **Storage** — Platform-agnostic file storage (S3, Cloudflare R2, or custom endpoints)
+- **Internationalization** — Multi-language support with locale detection and RTL support
+- **Testing** — Shared [Vitest](https://vitest.dev) configuration with [MSW](https://mswjs.io) integration for API mocking
+- **Webhooks** — Webhook handling and verification
 
 ## Getting Started
 
@@ -49,6 +56,9 @@ Platform comes with a comprehensive set of features:
   - [Better Auth](https://www.better-auth.com) (authentication)
   - [Resend](https://resend.com) (email)
   - [PostHog](https://posthog.com) (analytics)
+  - [Polar](https://polar.sh) (payments) - optional
+  - [Knock](https://knock.app) (notifications) - optional
+  - [Ably](https://ably.com) (realtime) - optional
 
 ### Installation
 
@@ -128,15 +138,24 @@ platform/
     ├── analytics/            # Analytics providers (PostHog, Google Analytics)
     ├── auth/                 # Authentication (Better Auth)
     ├── database/             # Database access (Kysely + Planetscale PG/Neon)
-    ├── design/        # UI component library (shadcn/ui)
+    ├── design/               # UI component library (shadcn/ui)
     ├── email/                # Email templates (React Email)
+    ├── internationalization/ # i18n support with locale detection
     ├── next-config/          # Shared Next.js configuration
+    ├── notifications/        # Notifications (Knock)
     ├── observability/        # Error tracking and logging
+    ├── payments/             # Payment processing (Polar)
+    ├── realtime/             # Real-time messaging (Ably)
     ├── seo/                  # SEO utilities (metadata, sitemaps)
-    └── typescript-config/    # Shared TypeScript configurations
+    ├── storage/              # File storage (S3, R2, custom)
+    ├── typescript-config/    # Shared TypeScript configurations
+    ├── vitest/               # Testing utilities (Vitest + MSW)
+    └── webhooks/             # Webhook handling
 ```
 
 Each app is self-contained and independently deployable. Packages are shared across apps for consistency and maintainability.
+
+**Note:** All packages provide SDK/client initialization only. Specific usage and business logic should be implemented in the apps themselves.
 
 ## Environment Variables
 

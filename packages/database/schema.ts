@@ -16,7 +16,6 @@ export interface UserTable {
   emailVerified: boolean;
   image: string | null;
   role: "admin" | "user" | null;
-  companyId: string | null;
   communications: boolean | null;
   banned: boolean;
   banReason: string | null;

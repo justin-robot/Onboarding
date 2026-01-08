@@ -1,0 +1,49 @@
+/**
+ * Example: Testing database operations
+ * 
+ * Add to your package's devDependencies:
+ * "@repo/vitest": "workspace:*"
+ * 
+ * Then create vitest.config.ts in your package root
+ */
+
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { database } from "@repo/database";
+
+describe("Database operations", () => {
+  beforeAll(async () => {
+    // Setup: Create test data
+  });
+
+  afterAll(async () => {
+    // Cleanup: Remove test data
+  });
+
+  it("should query users", async () => {
+    const users = await database
+      .selectFrom("user")
+      .selectAll()
+      .limit(10)
+      .execute();
+
+    expect(users).toBeDefined();
+    expect(Array.isArray(users)).toBe(true);
+  });
+
+  it("should handle transactions", async () => {
+    await database.transaction().execute(async (trx) => {
+      // Your transaction logic
+      const result = await trx
+        .insertInto("user")
+        .values({
+          id: "test-user-id",
+          email: "test@example.com",
+          name: "Test User",
+        })
+        .executeTakeFirst();
+
+      expect(result).toBeDefined();
+    });
+  });
+});
+
