@@ -137,12 +137,27 @@ Some packages support additional services that can be configured if needed:
 POLAR_ACCESS_TOKEN=
 POLAR_WEBHOOK_SECRET=
 POLAR_SERVER=
+POLAR_MODE=sandbox
 
 # Internationalization (Languine) - Add to apps that need i18n
 LANGUINE_PROJECT_ID=
 
 # Notifications (Knock) - Add secret key to apps/app/.env.local if using server-side
 KNOCK_SECRET_API_KEY=
+
+# Realtime (Ably) - Add to apps/app/.env.local if using realtime features
+ABLY_API_KEY=
+NEXT_PUBLIC_ABLY_API_KEY=
+
+# Storage (S3/R2/Custom) - Add to apps/app/.env.local if using file storage
+STORAGE_PROVIDER=s3
+STORAGE_BUCKET=
+STORAGE_REGION=
+STORAGE_ENDPOINT=
+STORAGE_ACCESS_KEY_ID=
+STORAGE_SECRET_ACCESS_KEY=
+STORAGE_PUBLIC_URL=
+
 ```
 
 ## Turborepo Configuration
