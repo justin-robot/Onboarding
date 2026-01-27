@@ -1,7 +1,7 @@
 import { type Kysely, FileMigrationProvider, Migrator } from "kysely";
 import { promises as fs } from "node:fs";
 import { join } from "node:path";
-import type { Database } from "../schema";
+import type { Database } from "../schemas/main";
 
 /**
  * Creates a migrator instance using Kysely's official FileMigrationProvider

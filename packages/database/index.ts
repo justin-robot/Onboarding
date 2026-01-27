@@ -7,7 +7,7 @@ if (typeof process !== "undefined" && process.env.NEXT_RUNTIME) {
 import { neon, neonConfig, Pool } from "@neondatabase/serverless";
 import { Kysely } from "kysely";
 import { NeonDialect } from "kysely-neon";
-import type { Database } from "./schema";
+import type { Database } from "./schemas/main";
 
 // Configure PlanetScale HTTP mode (instead of WebSockets)
 // https://planetscale.com/changelog/neon-serverless-driver-http-mode
@@ -50,4 +50,4 @@ export const pool = new Pool({
 
 // Export createDb for migrations
 export { createDb };
-export * from "./schema";
+export * from "./schemas/main";

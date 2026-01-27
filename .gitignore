@@ -269,3 +269,7 @@ packages/database/generated
 .contentlayer
 .content-collections
 .source
+
+# Workflow directories (local state, not committed)
+.pm/tasks.db
+.wm/

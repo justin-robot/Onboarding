@@ -109,7 +109,8 @@ pnpm install
 
 3. **Run database migrations:**
    ```sh
-   pnpm migrate:dev
+   cd packages/database && pnpm migrate:dev
+   # Or from root: pnpm --filter @repo/database migrate:dev
    ```
 
 4. **Start the development server:**
