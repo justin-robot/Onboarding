@@ -3,7 +3,7 @@
 **Production-grade monorepo application built with Next.js and Turborepo.**
 
 ## Overview
-
+edit
 Platform is a full-stack application built with modern web technologies, designed for scalability and developer experience. It uses a monorepo structure managed by [Turborepo](https://turborepo.com) and [Next.js](https://nextjs.org/) for the frontend and API layers.
 
 ### Philosophy
