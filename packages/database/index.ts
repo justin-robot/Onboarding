@@ -58,3 +58,5 @@ export type { WorkspaceWithNested, SectionWithTasks } from "./services/workspace
 
 export { sectionService } from "./services/section";
 export type { SectionProgress } from "./services/section";
+
+export { taskService } from "./services/task";
