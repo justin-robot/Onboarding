@@ -115,6 +115,15 @@ export const dependencyService = {
   },
 
   /**
+   * Check if a task is unlocked (all unlock/both dependencies are completed)
+   * Returns true if task can be worked on, false if blocked
+   */
+  async isTaskUnlocked(taskId: string): Promise<boolean> {
+    const hasBlocking = await this.hasBlockingDependencies(taskId);
+    return !hasBlocking;
+  },
+
+  /**
    * Check if a task has any blocking (unlock) dependencies that are not complete
    */
   async hasBlockingDependencies(taskId: string): Promise<boolean> {

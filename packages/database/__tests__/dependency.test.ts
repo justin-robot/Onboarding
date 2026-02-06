@@ -379,4 +379,141 @@ describe("DependencyService", () => {
       expect(chain).toEqual([]);
     });
   });
+
+  describe("isTaskUnlocked", () => {
+    it("should return true for task with no dependencies", async () => {
+      const { tasks } = await createTestTasks(1);
+
+      const unlocked = await dependencyService.isTaskUnlocked(tasks[0].id);
+
+      expect(unlocked).toBe(true);
+    });
+
+    it("should return false when unlock dependency is not completed", async () => {
+      const { tasks } = await createTestTasks(2);
+
+      // Task 1 depends on Task 0 (unlock type)
+      const dep = await dependencyService.create({
+        taskId: tasks[1].id,
+        dependsOnTaskId: tasks[0].id,
+        type: "unlock",
+      });
+      createdDependencyIds.push(dep.id);
+
+      const unlocked = await dependencyService.isTaskUnlocked(tasks[1].id);
+
+      expect(unlocked).toBe(false);
+    });
+
+    it("should return true when unlock dependency is completed", async () => {
+      const { tasks } = await createTestTasks(2);
+
+      // Task 1 depends on Task 0
+      const dep = await dependencyService.create({
+        taskId: tasks[1].id,
+        dependsOnTaskId: tasks[0].id,
+        type: "unlock",
+      });
+      createdDependencyIds.push(dep.id);
+
+      // Complete Task 0
+      await taskService.markComplete(tasks[0].id);
+
+      const unlocked = await dependencyService.isTaskUnlocked(tasks[1].id);
+
+      expect(unlocked).toBe(true);
+    });
+
+    it("should return false when ANY unlock dependency is not completed", async () => {
+      const { tasks } = await createTestTasks(3);
+
+      // Task 0 depends on Task 1 AND Task 2
+      const dep1 = await dependencyService.create({
+        taskId: tasks[0].id,
+        dependsOnTaskId: tasks[1].id,
+        type: "unlock",
+      });
+      createdDependencyIds.push(dep1.id);
+
+      const dep2 = await dependencyService.create({
+        taskId: tasks[0].id,
+        dependsOnTaskId: tasks[2].id,
+        type: "unlock",
+      });
+      createdDependencyIds.push(dep2.id);
+
+      // Complete only Task 1
+      await taskService.markComplete(tasks[1].id);
+
+      const unlocked = await dependencyService.isTaskUnlocked(tasks[0].id);
+
+      expect(unlocked).toBe(false);
+    });
+
+    it("should return true when ALL unlock dependencies are completed", async () => {
+      const { tasks } = await createTestTasks(3);
+
+      // Task 0 depends on Task 1 AND Task 2
+      const dep1 = await dependencyService.create({
+        taskId: tasks[0].id,
+        dependsOnTaskId: tasks[1].id,
+        type: "unlock",
+      });
+      createdDependencyIds.push(dep1.id);
+
+      const dep2 = await dependencyService.create({
+        taskId: tasks[0].id,
+        dependsOnTaskId: tasks[2].id,
+        type: "unlock",
+      });
+      createdDependencyIds.push(dep2.id);
+
+      // Complete both Task 1 and Task 2
+      await taskService.markComplete(tasks[1].id);
+      await taskService.markComplete(tasks[2].id);
+
+      const unlocked = await dependencyService.isTaskUnlocked(tasks[0].id);
+
+      expect(unlocked).toBe(true);
+    });
+
+    it("should check 'both' type dependencies for unlock", async () => {
+      const { tasks } = await createTestTasks(2);
+
+      // Task 1 depends on Task 0 (both type - unlock AND date_anchor)
+      const dep = await dependencyService.create({
+        taskId: tasks[1].id,
+        dependsOnTaskId: tasks[0].id,
+        type: "both",
+      });
+      createdDependencyIds.push(dep.id);
+
+      // Not completed - should be locked
+      let unlocked = await dependencyService.isTaskUnlocked(tasks[1].id);
+      expect(unlocked).toBe(false);
+
+      // Complete Task 0 - should be unlocked
+      await taskService.markComplete(tasks[0].id);
+      unlocked = await dependencyService.isTaskUnlocked(tasks[1].id);
+      expect(unlocked).toBe(true);
+    });
+
+    it("should ignore date_anchor only dependencies for unlock check", async () => {
+      const { tasks } = await createTestTasks(2);
+
+      // Task 1 depends on Task 0 (date_anchor type - does NOT block)
+      const dep = await dependencyService.create({
+        taskId: tasks[1].id,
+        dependsOnTaskId: tasks[0].id,
+        type: "date_anchor",
+        offsetDays: 7,
+      });
+      createdDependencyIds.push(dep.id);
+
+      // Task 0 is not completed, but date_anchor doesn't block
+      const unlocked = await dependencyService.isTaskUnlocked(tasks[1].id);
+
+      expect(unlocked).toBe(true);
+    });
+  });
 });
