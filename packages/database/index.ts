@@ -51,3 +51,7 @@ export const pool = new Pool({
 // Export createDb for migrations
 export { createDb };
 export * from "./schemas/main";
+
+// Export services
+export { workspaceService } from "./services/workspace";
+export type { WorkspaceWithNested, SectionWithTasks } from "./services/workspace";
