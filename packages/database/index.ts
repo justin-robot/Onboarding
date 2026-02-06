@@ -60,3 +60,5 @@ export { sectionService } from "./services/section";
 export type { SectionProgress } from "./services/section";
 
 export { taskService } from "./services/task";
+
+export { dependencyService, CircularDependencyError } from "./services/dependency";
