@@ -55,3 +55,6 @@ export * from "./schemas/main";
 // Export services
 export { workspaceService } from "./services/workspace";
 export type { WorkspaceWithNested, SectionWithTasks } from "./services/workspace";
+
+export { sectionService } from "./services/section";
+export type { SectionProgress } from "./services/section";
