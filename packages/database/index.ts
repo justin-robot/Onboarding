@@ -63,3 +63,5 @@ export { taskService } from "./services/task";
 export type { TaskWithLockStatus } from "./services/task";
 
 export { dependencyService, CircularDependencyError } from "./services/dependency";
+
+export { configService } from "./services/config";
