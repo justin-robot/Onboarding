@@ -1,10 +1,41 @@
 import { database } from "../index";
 import { dependencyService } from "./dependency";
-import type { Task, NewTask, TaskUpdate } from "../schemas/main";
+import { configService } from "./config";
+import type {
+  Task,
+  NewTask,
+  TaskUpdate,
+  FormConfig,
+  AcknowledgementConfig,
+  TimeBookingConfig,
+  ESignConfig,
+  FileRequestConfig,
+  ApprovalConfig,
+} from "../schemas/main";
 
 // Task with computed lock status
 export interface TaskWithLockStatus extends Task {
   locked: boolean;
+}
+
+// Config union type
+export type TaskConfig =
+  | FormConfig
+  | AcknowledgementConfig
+  | TimeBookingConfig
+  | ESignConfig
+  | FileRequestConfig
+  | ApprovalConfig;
+
+// Task with config
+export interface TaskWithConfig extends Task {
+  config: TaskConfig | null;
+}
+
+// Task with both config and lock status
+export interface TaskFull extends Task {
+  locked: boolean;
+  config: TaskConfig | null;
 }
 
 export const taskService = {
@@ -228,5 +259,43 @@ export const taskService = {
     }
 
     return tasksWithLockStatus;
+  },
+
+  /**
+   * Get a task by ID with its type-specific config loaded
+   */
+  async getByIdWithConfig(id: string): Promise<TaskWithConfig | null> {
+    const task = await this.getById(id);
+    if (!task) {
+      return null;
+    }
+
+    const config = await configService.getConfigByTaskId(id, task.type);
+
+    return {
+      ...task,
+      config,
+    };
+  },
+
+  /**
+   * Get a task by ID with both config and lock status
+   */
+  async getByIdFull(id: string): Promise<TaskFull | null> {
+    const task = await this.getById(id);
+    if (!task) {
+      return null;
+    }
+
+    const [config, unlocked] = await Promise.all([
+      configService.getConfigByTaskId(id, task.type),
+      dependencyService.isTaskUnlocked(id),
+    ]);
+
+    return {
+      ...task,
+      config,
+      locked: !unlocked,
+    };
   },
 };

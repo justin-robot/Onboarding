@@ -4,6 +4,7 @@ import { taskService } from "../services/task";
 import { sectionService } from "../services/section";
 import { workspaceService } from "../services/workspace";
 import { dependencyService } from "../services/dependency";
+import { configService } from "../services/config";
 import type { NewTask } from "../schemas/main";
 
 describe("TaskService", () => {
@@ -708,6 +709,136 @@ describe("TaskService", () => {
       // After completing - task2 is unlocked
       tasks = await taskService.getBySectionIdWithLockStatus(section.id);
       expect(tasks[1].locked).toBe(false);
+    });
+  });
+
+  describe("getByIdWithConfig", () => {
+    it("should return FORM task with form config", async () => {
+      const { section } = await createWorkspaceAndSection("Config Loading FORM");
+
+      const task = await taskService.create({
+        sectionId: section.id,
+        title: "Form Task",
+        position: 0,
+        type: "FORM",
+      });
+      createdTaskIds.push(task.id);
+
+      // Create config for the task
+      await configService.createFormConfig(task.id);
+
+      const result = await taskService.getByIdWithConfig(task.id);
+
+      expect(result).toBeDefined();
+      expect(result!.type).toBe("FORM");
+      expect(result!.config).toBeDefined();
+      expect(result!.config!.taskId).toBe(task.id);
+    });
+
+    it("should return ACKNOWLEDGEMENT task with acknowledgement config", async () => {
+      const { section } = await createWorkspaceAndSection("Config Loading ACK");
+
+      const task = await taskService.create({
+        sectionId: section.id,
+        title: "Ack Task",
+        position: 0,
+        type: "ACKNOWLEDGEMENT",
+      });
+      createdTaskIds.push(task.id);
+
+      await configService.createAcknowledgementConfig(task.id, {
+        instructions: "Please acknowledge",
+      });
+
+      const result = await taskService.getByIdWithConfig(task.id);
+
+      expect(result).toBeDefined();
+      expect(result!.type).toBe("ACKNOWLEDGEMENT");
+      expect(result!.config).toBeDefined();
+      expect((result!.config as any).instructions).toBe("Please acknowledge");
+    });
+
+    it("should return APPROVAL task with approval config", async () => {
+      const { section } = await createWorkspaceAndSection("Config Loading APPROVAL");
+
+      const task = await taskService.create({
+        sectionId: section.id,
+        title: "Approval Task",
+        position: 0,
+        type: "APPROVAL",
+      });
+      createdTaskIds.push(task.id);
+
+      await configService.createApprovalConfig(task.id);
+
+      const result = await taskService.getByIdWithConfig(task.id);
+
+      expect(result).toBeDefined();
+      expect(result!.type).toBe("APPROVAL");
+      expect(result!.config).toBeDefined();
+    });
+
+    it("should return null config when config does not exist", async () => {
+      const { section } = await createWorkspaceAndSection("Config Loading None");
+
+      const task = await taskService.create({
+        sectionId: section.id,
+        title: "No Config Task",
+        position: 0,
+        type: "FORM",
+      });
+      createdTaskIds.push(task.id);
+
+      // Don't create config
+
+      const result = await taskService.getByIdWithConfig(task.id);
+
+      expect(result).toBeDefined();
+      expect(result!.config).toBeNull();
+    });
+
+    it("should return null for non-existent task", async () => {
+      const result = await taskService.getByIdWithConfig("non-existent-id");
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("getByIdFull", () => {
+    it("should return task with both config and lock status", async () => {
+      const { section } = await createWorkspaceAndSection("Full Task Loading");
+
+      const task1 = await taskService.create({
+        sectionId: section.id,
+        title: "Prerequisite",
+        position: 0,
+        type: "FORM",
+      });
+      createdTaskIds.push(task1.id);
+
+      const task2 = await taskService.create({
+        sectionId: section.id,
+        title: "Dependent Form Task",
+        position: 1,
+        type: "FORM",
+      });
+      createdTaskIds.push(task2.id);
+
+      // Create config for task2
+      await configService.createFormConfig(task2.id);
+
+      // Create dependency
+      const dep = await dependencyService.create({
+        taskId: task2.id,
+        dependsOnTaskId: task1.id,
+        type: "unlock",
+      });
+      createdDependencyIds.push(dep.id);
+
+      const result = await taskService.getByIdFull(task2.id);
+
+      expect(result).toBeDefined();
+      expect(result!.locked).toBe(true); // Has incomplete dependency
+      expect(result!.config).toBeDefined(); // Has config
     });
   });
 });
