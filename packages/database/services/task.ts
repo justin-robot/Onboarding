@@ -1,5 +1,11 @@
 import { database } from "../index";
+import { dependencyService } from "./dependency";
 import type { Task, NewTask, TaskUpdate } from "../schemas/main";
+
+// Task with computed lock status
+export interface TaskWithLockStatus extends Task {
+  locked: boolean;
+}
 
 export const taskService = {
   /**
@@ -188,5 +194,39 @@ export const taskService = {
       .executeTakeFirst();
 
     return result ?? null;
+  },
+
+  /**
+   * Get a task by ID with computed lock status
+   */
+  async getByIdWithLockStatus(id: string): Promise<TaskWithLockStatus | null> {
+    const task = await this.getById(id);
+    if (!task) {
+      return null;
+    }
+
+    const unlocked = await dependencyService.isTaskUnlocked(id);
+    return {
+      ...task,
+      locked: !unlocked,
+    };
+  },
+
+  /**
+   * Get all tasks for a section with computed lock status
+   */
+  async getBySectionIdWithLockStatus(sectionId: string): Promise<TaskWithLockStatus[]> {
+    const tasks = await this.getBySectionId(sectionId);
+
+    const tasksWithLockStatus: TaskWithLockStatus[] = [];
+    for (const task of tasks) {
+      const unlocked = await dependencyService.isTaskUnlocked(task.id);
+      tasksWithLockStatus.push({
+        ...task,
+        locked: !unlocked,
+      });
+    }
+
+    return tasksWithLockStatus;
   },
 };

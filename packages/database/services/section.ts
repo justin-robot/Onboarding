@@ -1,4 +1,5 @@
 import { database } from "../index";
+import { taskService, type TaskWithLockStatus } from "./task";
 import type {
   Section,
   NewSection,
@@ -9,6 +10,10 @@ import type {
 // Types for nested section structure
 export interface SectionWithTasks extends Section {
   tasks: Task[];
+}
+
+export interface SectionWithTasksAndLockStatus extends Section {
+  tasks: TaskWithLockStatus[];
 }
 
 export interface SectionProgress {
@@ -72,6 +77,23 @@ export const sectionService = {
       .where("deletedAt", "is", null)
       .orderBy("position", "asc")
       .execute();
+
+    return {
+      ...section,
+      tasks,
+    };
+  },
+
+  /**
+   * Get a section with nested tasks including lock status
+   */
+  async getByIdWithTasksAndLockStatus(id: string): Promise<SectionWithTasksAndLockStatus | null> {
+    const section = await this.getById(id);
+    if (!section) {
+      return null;
+    }
+
+    const tasks = await taskService.getBySectionIdWithLockStatus(id);
 
     return {
       ...section,

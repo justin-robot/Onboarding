@@ -6,14 +6,14 @@ import type { TaskStatus, CompletionRule } from "@repo/database";
 type Params = { params: Promise<{ id: string }> };
 
 /**
- * GET /api/tasks/[id] - Get task by ID
+ * GET /api/tasks/[id] - Get task by ID with lock status
  */
 export async function GET(_request: NextRequest, { params }: Params) {
   return withErrorHandler(async () => {
     await requireAuth();
     const { id } = await params;
 
-    const task = await taskService.getById(id);
+    const task = await taskService.getByIdWithLockStatus(id);
     if (!task) {
       return errorResponse("Task not found", 404);
     }

@@ -1,4 +1,5 @@
 import { database } from "../index";
+import { dependencyService } from "./dependency";
 import type {
   Workspace,
   NewWorkspace,
@@ -14,6 +15,19 @@ export interface WorkspaceWithNested extends Workspace {
 
 export interface SectionWithTasks extends Section {
   tasks: Task[];
+}
+
+// Types with lock status
+export interface TaskWithLock extends Task {
+  locked: boolean;
+}
+
+export interface SectionWithTasksAndLock extends Section {
+  tasks: TaskWithLock[];
+}
+
+export interface WorkspaceWithNestedAndLock extends Workspace {
+  sections: SectionWithTasksAndLock[];
 }
 
 export const workspaceService = {
@@ -84,6 +98,68 @@ export const workspaceService = {
 
     // Build nested structure
     const sectionsWithTasks: SectionWithTasks[] = sections.map((section) => ({
+      ...section,
+      tasks: tasksBySectionId.get(section.id) ?? [],
+    }));
+
+    return {
+      ...workspace,
+      sections: sectionsWithTasks,
+    };
+  },
+
+  /**
+   * Get a workspace with nested sections and tasks, including lock status
+   */
+  async getByIdWithNestedAndLockStatus(id: string): Promise<WorkspaceWithNestedAndLock | null> {
+    // First get the workspace
+    const workspace = await this.getById(id);
+    if (!workspace) {
+      return null;
+    }
+
+    // Get sections for this workspace (ordered by position)
+    const sections = await database
+      .selectFrom("section")
+      .selectAll()
+      .where("workspaceId", "=", id)
+      .where("deletedAt", "is", null)
+      .orderBy("position", "asc")
+      .execute();
+
+    // Get tasks for all sections (ordered by position)
+    const sectionIds = sections.map((s) => s.id);
+    const tasks =
+      sectionIds.length > 0
+        ? await database
+            .selectFrom("task")
+            .selectAll()
+            .where("sectionId", "in", sectionIds)
+            .where("deletedAt", "is", null)
+            .orderBy("position", "asc")
+            .execute()
+        : [];
+
+    // Compute lock status for all tasks
+    const tasksWithLock: TaskWithLock[] = [];
+    for (const task of tasks) {
+      const unlocked = await dependencyService.isTaskUnlocked(task.id);
+      tasksWithLock.push({
+        ...task,
+        locked: !unlocked,
+      });
+    }
+
+    // Group tasks by section
+    const tasksBySectionId = new Map<string, TaskWithLock[]>();
+    for (const task of tasksWithLock) {
+      const sectionTasks = tasksBySectionId.get(task.sectionId) ?? [];
+      sectionTasks.push(task);
+      tasksBySectionId.set(task.sectionId, sectionTasks);
+    }
+
+    // Build nested structure
+    const sectionsWithTasks: SectionWithTasksAndLock[] = sections.map((section) => ({
       ...section,
       tasks: tasksBySectionId.get(section.id) ?? [],
     }));

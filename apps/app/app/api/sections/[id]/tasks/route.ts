@@ -6,14 +6,14 @@ import type { TaskType, DueDateType } from "@repo/database";
 type Params = { params: Promise<{ id: string }> };
 
 /**
- * GET /api/sections/[id]/tasks - List tasks for section
+ * GET /api/sections/[id]/tasks - List tasks for section with lock status
  */
 export async function GET(_request: NextRequest, { params }: Params) {
   return withErrorHandler(async () => {
     await requireAuth();
     const { id: sectionId } = await params;
 
-    const tasks = await taskService.getBySectionId(sectionId);
+    const tasks = await taskService.getBySectionIdWithLockStatus(sectionId);
     return json(tasks);
   });
 }

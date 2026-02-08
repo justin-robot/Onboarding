@@ -5,14 +5,14 @@ import type { NextRequest } from "next/server";
 type Params = { params: Promise<{ id: string }> };
 
 /**
- * GET /api/workspaces/[id] - Get workspace by ID with nested sections/tasks
+ * GET /api/workspaces/[id] - Get workspace by ID with nested sections/tasks (including lock status)
  */
 export async function GET(_request: NextRequest, { params }: Params) {
   return withErrorHandler(async () => {
     await requireAuth();
     const { id } = await params;
 
-    const workspace = await workspaceService.getByIdWithNested(id);
+    const workspace = await workspaceService.getByIdWithNestedAndLockStatus(id);
     if (!workspace) {
       return errorResponse("Workspace not found", 404);
     }

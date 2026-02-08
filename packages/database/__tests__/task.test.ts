@@ -3,6 +3,7 @@ import { database } from "../index";
 import { taskService } from "../services/task";
 import { sectionService } from "../services/section";
 import { workspaceService } from "../services/workspace";
+import { dependencyService } from "../services/dependency";
 import type { NewTask } from "../schemas/main";
 
 describe("TaskService", () => {
@@ -10,9 +11,13 @@ describe("TaskService", () => {
   const createdWorkspaceIds: string[] = [];
   const createdSectionIds: string[] = [];
   const createdTaskIds: string[] = [];
+  const createdDependencyIds: string[] = [];
 
   afterAll(async () => {
     // Cleanup in reverse order
+    for (const id of createdDependencyIds) {
+      await database.deleteFrom("task_dependency").where("id", "=", id).execute();
+    }
     for (const id of createdTaskIds) {
       await database.deleteFrom("task").where("id", "=", id).execute();
     }
@@ -538,6 +543,171 @@ describe("TaskService", () => {
 
       expect(incomplete!.status).toBe("not_started");
       expect(incomplete!.completedAt).toBeNull();
+    });
+  });
+
+  describe("getByIdWithLockStatus", () => {
+    it("should return task with locked: false when no dependencies", async () => {
+      const { section } = await createWorkspaceAndSection("Lock Status Workspace");
+
+      const task = await taskService.create({
+        sectionId: section.id,
+        title: "No Dependencies",
+        position: 0,
+        type: "FORM",
+      });
+      createdTaskIds.push(task.id);
+
+      const result = await taskService.getByIdWithLockStatus(task.id);
+
+      expect(result).toBeDefined();
+      expect(result!.locked).toBe(false);
+    });
+
+    it("should return task with locked: true when dependency not completed", async () => {
+      const { section } = await createWorkspaceAndSection("Locked Task Workspace");
+
+      const task1 = await taskService.create({
+        sectionId: section.id,
+        title: "Prerequisite",
+        position: 0,
+        type: "FORM",
+      });
+      createdTaskIds.push(task1.id);
+
+      const task2 = await taskService.create({
+        sectionId: section.id,
+        title: "Dependent Task",
+        position: 1,
+        type: "FORM",
+      });
+      createdTaskIds.push(task2.id);
+
+      const dep = await dependencyService.create({
+        taskId: task2.id,
+        dependsOnTaskId: task1.id,
+        type: "unlock",
+      });
+      createdDependencyIds.push(dep.id);
+
+      const result = await taskService.getByIdWithLockStatus(task2.id);
+
+      expect(result!.locked).toBe(true);
+    });
+
+    it("should return task with locked: false when dependency is completed", async () => {
+      const { section } = await createWorkspaceAndSection("Unlocked Task Workspace");
+
+      const task1 = await taskService.create({
+        sectionId: section.id,
+        title: "Prerequisite",
+        position: 0,
+        type: "FORM",
+      });
+      createdTaskIds.push(task1.id);
+
+      const task2 = await taskService.create({
+        sectionId: section.id,
+        title: "Dependent Task",
+        position: 1,
+        type: "FORM",
+      });
+      createdTaskIds.push(task2.id);
+
+      const dep = await dependencyService.create({
+        taskId: task2.id,
+        dependsOnTaskId: task1.id,
+        type: "unlock",
+      });
+      createdDependencyIds.push(dep.id);
+
+      // Complete the prerequisite
+      await taskService.markComplete(task1.id);
+
+      const result = await taskService.getByIdWithLockStatus(task2.id);
+
+      expect(result!.locked).toBe(false);
+    });
+
+    it("should return null for non-existent task", async () => {
+      const result = await taskService.getByIdWithLockStatus("non-existent-id");
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("getBySectionIdWithLockStatus", () => {
+    it("should return tasks with lock status", async () => {
+      const { section } = await createWorkspaceAndSection("Section Lock Status");
+
+      const task1 = await taskService.create({
+        sectionId: section.id,
+        title: "First Task",
+        position: 0,
+        type: "FORM",
+      });
+      createdTaskIds.push(task1.id);
+
+      const task2 = await taskService.create({
+        sectionId: section.id,
+        title: "Second Task",
+        position: 1,
+        type: "FORM",
+      });
+      createdTaskIds.push(task2.id);
+
+      // Task 2 depends on Task 1
+      const dep = await dependencyService.create({
+        taskId: task2.id,
+        dependsOnTaskId: task1.id,
+        type: "unlock",
+      });
+      createdDependencyIds.push(dep.id);
+
+      const tasks = await taskService.getBySectionIdWithLockStatus(section.id);
+
+      expect(tasks).toHaveLength(2);
+      expect(tasks[0].title).toBe("First Task");
+      expect(tasks[0].locked).toBe(false);
+      expect(tasks[1].title).toBe("Second Task");
+      expect(tasks[1].locked).toBe(true);
+    });
+
+    it("should update lock status after completing prerequisite", async () => {
+      const { section } = await createWorkspaceAndSection("Dynamic Lock Status");
+
+      const task1 = await taskService.create({
+        sectionId: section.id,
+        title: "Prerequisite",
+        position: 0,
+        type: "FORM",
+      });
+      createdTaskIds.push(task1.id);
+
+      const task2 = await taskService.create({
+        sectionId: section.id,
+        title: "Dependent",
+        position: 1,
+        type: "FORM",
+      });
+      createdTaskIds.push(task2.id);
+
+      const dep = await dependencyService.create({
+        taskId: task2.id,
+        dependsOnTaskId: task1.id,
+        type: "unlock",
+      });
+      createdDependencyIds.push(dep.id);
+
+      // Before completing - task2 is locked
+      let tasks = await taskService.getBySectionIdWithLockStatus(section.id);
+      expect(tasks[1].locked).toBe(true);
+
+      // Complete task1
+      await taskService.markComplete(task1.id);
+
+      // After completing - task2 is unlocked
+      tasks = await taskService.getBySectionIdWithLockStatus(section.id);
+      expect(tasks[1].locked).toBe(false);
     });
   });
 });

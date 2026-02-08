@@ -5,14 +5,14 @@ import type { NextRequest } from "next/server";
 type Params = { params: Promise<{ id: string }> };
 
 /**
- * GET /api/sections/[id] - Get section by ID with nested tasks
+ * GET /api/sections/[id] - Get section by ID with nested tasks (including lock status)
  */
 export async function GET(_request: NextRequest, { params }: Params) {
   return withErrorHandler(async () => {
     await requireAuth();
     const { id } = await params;
 
-    const section = await sectionService.getByIdWithTasks(id);
+    const section = await sectionService.getByIdWithTasksAndLockStatus(id);
     if (!section) {
       return errorResponse("Section not found", 404);
     }
