@@ -3,7 +3,9 @@ import { render } from "@react-email/components";
 import { VerifyEmail } from "./templates/verify-email";
 import { ResetPassword } from "./templates/reset-password";
 
-export const resend = new Resend(process.env.RESEND_TOKEN);
+// Use placeholder in development if RESEND_TOKEN is not set
+// Resend will fail gracefully on send attempts rather than on initialization
+export const resend = new Resend(process.env.RESEND_TOKEN || "re_placeholder");
 
 export * from "./templates/verify-email";
 export * from "./templates/reset-password";
