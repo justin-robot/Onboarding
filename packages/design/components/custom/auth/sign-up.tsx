@@ -69,6 +69,13 @@ export const SignUpForm = () => {
               window.location.href = "/";
             }, 2000);
           },
+          onError: (ctx: any) => {
+            console.error("Sign up error:", ctx.error);
+            const errorMessage = ctx.error?.message ||
+              ctx.error?.body?.message ||
+              "Unable to sign up. Please check your details and try again.";
+            setError(errorMessage);
+          },
         }
       );
     } catch (err: any) {
@@ -92,7 +99,7 @@ export const SignUpForm = () => {
         </p>
       </div>
       <Form {...form}>
-        <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+        <form className="space-y-4" noValidate onSubmit={form.handleSubmit(onSubmit)}>
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />

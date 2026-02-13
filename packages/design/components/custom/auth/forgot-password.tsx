@@ -86,7 +86,7 @@ export const ForgotPasswordForm = () => {
         </p>
       </div>
       <Form {...form}>
-        <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
+        <form className="space-y-4" noValidate onSubmit={form.handleSubmit(onSubmit)}>
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
