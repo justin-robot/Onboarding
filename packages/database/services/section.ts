@@ -1,5 +1,20 @@
 import { database } from "../index";
 import { taskService, type TaskWithLockStatus } from "./task";
+import { auditLogService, type AuditContext } from "./auditLog";
+
+// Dynamically import ably to avoid bundling issues with Next.js
+// Uses string variable to prevent static analysis by bundler
+const ABLY_PATH = "./ably";
+async function getAblyService() {
+  if (typeof window !== "undefined") return null; // Client-side guard
+  try {
+    const module = await import(/* webpackIgnore: true */ ABLY_PATH);
+    return { ablyService: module.ablyService, WORKSPACE_EVENTS: module.WORKSPACE_EVENTS };
+  } catch {
+    return null;
+  }
+}
+
 import type {
   Section,
   NewSection,
@@ -22,16 +37,39 @@ export interface SectionProgress {
   percentage: number;
 }
 
+// Section status type (derived, never stored)
+export type SectionStatus = "not_started" | "in_progress" | "completed";
+
+// Section with computed status and progress counts
+export interface SectionWithStatus extends Section {
+  status: SectionStatus;
+  completedCount: number;
+  totalCount: number;
+}
+
 export const sectionService = {
   /**
    * Create a new section
    */
-  async create(input: NewSection): Promise<Section> {
-    return database
+  async create(input: NewSection, auditContext?: AuditContext): Promise<Section> {
+    const section = await database
       .insertInto("section")
       .values(input)
       .returningAll()
       .executeTakeFirstOrThrow();
+
+    if (auditContext) {
+      await auditLogService.logEvent({
+        workspaceId: section.workspaceId,
+        eventType: "section.created",
+        actorId: auditContext.actorId,
+        source: auditContext.source,
+        ipAddress: auditContext.ipAddress,
+        metadata: { sectionTitle: section.title },
+      });
+    }
+
+    return section;
   },
 
   /**
@@ -106,8 +144,12 @@ export const sectionService = {
    */
   async update(
     id: string,
-    input: Omit<SectionUpdate, "id" | "workspaceId" | "createdAt" | "deletedAt">
+    input: Omit<SectionUpdate, "id" | "workspaceId" | "createdAt" | "deletedAt">,
+    auditContext?: AuditContext
   ): Promise<Section | null> {
+    // Get current state for change tracking
+    const current = auditContext ? await this.getById(id) : null;
+
     const result = await database
       .updateTable("section")
       .set({
@@ -119,13 +161,37 @@ export const sectionService = {
       .returningAll()
       .executeTakeFirst();
 
+    if (result && auditContext && current) {
+      // Build changes metadata
+      const changes: Record<string, { from: unknown; to: unknown }> = {};
+      for (const [key, value] of Object.entries(input)) {
+        if (value !== undefined && current[key as keyof typeof current] !== value) {
+          changes[key] = { from: current[key as keyof typeof current], to: value };
+        }
+      }
+
+      if (Object.keys(changes).length > 0) {
+        await auditLogService.logEvent({
+          workspaceId: result.workspaceId,
+          eventType: "section.updated",
+          actorId: auditContext.actorId,
+          source: auditContext.source,
+          ipAddress: auditContext.ipAddress,
+          metadata: { changes },
+        });
+      }
+    }
+
     return result ?? null;
   },
 
   /**
    * Soft delete a section
    */
-  async softDelete(id: string): Promise<boolean> {
+  async softDelete(id: string, auditContext?: AuditContext): Promise<boolean> {
+    // Get section for workspaceId before deleting
+    const section = auditContext ? await this.getById(id) : null;
+
     const result = await database
       .updateTable("section")
       .set({ deletedAt: new Date() })
@@ -133,7 +199,19 @@ export const sectionService = {
       .where("deletedAt", "is", null)
       .executeTakeFirst();
 
-    return (result.numUpdatedRows ?? 0n) > 0n;
+    const deleted = (result.numUpdatedRows ?? 0n) > 0n;
+
+    if (deleted && auditContext && section) {
+      await auditLogService.logEvent({
+        workspaceId: section.workspaceId,
+        eventType: "section.deleted",
+        actorId: auditContext.actorId,
+        source: auditContext.source,
+        ipAddress: auditContext.ipAddress,
+      });
+    }
+
+    return deleted;
   },
 
   /**
@@ -172,5 +250,99 @@ export const sectionService = {
       completed,
       percentage: Math.round(percentage * 100) / 100,
     };
+  },
+
+  /**
+   * Compute section status from task statuses (never stored)
+   * - All completed → "completed"
+   * - Any in_progress OR some completed but not all → "in_progress"
+   * - Else → "not_started"
+   */
+  async getStatus(sectionId: string): Promise<SectionStatus> {
+    const tasks = await database
+      .selectFrom("task")
+      .select(["status"])
+      .where("sectionId", "=", sectionId)
+      .where("deletedAt", "is", null)
+      .execute();
+
+    if (tasks.length === 0) {
+      return "not_started";
+    }
+
+    const completedCount = tasks.filter((t) => t.status === "completed").length;
+    const inProgressCount = tasks.filter((t) => t.status === "in_progress").length;
+
+    if (completedCount === tasks.length) {
+      return "completed";
+    }
+
+    if (inProgressCount > 0 || completedCount > 0) {
+      return "in_progress";
+    }
+
+    return "not_started";
+  },
+
+  /**
+   * Get section with computed status and progress counts
+   */
+  async getByIdWithStatus(sectionId: string): Promise<SectionWithStatus | null> {
+    const section = await this.getById(sectionId);
+    if (!section) {
+      return null;
+    }
+
+    const tasks = await database
+      .selectFrom("task")
+      .select(["status"])
+      .where("sectionId", "=", sectionId)
+      .where("deletedAt", "is", null)
+      .execute();
+
+    const totalCount = tasks.length;
+    const completedCount = tasks.filter((t) => t.status === "completed").length;
+    const inProgressCount = tasks.filter((t) => t.status === "in_progress").length;
+
+    let status: SectionStatus;
+    if (totalCount === 0) {
+      status = "not_started";
+    } else if (completedCount === totalCount) {
+      status = "completed";
+    } else if (inProgressCount > 0 || completedCount > 0) {
+      status = "in_progress";
+    } else {
+      status = "not_started";
+    }
+
+    return {
+      ...section,
+      status,
+      completedCount,
+      totalCount,
+    };
+  },
+
+  /**
+   * Broadcast section status change
+   * Call this after task status changes that might affect section status
+   */
+  async broadcastStatusChange(sectionId: string): Promise<void> {
+    const sectionWithStatus = await this.getByIdWithStatus(sectionId);
+    if (!sectionWithStatus) return;
+
+    const ably = await getAblyService();
+    if (ably) {
+      ably.ablyService.broadcastToWorkspace(
+        sectionWithStatus.workspaceId,
+        ably.WORKSPACE_EVENTS.SECTION_STATUS_CHANGED,
+        {
+          sectionId: sectionWithStatus.id,
+          status: sectionWithStatus.status,
+          completedCount: sectionWithStatus.completedCount,
+          totalCount: sectionWithStatus.totalCount,
+        }
+      ).catch((err) => console.error("Failed to broadcast section status:", err));
+    }
   },
 };
