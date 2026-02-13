@@ -273,3 +273,8 @@ packages/database/generated
 # Workflow directories (local state, not committed)
 .pm/tasks.db
 .wm/
+
+# Playwright
+**/playwright-report/
+**/playwright/.cache/
+**/test-results/
