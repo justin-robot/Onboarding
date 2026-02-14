@@ -12,6 +12,7 @@ import type { SectionStatus } from "@repo/design/components/moxo-layout";
 import { TaskDetailsPanel } from "./components/task-details-panel";
 import { FilesView, type FileItem } from "./components/files-view";
 import { MembersPanel } from "./components/members-panel";
+import { AddTaskDialog } from "./components/add-task-dialog";
 
 interface WorkspaceData {
   id: string;
@@ -75,6 +76,8 @@ export function WorkspaceView({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [showMembersPanel, setShowMembersPanel] = useState(false);
+  const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
+  const [addTaskSectionId, setAddTaskSectionId] = useState<string | null>(null);
 
   // Transform workspace sections for FlowView
   const flowSections: FlowSection[] = workspace.sections.map((section) => ({
@@ -114,6 +117,18 @@ export function WorkspaceView({
     setRightPanelOpen(true);
   };
 
+  // Handle add task
+  const handleAddTask = (sectionId: string) => {
+    setAddTaskSectionId(sectionId);
+    setAddTaskDialogOpen(true);
+  };
+
+  // Get task count for the selected section
+  const getTaskCount = (sectionId: string) => {
+    const section = workspace.sections.find((s) => s.id === sectionId);
+    return section?.tasks.length ?? 0;
+  };
+
   // Handle workspace navigation
   const handleWorkspaceSelect = (workspaceId: string) => {
     router.push(`/workspace/${workspaceId}`);
@@ -135,6 +150,7 @@ export function WorkspaceView({
   };
 
   return (
+    <>
     <MoxoLayout
       sidebar={
         <WorkspaceSidebar
@@ -149,6 +165,7 @@ export function WorkspaceView({
           sections={flowSections}
           selectedTaskId={selectedTaskId || undefined}
           onTaskSelect={handleTaskSelect}
+          onAddTask={currentUserRole === "admin" ? handleAddTask : undefined}
           showTimeline={true}
           timelinePosition="left"
         />
@@ -197,5 +214,17 @@ export function WorkspaceView({
       rightPanelOpen={rightPanelOpen}
       onRightPanelOpenChange={setRightPanelOpen}
     />
+
+    {/* Add Task Dialog */}
+    {addTaskSectionId && (
+      <AddTaskDialog
+        open={addTaskDialogOpen}
+        onOpenChange={setAddTaskDialogOpen}
+        sectionId={addTaskSectionId}
+        currentTaskCount={getTaskCount(addTaskSectionId)}
+        onTaskCreated={() => router.refresh()}
+      />
+    )}
+  </>
   );
 }
