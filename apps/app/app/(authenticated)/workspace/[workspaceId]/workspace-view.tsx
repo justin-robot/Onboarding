@@ -13,6 +13,23 @@ import { TaskDetailsPanel } from "./components/task-details-panel";
 import { FilesView, type FileItem } from "./components/files-view";
 import { MembersPanel } from "./components/members-panel";
 import { AddTaskDialog } from "./components/add-task-dialog";
+import { AddSectionDialog } from "./components/add-section-dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@repo/design/components/ui/sheet";
+import { Button } from "@repo/design/components/ui/button";
+import {
+  FolderPlus,
+  Plus,
+  Settings,
+  Users,
+  Bookmark,
+  Zap,
+} from "lucide-react";
+import { toast } from "sonner";
 
 interface WorkspaceData {
   id: string;
@@ -78,6 +95,8 @@ export function WorkspaceView({
   const [showMembersPanel, setShowMembersPanel] = useState(false);
   const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
   const [addTaskSectionId, setAddTaskSectionId] = useState<string | null>(null);
+  const [addSectionDialogOpen, setAddSectionDialogOpen] = useState(false);
+  const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
 
   // Transform workspace sections for FlowView
   const flowSections: FlowSection[] = workspace.sections.map((section) => ({
@@ -134,6 +153,18 @@ export function WorkspaceView({
     router.push(`/workspace/${workspaceId}`);
   };
 
+  // Handle add task from menu (need to select a section first)
+  const handleAddTaskFromMenu = () => {
+    if (workspace.sections.length === 0) {
+      toast.error("Please create a section first");
+      setAddSectionDialogOpen(true);
+      return;
+    }
+    // Use the first section by default, or show section picker
+    setAddTaskSectionId(workspace.sections[0].id);
+    setAddTaskDialogOpen(true);
+  };
+
   // Workspace header data
   const workspaceHeader = {
     name: workspace.name,
@@ -145,7 +176,7 @@ export function WorkspaceView({
     totalMembers: members.length,
     onMembersClick: handleMembersClick,
     onMoreClick: () => {
-      // TODO: Open workspace menu
+      setShowWorkspaceMenu(true);
     },
   };
 
@@ -196,6 +227,7 @@ export function WorkspaceView({
             onTaskComplete={() => {
               router.refresh();
             }}
+            isAdmin={currentUserRole === "admin"}
           />
         ) : (
           <div className="flex h-full items-center justify-center p-6 text-muted-foreground">
@@ -225,6 +257,81 @@ export function WorkspaceView({
         onTaskCreated={() => router.refresh()}
       />
     )}
+
+    {/* Add Section Dialog */}
+    <AddSectionDialog
+      open={addSectionDialogOpen}
+      onOpenChange={setAddSectionDialogOpen}
+      workspaceId={currentWorkspaceId}
+      currentSectionCount={workspace.sections.length}
+      onSectionCreated={() => router.refresh()}
+    />
+
+    {/* Workspace Menu Sheet */}
+    <Sheet open={showWorkspaceMenu} onOpenChange={setShowWorkspaceMenu}>
+      <SheetContent side="right" className="w-[300px]">
+        <SheetHeader>
+          <SheetTitle>Workspace Menu</SheetTitle>
+        </SheetHeader>
+        <div className="mt-6 space-y-2">
+          {currentUserRole === "admin" && (
+            <>
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => {
+                  setShowWorkspaceMenu(false);
+                  setAddSectionDialogOpen(true);
+                }}
+              >
+                <FolderPlus className="mr-2 h-4 w-4" />
+                Add Section
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => {
+                  setShowWorkspaceMenu(false);
+                  handleAddTaskFromMenu();
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add New Action
+              </Button>
+              <div className="my-4 border-t" />
+            </>
+          )}
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => {
+              setShowWorkspaceMenu(false);
+              handleMembersClick();
+            }}
+          >
+            <Users className="mr-2 h-4 w-4" />
+            Members
+          </Button>
+          <Button variant="ghost" className="w-full justify-start">
+            <Bookmark className="mr-2 h-4 w-4" />
+            Bookmarks
+          </Button>
+          {currentUserRole === "admin" && (
+            <>
+              <div className="my-4 border-t" />
+              <Button variant="ghost" className="w-full justify-start">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </Button>
+              <Button variant="ghost" className="w-full justify-start">
+                <Zap className="mr-2 h-4 w-4" />
+                Automations & Events
+              </Button>
+            </>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
   </>
   );
 }

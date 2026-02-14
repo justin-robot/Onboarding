@@ -1,4 +1,4 @@
-import { taskService } from "@repo/database";
+import { taskService, configService } from "@repo/database";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 import type { TaskType, DueDateType } from "@repo/database";
@@ -49,6 +49,9 @@ export async function POST(request: NextRequest, { params }: Params) {
       dueDateType: body.dueDateType as DueDateType | undefined,
       dueDateValue: body.dueDateValue ? new Date(body.dueDateValue) : undefined,
     });
+
+    // Auto-create config for task types that support it
+    await configService.createConfigForTask(task.id, task.type);
 
     return json(task, 201);
   });

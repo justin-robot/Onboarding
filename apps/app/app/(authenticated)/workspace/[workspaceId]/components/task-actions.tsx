@@ -40,6 +40,7 @@ interface TaskActionProps {
   isYourTurn: boolean;
   isCompleted: boolean;
   isLocked: boolean;
+  isAdmin?: boolean;
   formConfigId?: string;
   documentUrl?: string;
   documentName?: string;
@@ -53,6 +54,7 @@ export function TaskAction({
   isYourTurn,
   isCompleted,
   isLocked,
+  isAdmin,
   formConfigId,
   documentUrl,
   documentName,
@@ -88,6 +90,7 @@ export function TaskAction({
           taskId={taskId}
           formConfigId={formConfigId}
           isYourTurn={isYourTurn}
+          isAdmin={isAdmin}
           onComplete={onComplete}
         />
       );
@@ -144,14 +147,54 @@ function FormTaskAction({
   taskId,
   formConfigId,
   isYourTurn,
+  isAdmin,
   onComplete,
 }: {
   taskId: string;
   formConfigId?: string;
   isYourTurn: boolean;
+  isAdmin?: boolean;
   onComplete?: () => void;
 }) {
   const router = useRouter();
+
+  // Admin view - show edit form option
+  if (isAdmin) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-teal-600" />
+              <CardTitle className="text-base">Form Builder</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Design the form that users will complete for this task.
+            </p>
+            <Button
+              className="w-full"
+              onClick={() => router.push(`/forms/${taskId}/edit`)}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Edit Form
+            </Button>
+            {formConfigId && (
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => router.push(`/forms/${formConfigId}`)}
+              >
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Preview Form
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!isYourTurn) {
     return (
