@@ -47,6 +47,16 @@ export function useFormDraft({
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(true);
 
+  // Store callbacks in refs to avoid dependency issues
+  const onErrorRef = useRef(onError);
+  const onSubmitSuccessRef = useRef(onSubmitSuccess);
+
+  // Update refs when callbacks change
+  useEffect(() => {
+    onErrorRef.current = onError;
+    onSubmitSuccessRef.current = onSubmitSuccess;
+  }, [onError, onSubmitSuccess]);
+
   // Load initial draft
   useEffect(() => {
     isMountedRef.current = true;
@@ -79,7 +89,7 @@ export function useFormDraft({
         const error = err instanceof Error ? err : new Error("Unknown error");
         setError(error);
         setStatus("error");
-        onError?.(error);
+        onErrorRef.current?.(error);
       } finally {
         if (isMountedRef.current) {
           setIsLoading(false);
@@ -95,7 +105,7 @@ export function useFormDraft({
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [formConfigId, onError]);
+  }, [formConfigId]);
 
   // Save function
   const saveDraft = useCallback(
@@ -117,8 +127,10 @@ export function useFormDraft({
           setStatus("saved");
           // Reset to idle after 2 seconds
           setTimeout(() => {
-            if (isMountedRef.current && status !== "submitting" && status !== "submitted") {
-              setStatus("idle");
+            if (isMountedRef.current) {
+              setStatus((current) =>
+                current === "saved" ? "idle" : current
+              );
             }
           }, 2000);
         }
@@ -127,11 +139,11 @@ export function useFormDraft({
           const error = err instanceof Error ? err : new Error("Unknown error");
           setError(error);
           setStatus("error");
-          onError?.(error);
+          onErrorRef.current?.(error);
         }
       }
     },
-    [formConfigId, onError, status]
+    [formConfigId]
   );
 
   // Debounced update function
@@ -181,17 +193,17 @@ export function useFormDraft({
 
       if (isMountedRef.current) {
         setStatus("submitted");
-        onSubmitSuccess?.();
+        onSubmitSuccessRef.current?.();
       }
     } catch (err) {
       if (isMountedRef.current) {
         const error = err instanceof Error ? err : new Error("Unknown error");
         setError(error);
         setStatus("error");
-        onError?.(error);
+        onErrorRef.current?.(error);
       }
     }
-  }, [formConfigId, saveDraft, onError, onSubmitSuccess]);
+  }, [formConfigId, saveDraft]);
 
   // Clear draft function
   const clearDraft = useCallback(async () => {
@@ -212,10 +224,10 @@ export function useFormDraft({
       if (isMountedRef.current) {
         const error = err instanceof Error ? err : new Error("Unknown error");
         setError(error);
-        onError?.(error);
+        onErrorRef.current?.(error);
       }
     }
-  }, [formConfigId, onError]);
+  }, [formConfigId]);
 
   return {
     values,
