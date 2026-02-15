@@ -175,7 +175,7 @@ function FormTaskAction({
             </p>
             <Button
               className="w-full"
-              onClick={() => router.push(`/forms/${taskId}/edit`)}
+              onClick={() => router.push(`/forms/edit/${taskId}`)}
             >
               <FileText className="mr-2 h-4 w-4" />
               Edit Form
@@ -184,7 +184,7 @@ function FormTaskAction({
               <Button
                 variant="outline"
                 className="w-full"
-                onClick={() => router.push(`/forms/${formConfigId}`)}
+                onClick={() => router.push(`/forms/submit/${formConfigId}`)}
               >
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Preview Form
@@ -219,7 +219,7 @@ function FormTaskAction({
             className="w-full"
             onClick={() => {
               if (formConfigId) {
-                router.push(`/forms/${formConfigId}`);
+                router.push(`/forms/submit/${formConfigId}`);
               } else {
                 toast.error("Form configuration not found");
               }

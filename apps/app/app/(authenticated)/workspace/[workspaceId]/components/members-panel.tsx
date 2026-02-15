@@ -29,6 +29,8 @@ import {
   UserPlus,
   Send,
   Trash2,
+  Copy,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -46,6 +48,7 @@ interface Invitation {
   id: string;
   email: string;
   role: string;
+  token?: string;
   expiresAt: string;
   createdAt: string;
 }
@@ -97,8 +100,26 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole }: MembersP
   const [inviteRole, setInviteRole] = useState("user");
   const [sending, setSending] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const canInvite = currentUserRole === "admin";
+
+  // Copy invitation link to clipboard
+  const handleCopyLink = async (invitation: Invitation) => {
+    if (!invitation.token) return;
+
+    const inviteUrl = `${window.location.origin}/invite/${invitation.token}`;
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopiedId(invitation.id);
+      toast.success("Invitation link copied to clipboard");
+
+      // Reset copied state after 2 seconds
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (error) {
+      toast.error("Failed to copy link");
+    }
+  };
 
   // Fetch members and invitations
   useEffect(() => {
@@ -285,19 +306,36 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole }: MembersP
                           </p>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => handleCancelInvitation(invitation.id)}
-                        disabled={cancellingId === invitation.id}
-                      >
-                        {cancellingId === invitation.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="h-4 w-4" />
+                      <div className="flex items-center gap-1">
+                        {invitation.token && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={() => handleCopyLink(invitation)}
+                            title="Copy invitation link"
+                          >
+                            {copiedId === invitation.id ? (
+                              <Check className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
                         )}
-                      </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() => handleCancelInvitation(invitation.id)}
+                          disabled={cancellingId === invitation.id}
+                        >
+                          {cancellingId === invitation.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
