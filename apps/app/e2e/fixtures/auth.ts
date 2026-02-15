@@ -1,4 +1,4 @@
-import { test as base, expect } from "@playwright/test";
+import { test as base, expect, Page, BrowserContext, Route } from "@playwright/test";
 
 /**
  * Test user credentials for E2E tests
@@ -26,12 +26,12 @@ export const mockSession = {
  * Extended test fixture with authentication helpers
  */
 export const test = base.extend<{
-  authenticatedPage: typeof base.prototype.page;
+  authenticatedPage: Page;
 }>({
   /**
    * A page that is already authenticated with a mock session
    */
-  authenticatedPage: async ({ page, context }, use) => {
+  authenticatedPage: async ({ page, context }: { page: Page; context: BrowserContext }, use: (page: Page) => Promise<void>) => {
     // Set up mock session cookie
     await context.addCookies([
       {
@@ -43,7 +43,7 @@ export const test = base.extend<{
     ]);
 
     // Mock session validation endpoint
-    await page.route("**/api/auth/session", async (route) => {
+    await page.route("**/api/auth/session", async (route: Route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -99,9 +99,9 @@ export async function signOut(page: typeof base.prototype.page) {
 /**
  * Helper to check if user is authenticated
  */
-export async function isAuthenticated(page: typeof base.prototype.page): Promise<boolean> {
+export async function isAuthenticated(page: Page): Promise<boolean> {
   const cookies = await page.context().cookies();
-  return cookies.some((cookie) => cookie.name === "better-auth.session_token");
+  return cookies.some((cookie: { name: string }) => cookie.name === "better-auth.session_token");
 }
 
 /**

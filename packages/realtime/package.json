@@ -2,6 +2,10 @@
   "name": "@repo/realtime",
   "version": "0.0.0",
   "private": true,
+  "exports": {
+    ".": "./index.ts",
+    "./server": "./server.ts"
+  },
   "scripts": {
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"

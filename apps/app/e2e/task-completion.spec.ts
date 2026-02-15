@@ -19,7 +19,20 @@ test.describe("Task Completion Flow", () => {
   }
 
   // Mock task data
-  const mockTask = {
+  const mockTask: {
+    id: string;
+    title: string;
+    description: string;
+    type: string;
+    status: string;
+    completionRule: string;
+    sectionId: string;
+    order: number;
+    isLocked: boolean;
+    completedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  } = {
     id: "task-1",
     title: "Complete Onboarding",
     description: "Complete all onboarding steps",
@@ -34,7 +47,7 @@ test.describe("Task Completion Flow", () => {
     updatedAt: new Date().toISOString(),
   };
 
-  const mockCompletedTask = {
+  const mockCompletedTask: typeof mockTask = {
     ...mockTask,
     status: "completed",
     completedAt: new Date().toISOString(),

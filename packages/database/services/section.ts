@@ -342,7 +342,7 @@ export const sectionService = {
           completedCount: sectionWithStatus.completedCount,
           totalCount: sectionWithStatus.totalCount,
         }
-      ).catch((err) => console.error("Failed to broadcast section status:", err));
+      ).catch((err: unknown) => console.error("Failed to broadcast section status:", err));
     }
   },
 };

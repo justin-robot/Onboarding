@@ -106,12 +106,12 @@ export const taskService = {
             type: task.type,
             status: task.status,
             position: task.position,
-          }).catch((err) => console.error("Failed to broadcast task created:", err));
+          }).catch((err: unknown) => console.error("Failed to broadcast task created:", err));
         }
       });
 
       // Broadcast section status change (new task affects section status)
-      broadcastSectionStatusChange(task.sectionId).catch((err) =>
+      broadcastSectionStatusChange(task.sectionId).catch((err: unknown) =>
         console.error("Failed to broadcast section status:", err)
       );
     }
@@ -203,7 +203,7 @@ export const taskService = {
               title: result.title,
               status: result.status,
               changes: input,
-            }).catch((err) => console.error("Failed to broadcast task updated:", err));
+            }).catch((err: unknown) => console.error("Failed to broadcast task updated:", err));
           }
         });
 
@@ -256,7 +256,7 @@ export const taskService = {
             ably.ablyService.broadcastToWorkspace(workspaceId, ably.WORKSPACE_EVENTS.TASK_DELETED, {
               taskId: id,
               sectionId: task.sectionId,
-            }).catch((err) => console.error("Failed to broadcast task deleted:", err));
+            }).catch((err: unknown) => console.error("Failed to broadcast task deleted:", err));
           }
         });
 
@@ -387,7 +387,7 @@ export const taskService = {
               sectionId: result.sectionId,
               title: result.title,
               completedAt: result.completedAt,
-            }).catch((err) => console.error("Failed to broadcast task completed:", err));
+            }).catch((err: unknown) => console.error("Failed to broadcast task completed:", err));
           }
         });
 

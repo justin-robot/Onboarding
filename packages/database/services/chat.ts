@@ -107,7 +107,7 @@ export const chatService = {
           referencedTaskId: message.referencedTaskId,
           referencedFileId: message.referencedFileId,
           createdAt: message.createdAt,
-        }).catch((err) => console.error("Failed to broadcast message:", err));
+        }).catch((err: unknown) => console.error("Failed to broadcast message:", err));
       }
     });
 
@@ -249,7 +249,7 @@ export const chatService = {
             id: message.id,
             content: message.content,
             updatedAt: message.updatedAt,
-          }).catch((err) => console.error("Failed to broadcast message update:", err));
+          }).catch((err: unknown) => console.error("Failed to broadcast message update:", err));
         }
       });
     }
@@ -286,7 +286,7 @@ export const chatService = {
         if (ably) {
           ably.ablyService.broadcastToChat(existing.workspaceId, ably.CHAT_EVENTS.MESSAGE_DELETED, {
             id,
-          }).catch((err) => console.error("Failed to broadcast message deletion:", err));
+          }).catch((err: unknown) => console.error("Failed to broadcast message deletion:", err));
         }
       });
     }

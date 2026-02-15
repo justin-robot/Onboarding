@@ -2,7 +2,7 @@
   "name": "app",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
+    "dev": "next dev -p 3000 --webpack",
     "build": "next build",
     "start": "next start",
     "analyze": "ANALYZE=true npm run build",
@@ -43,6 +43,7 @@
     "@next/env": "^16.0.10",
     "@playwright/test": "^1.52.0",
     "@repo/typescript-config": "workspace:*",
+    "@repo/vitest": "workspace:*",
     "@tailwindcss/postcss": "^4.1.17",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.0",

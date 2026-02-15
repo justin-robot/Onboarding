@@ -1,7 +1,7 @@
 "use client";
 
-import Ably from "ably";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import type Ably from "ably";
 
 // TokenRequest type from Ably - this is what the server returns
 type TokenRequestData = {
@@ -24,27 +24,29 @@ type AblyClientProviderProps = {
 };
 
 /**
- * Create an Ably client instance using token-based authentication
+ * React context for Ably client
  */
-export const createAblyClient = (tokenRequest: TokenRequestData) => {
-  // Use authCallback to authenticate with the server-provided token request
-  return new Ably.Realtime({
-    authCallback: (tokenParams, callback) => {
-      // Return the token request data - Ably SDK will exchange this for a token
-      callback(null, tokenRequest as Ably.TokenRequest);
-    },
-  });
-};
+const AblyContext = createContext<Ably.Realtime | null>(null);
 
 /**
  * Provider component for Ably realtime functionality
+ * Uses dynamic import to avoid SSR issues with ably's Node.js dependencies
  */
 export const AblyProvider = ({ children, tokenRequest }: AblyClientProviderProps) => {
   const [ablyClient, setAblyClient] = useState<Ably.Realtime | null>(null);
 
   useEffect(() => {
-    const client = createAblyClient(tokenRequest);
-    setAblyClient(client);
+    let client: Ably.Realtime | null = null;
+
+    // Dynamically import ably to avoid SSR issues
+    import("ably").then((AblyModule) => {
+      client = new AblyModule.default.Realtime({
+        authCallback: (tokenParams, callback) => {
+          callback(null, tokenRequest as Ably.TokenRequest);
+        },
+      });
+      setAblyClient(client);
+    });
 
     return () => {
       client?.close();
@@ -59,11 +61,6 @@ export const AblyProvider = ({ children, tokenRequest }: AblyClientProviderProps
     <AblyContext.Provider value={ablyClient}>{children}</AblyContext.Provider>
   );
 };
-
-/**
- * React context for Ably client
- */
-const AblyContext = createContext<Ably.Realtime | null>(null);
 
 export const useAbly = () => {
   const context = useContext(AblyContext);
@@ -126,4 +123,3 @@ export const usePublishMessage = () => {
     return channel.publish(eventName, data);
   };
 };
-

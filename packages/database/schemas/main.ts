@@ -40,6 +40,12 @@ export interface Database {
   file_request_config: FileRequestConfigTable;
   approval_config: ApprovalConfigTable;
   approver: ApproverTable;
+
+  // Moxo audit log (separate from auth audit_log)
+  moxo_audit_log_entry: MoxoAuditLogEntryTable;
+
+  // Integrations
+  workspace_integration: WorkspaceIntegrationTable;
 }
 
 // =====================
@@ -209,6 +215,9 @@ export interface MessageTable {
   userId: string;
   content: string;
   type: Generated<MessageType>;
+  attachmentIds: string[] | null;
+  referencedTaskId: string | null;
+  referencedFileId: string | null;
   deletedAt: Date | null;
   createdAt: Generated<Date>;
   updatedAt: Generated<Date>;
@@ -227,6 +236,7 @@ export interface FileTable {
   thumbnailKey: string | null;
   sourceType: FileSourceType;
   sourceTaskId: string | null;
+  previousVersionId: string | null;
   deletedAt: Date | null;
   createdAt: Generated<Date>;
   updatedAt: Generated<Date>;
@@ -290,7 +300,7 @@ export interface FormPageTable {
   updatedAt: Generated<Date>;
 }
 
-export type FormElementType = "text" | "textarea" | "select" | "radio" | "checkbox" | "file" | "date" | "number" | "email" | "phone";
+export type FormElementType = "text" | "textarea" | "select" | "radio" | "checkbox" | "file" | "date" | "number" | "email" | "phone" | "heading" | "paragraph" | "divider" | "image";
 
 export interface FormElementTable {
   id: Generated<string>;
@@ -382,13 +392,17 @@ export interface BookingTable {
 // E-SIGN TASK TABLES
 // =====================
 
-export type ESignStatus = "pending" | "completed";
+export type ESignStatus = "pending" | "sent" | "viewed" | "signed" | "completed" | "declined" | "cancelled";
+export type ESignProvider = "signnow";
 
 export interface ESignConfigTable {
   id: Generated<string>;
   taskId: string;
-  providerDocumentId: string;
-  providerSigningUrl: string;
+  fileId: string; // Source file to be signed
+  signerEmail: string; // Who should sign
+  provider: Generated<ESignProvider>;
+  providerDocumentId: string | null; // Set after push to provider
+  providerSigningUrl: string | null; // Set after push to provider
   status: Generated<ESignStatus>;
   completedDocumentUrl: string | null;
   createdAt: Generated<Date>;
@@ -427,6 +441,42 @@ export interface ApproverTable {
   status: Generated<ApprovalStatus>;
   decidedAt: Date | null;
   comments: string | null;
+  createdAt: Generated<Date>;
+  updatedAt: Generated<Date>;
+}
+
+// =====================
+// MOXO AUDIT LOG TABLE
+// =====================
+
+export interface MoxoAuditLogEntryTable {
+  id: Generated<string>;
+  workspaceId: string;
+  taskId: string | null;
+  eventType: string;
+  actorId: string;
+  metadata: Record<string, unknown> | null;
+  source: string;
+  ipAddress: string | null;
+  createdAt: Generated<Date>;
+  // No updatedAt - audit logs are immutable
+}
+
+// =====================
+// WORKSPACE INTEGRATION TABLE
+// =====================
+
+export type IntegrationProvider = "google_calendar";
+
+export interface WorkspaceIntegrationTable {
+  id: Generated<string>;
+  workspaceId: string;
+  provider: IntegrationProvider;
+  accessToken: string | null; // Encrypted
+  refreshToken: string | null; // Encrypted
+  tokenExpiresAt: Date | null;
+  scope: string | null;
+  connectedBy: string; // User who connected the integration
   createdAt: Generated<Date>;
   updatedAt: Generated<Date>;
 }
@@ -562,3 +612,12 @@ export type ApprovalConfigUpdate = Updateable<ApprovalConfigTable>;
 export type Approver = Selectable<ApproverTable>;
 export type NewApprover = Insertable<ApproverTable>;
 export type ApproverUpdate = Updateable<ApproverTable>;
+
+// Moxo audit log types (no Update type - immutable)
+export type MoxoAuditLogEntry = Selectable<MoxoAuditLogEntryTable>;
+export type NewMoxoAuditLogEntry = Insertable<MoxoAuditLogEntryTable>;
+
+// Workspace integration types
+export type WorkspaceIntegration = Selectable<WorkspaceIntegrationTable>;
+export type NewWorkspaceIntegration = Insertable<WorkspaceIntegrationTable>;
+export type WorkspaceIntegrationUpdate = Updateable<WorkspaceIntegrationTable>;

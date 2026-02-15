@@ -43,7 +43,7 @@ test.describe("Workspace and Task Management Flow", () => {
       expect(workspace.sections).toHaveLength(0);
 
       // Step 2: Create first section
-      const section1 = {
+      const section1: typeof workspace.sections[number] = {
         id: "section-1",
         title: "Getting Started",
         position: 0,
@@ -54,7 +54,7 @@ test.describe("Workspace and Task Management Flow", () => {
       expect(workspace.sections[0].title).toBe("Getting Started");
 
       // Step 3: Create second section
-      const section2 = {
+      const section2: typeof workspace.sections[number] = {
         id: "section-2",
         title: "Documentation",
         position: 1,

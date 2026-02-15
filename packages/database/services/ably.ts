@@ -1,18 +1,28 @@
 import { database } from "../index";
 
-// Ably is loaded dynamically to avoid bundling issues with Next.js
+// Ably is loaded via require() to avoid Turbopack static analysis issues
 // The ably package has dependencies (keyv, got) that use dynamic requires
 let AblyModule: typeof import("ably") | null = null;
 
-async function loadAbly(): Promise<typeof import("ably") | null> {
+function loadAblySync(): typeof import("ably") | null {
   if (AblyModule) return AblyModule;
+
+  // Only load on server (Node.js environment)
+  if (typeof window !== "undefined") return null;
+
   try {
-    AblyModule = await import("ably");
+    // Use require() to avoid static analysis by bundlers
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    AblyModule = require("ably");
     return AblyModule;
   } catch (error) {
     console.warn("Failed to load Ably module:", error);
     return null;
   }
+}
+
+async function loadAbly(): Promise<typeof import("ably") | null> {
+  return loadAblySync();
 }
 
 // Channel name patterns
