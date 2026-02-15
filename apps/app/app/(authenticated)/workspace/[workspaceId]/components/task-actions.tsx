@@ -45,6 +45,8 @@ interface TaskActionProps {
   documentUrl?: string;
   documentName?: string;
   instructions?: string;
+  bookingLink?: string;
+  signerEmail?: string;
   onComplete?: () => void;
 }
 
@@ -59,6 +61,8 @@ export function TaskAction({
   documentUrl,
   documentName,
   instructions,
+  bookingLink,
+  signerEmail,
   onComplete,
 }: TaskActionProps) {
   if (isLocked) {
@@ -123,7 +127,9 @@ export function TaskAction({
       return (
         <BookingTaskAction
           taskId={taskId}
+          bookingLink={bookingLink}
           isYourTurn={isYourTurn}
+          isAdmin={isAdmin}
           onComplete={onComplete}
         />
       );
@@ -133,7 +139,9 @@ export function TaskAction({
           taskId={taskId}
           documentUrl={documentUrl}
           documentName={documentName}
+          signerEmail={signerEmail}
           isYourTurn={isYourTurn}
+          isAdmin={isAdmin}
           onComplete={onComplete}
         />
       );
@@ -644,6 +652,122 @@ function ApprovalTaskAction({
 // Booking Task Action
 function BookingTaskAction({
   taskId,
+  bookingLink,
+  isYourTurn,
+  isAdmin,
+  onComplete,
+}: {
+  taskId: string;
+  bookingLink?: string;
+  isYourTurn: boolean;
+  isAdmin?: boolean;
+  onComplete?: () => void;
+}) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // If booking link is configured, show the booking UI
+  if (bookingLink) {
+    if (!isYourTurn) {
+      return (
+        <WaitingState message="Waiting for assignee to book a time" />
+      );
+    }
+
+    const handleOpenBookingLink = () => {
+      window.open(bookingLink, "_blank", "noopener,noreferrer");
+    };
+
+    const handleMarkComplete = async () => {
+      setIsSubmitting(true);
+      try {
+        const response = await fetch(`/api/tasks/${taskId}/complete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to complete booking");
+        }
+
+        toast.success("Booking completed successfully");
+        onComplete?.();
+      } catch (error) {
+        toast.error("Failed to complete booking");
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5 text-orange-600" />
+              <CardTitle className="text-base">Book a Meeting</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Click the button below to open the scheduling page and book a time that works for you.
+            </p>
+            <Button
+              className="w-full"
+              onClick={handleOpenBookingLink}
+            >
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Open Booking Page
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={handleMarkComplete}
+          disabled={isSubmitting}
+        >
+          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <CheckSquare className="mr-2 h-4 w-4" />
+          Mark as Booked
+        </Button>
+      </div>
+    );
+  }
+
+  // No booking link configured - show fallback or admin message
+  if (isAdmin) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <CalendarIcon className="h-5 w-5 text-orange-600" />
+              <CardTitle className="text-base">Booking Setup</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Configure this task with a booking link (e.g., Calendly, Cal.com) to allow users to schedule meetings.
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Use the Settings button above to add a booking link.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // For non-admin users, show waiting state
+  return (
+    <WaitingState message="Booking is not yet configured. Please wait for an admin to set it up." />
+  );
+}
+
+// Legacy Booking Task Action with inline calendar (fallback)
+function BookingTaskActionLegacy({
+  taskId,
   isYourTurn,
   onComplete,
 }: {
@@ -766,16 +890,53 @@ function ESignTaskAction({
   taskId,
   documentUrl,
   documentName,
+  signerEmail,
   isYourTurn,
+  isAdmin,
   onComplete,
 }: {
   taskId: string;
   documentUrl?: string;
   documentName?: string;
+  signerEmail?: string;
   isYourTurn: boolean;
+  isAdmin?: boolean;
   onComplete?: () => void;
 }) {
   const [isRedirecting, setIsRedirecting] = useState(false);
+
+  // Check if E-Sign is configured (needs both document and signer)
+  const isConfigured = documentName && signerEmail;
+
+  if (!isConfigured) {
+    // Not configured - show admin setup message or waiting state
+    if (isAdmin) {
+      return (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <FileSignature className="h-5 w-5 text-indigo-600" />
+                <CardTitle className="text-base">E-Signature Setup</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Upload a document and specify the signer's email to enable e-signatures for this task.
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Use the Settings button above to configure e-signature.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+
+    return (
+      <WaitingState message="E-Signature is not yet configured. Please wait for an admin to set it up." />
+    );
+  }
 
   if (!isYourTurn) {
     return (
@@ -786,7 +947,6 @@ function ESignTaskAction({
   const handleSign = async () => {
     setIsRedirecting(true);
     try {
-      // TODO: Get signing URL from API
       const response = await fetch(`/api/tasks/${taskId}/signing-url`, {
         method: "POST",
       });
@@ -813,31 +973,29 @@ function ESignTaskAction({
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {documentName && (
-            <div className="flex items-center gap-3 rounded-md border border-border p-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded bg-muted">
-                <FileText className="h-5 w-5 text-muted-foreground" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">{documentName}</p>
-                <p className="text-xs text-muted-foreground">PDF Document</p>
-              </div>
-              {documentUrl && (
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                    <a href={documentUrl} download>
-                      <Download className="h-4 w-4" />
-                    </a>
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                    <a href={documentUrl} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                  </Button>
-                </div>
-              )}
+          <div className="flex items-center gap-3 rounded-md border border-border p-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded bg-muted">
+              <FileText className="h-5 w-5 text-muted-foreground" />
             </div>
-          )}
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm truncate">{documentName}</p>
+              <p className="text-xs text-muted-foreground">Signer: {signerEmail}</p>
+            </div>
+            {documentUrl && (
+              <div className="flex gap-1">
+                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                  <a href={documentUrl} download>
+                    <Download className="h-4 w-4" />
+                  </a>
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                  <a href={documentUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 

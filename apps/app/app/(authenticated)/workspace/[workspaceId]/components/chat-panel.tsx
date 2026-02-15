@@ -7,6 +7,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@repo/design/components/ui/
 import { ScrollArea } from "@repo/design/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/design/components/ui/tabs";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@repo/design/components/ui/popover";
+import {
   MessageSquare,
   Video,
   Send,
@@ -15,9 +20,20 @@ import {
   ArrowDown,
   Image as ImageIcon,
   FileText,
+  X,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@repo/design/lib/utils";
 import { format, isToday, isYesterday, isSameDay } from "date-fns";
+import { toast } from "sonner";
+
+// Common emoji categories for quick access
+const EMOJI_CATEGORIES = [
+  { name: "Smileys", emojis: ["😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "😉", "😊", "😇", "🥰", "😍", "😘", "😗"] },
+  { name: "Gestures", emojis: ["👍", "👎", "👌", "✌️", "🤞", "🤟", "🤘", "🤙", "👋", "🖐️", "✋", "👏", "🙌", "🤝", "🙏", "💪"] },
+  { name: "Hearts", emojis: ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❣️", "💕", "💞", "💓", "💗", "💖"] },
+  { name: "Objects", emojis: ["⭐", "🔥", "✨", "💯", "✅", "❌", "⚡", "💡", "🎉", "🎊", "🎁", "📌", "📍", "🔔", "💬", "📝"] },
+];
 
 type MessageType = "text" | "annotation" | "system" | "file";
 
@@ -68,8 +84,12 @@ export function ChatPanel({
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -88,12 +108,15 @@ export function ChatPanel({
   };
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || isSending) return;
+    if ((!newMessage.trim() && !selectedFile) || isSending) return;
 
     setIsSending(true);
     try {
-      await onSendMessage?.(newMessage.trim());
+      await onSendMessage?.(newMessage.trim(), selectedFile || undefined);
       setNewMessage("");
+      setSelectedFile(null);
+    } catch (error) {
+      toast.error("Failed to send message");
     } finally {
       setIsSending(false);
     }
@@ -104,6 +127,29 @@ export function ChatPanel({
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Check file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("File size must be less than 10MB");
+        return;
+      }
+      setSelectedFile(file);
+    }
+    // Reset input so same file can be selected again
+    e.target.value = "";
+  };
+
+  const handleEmojiSelect = (emoji: string) => {
+    setNewMessage((prev) => prev + emoji);
+    setEmojiPickerOpen(false);
+  };
+
+  const clearSelectedFile = () => {
+    setSelectedFile(null);
   };
 
   // Group messages by date
@@ -183,8 +229,42 @@ export function ChatPanel({
 
           {/* Message input */}
           <div className="border-t border-border p-3">
+            {/* Selected file preview */}
+            {selectedFile && (
+              <div className="mb-2 flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2">
+                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-sm truncate flex-1">{selectedFile.name}</span>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {(selectedFile.size / 1024).toFixed(1)} KB
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 shrink-0"
+                  onClick={clearSelectedFile}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+              {/* Hidden file input */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleFileSelect}
+                accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx"
+              />
+
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSending}
+              >
                 <Paperclip className="h-4 w-4" />
               </Button>
               <Input
@@ -195,16 +275,49 @@ export function ChatPanel({
                 disabled={isSending}
                 className="flex-1"
               />
-              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-                <Smile className="h-4 w-4" />
-              </Button>
+
+              {/* Emoji picker */}
+              <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                    <Smile className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 p-2" align="end">
+                  <div className="space-y-2">
+                    {EMOJI_CATEGORIES.map((category) => (
+                      <div key={category.name}>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">
+                          {category.name}
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {category.emojis.map((emoji) => (
+                            <button
+                              key={emoji}
+                              className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted text-lg"
+                              onClick={() => handleEmojiSelect(emoji)}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
               <Button
                 size="icon"
                 className="h-8 w-8 shrink-0"
                 onClick={handleSendMessage}
-                disabled={!newMessage.trim() || isSending}
+                disabled={(!newMessage.trim() && !selectedFile) || isSending}
               >
-                <Send className="h-4 w-4" />
+                {isSending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
               </Button>
             </div>
           </div>

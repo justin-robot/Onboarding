@@ -98,12 +98,71 @@ function RealtimeChatInner({
     onMessageDeleted: handleMessageDeleted,
   });
 
+  // Upload file helper
+  const uploadFile = async (file: File): Promise<{ id: string; name: string; url?: string }> => {
+    // Get presigned URL
+    const uploadResponse = await fetch(`/api/workspaces/${workspaceId}/files/upload`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        filename: file.name,
+        mimeType: file.type || "application/octet-stream",
+      }),
+    });
+
+    if (!uploadResponse.ok) {
+      throw new Error("Failed to get upload URL");
+    }
+
+    const { uploadUrl, key } = await uploadResponse.json();
+
+    // Upload to S3
+    const s3Response = await fetch(uploadUrl, {
+      method: "PUT",
+      body: file,
+      headers: { "Content-Type": file.type || "application/octet-stream" },
+    });
+
+    if (!s3Response.ok) {
+      throw new Error("Failed to upload file");
+    }
+
+    // Confirm upload
+    const confirmResponse = await fetch(`/api/workspaces/${workspaceId}/files/confirm`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        key,
+        name: file.name,
+        mimeType: file.type || "application/octet-stream",
+        size: file.size,
+      }),
+    });
+
+    if (!confirmResponse.ok) {
+      throw new Error("Failed to confirm upload");
+    }
+
+    return confirmResponse.json();
+  };
+
   // Send message handler
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (content: string, attachment?: File) => {
+    let fileId: string | undefined;
+
+    // Upload attachment if present
+    if (attachment) {
+      const uploadedFile = await uploadFile(attachment);
+      fileId = uploadedFile.id;
+    }
+
     const response = await fetch(`/api/workspaces/${workspaceId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({
+        content,
+        fileId,
+      }),
     });
 
     if (!response.ok) {
@@ -120,6 +179,7 @@ function RealtimeChatInner({
       senderId: data.senderId,
       senderName: data.senderName,
       createdAt: new Date(data.createdAt),
+      attachment: data.attachment,
     };
 
     setMessages((prev) => {

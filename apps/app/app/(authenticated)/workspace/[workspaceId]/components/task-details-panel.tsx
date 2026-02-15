@@ -105,6 +105,7 @@ export function TaskDetailsPanel({
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
+  const [fileInfo, setFileInfo] = useState<{ name: string; url?: string } | null>(null);
 
   // Check if this task type needs configuration
   const needsConfiguration = () => {
@@ -186,6 +187,7 @@ export function TaskDetailsPanel({
     const fetchTaskDetails = async () => {
       setLoading(true);
       setError(null);
+      setFileInfo(null);
       try {
         const response = await fetch(`/api/tasks/${task.id}`);
         if (!response.ok) {
@@ -193,6 +195,22 @@ export function TaskDetailsPanel({
         }
         const data = await response.json();
         setConfig(data.config);
+
+        // If this is an e-sign task with a fileId, fetch file info
+        if (task.type === "esign" && data.config?.fileId) {
+          try {
+            const fileResponse = await fetch(`/api/files/${data.config.fileId}`);
+            if (fileResponse.ok) {
+              const fileData = await fileResponse.json();
+              setFileInfo({
+                name: fileData.name,
+                url: fileData.url,
+              });
+            }
+          } catch (fileErr) {
+            console.error("Error fetching file info:", fileErr);
+          }
+        }
       } catch (err) {
         console.error("Error fetching task details:", err);
         setError("Failed to load task details");
@@ -202,7 +220,7 @@ export function TaskDetailsPanel({
     };
 
     fetchTaskDetails();
-  }, [task.id]);
+  }, [task.id, task.type]);
 
   // Extract config-specific props based on task type
   const getConfigProps = () => {
@@ -213,12 +231,20 @@ export function TaskDetailsPanel({
         return { formConfigId: (config as FormConfig).id };
       case "acknowledgement":
         return { instructions: (config as AcknowledgementConfig).instructions || task.description || undefined };
-      case "esign":
-        // TODO: Fetch file URL from file service
+      case "booking": {
+        const bookingConfig = config as TimeBookingConfig;
         return {
-          documentName: "Document.pdf",
-          documentUrl: undefined,
+          bookingLink: bookingConfig.bookingLink || undefined,
         };
+      }
+      case "esign": {
+        const esignConfig = config as ESignConfig;
+        return {
+          documentName: fileInfo?.name || (esignConfig.fileId ? "Document" : undefined),
+          documentUrl: fileInfo?.url,
+          signerEmail: esignConfig.signerEmail || undefined,
+        };
+      }
       default:
         return {};
     }
