@@ -15,7 +15,7 @@ let nextConfig: NextConfig = withLogging({
     "@aws-sdk/s3-request-presigner",
   ],
   // Webpack fallback for when turbopack isn't used
-  webpack: (webpackConfig, { isServer }) => {
+  webpack: (webpackConfig: { externals?: unknown[] }, { isServer }: { isServer: boolean }) => {
     if (isServer) {
       // Externalize ably and its problematic dependencies on server
       webpackConfig.externals = webpackConfig.externals || [];

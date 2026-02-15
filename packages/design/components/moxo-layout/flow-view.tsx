@@ -58,7 +58,8 @@ function sectionsToTimelineSteps(sections: FlowSection[]): TimelineStep[] {
   let stepNumber = 1;
 
   sections.forEach((section) => {
-    section.tasks.forEach((task) => {
+    const tasks = section.tasks || [];
+    tasks.forEach((task) => {
       let status: TimelineStepStatus;
       if (task.isCompleted) {
         status = "completed";
@@ -125,8 +126,9 @@ export function FlowView({
 
   // Calculate progress for each section
   const getSectionProgress = (section: FlowSection) => {
-    const completed = section.tasks.filter((t) => t.isCompleted).length;
-    return { completedCount: completed, totalCount: section.tasks.length };
+    const tasks = section.tasks || [];
+    const completed = tasks.filter((t) => t.isCompleted).length;
+    return { completedCount: completed, totalCount: tasks.length };
   };
 
   // Hide timeline on mobile

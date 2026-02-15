@@ -6,7 +6,10 @@ import {
   MoxoLayout,
   WorkspaceSidebar,
   FlowView,
+  UploadDialog,
+  FilePreviewModal,
   type FlowSection,
+  type PreviewFile,
 } from "@repo/design/components/moxo-layout";
 import type { SectionStatus } from "@repo/design/components/moxo-layout";
 import { TaskDetailsPanel } from "./components/task-details-panel";
@@ -100,6 +103,9 @@ export function WorkspaceView({
   const [addTaskSectionId, setAddTaskSectionId] = useState<string | null>(null);
   const [addSectionDialogOpen, setAddSectionDialogOpen] = useState(false);
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [previewFile, setPreviewFile] = useState<PreviewFile | null>(null);
+  const [workspaceFiles, setWorkspaceFiles] = useState<FileItem[]>(files);
 
   // Initial messages state (fetched once, then real-time takes over)
   const [initialMessages, setInitialMessages] = useState<Message[]>([]);
@@ -142,12 +148,12 @@ export function WorkspaceView({
   }, [currentWorkspaceId]);
 
   // Transform workspace sections for FlowView
-  const flowSections: FlowSection[] = workspace.sections.map((section) => ({
+  const flowSections: FlowSection[] = (workspace.sections || []).map((section) => ({
     id: section.id,
     title: section.title,
     description: section.description || undefined,
     status: section.status as SectionStatus,
-    tasks: section.tasks.map((task) => ({
+    tasks: (section.tasks || []).map((task) => ({
       id: task.id,
       title: task.title,
       type: task.type,
@@ -162,7 +168,7 @@ export function WorkspaceView({
 
   // Get currently selected task
   const selectedTask = selectedTaskId
-    ? workspace.sections.flatMap((s) => s.tasks).find((t) => t.id === selectedTaskId)
+    ? (workspace.sections || []).flatMap((s) => s.tasks || []).find((t) => t.id === selectedTaskId)
     : null;
 
   // Handle task selection
@@ -187,8 +193,8 @@ export function WorkspaceView({
 
   // Get task count for the selected section
   const getTaskCount = (sectionId: string) => {
-    const section = workspace.sections.find((s) => s.id === sectionId);
-    return section?.tasks.length ?? 0;
+    const section = (workspace.sections || []).find((s) => s.id === sectionId);
+    return section?.tasks?.length ?? 0;
   };
 
   // Handle workspace navigation
@@ -198,13 +204,14 @@ export function WorkspaceView({
 
   // Handle add task from menu (need to select a section first)
   const handleAddTaskFromMenu = () => {
-    if (workspace.sections.length === 0) {
+    const sections = workspace.sections || [];
+    if (sections.length === 0) {
       toast.error("Please create a section first");
       setAddSectionDialogOpen(true);
       return;
     }
     // Use the first section by default, or show section picker
-    setAddTaskSectionId(workspace.sections[0].id);
+    setAddTaskSectionId(sections[0].id);
     setAddTaskDialogOpen(true);
   };
 
@@ -252,13 +259,24 @@ export function WorkspaceView({
       }
       filesContent={
         <FilesView
-          files={files}
+          files={workspaceFiles}
           workspaceId={currentWorkspaceId}
           onFileClick={(file) => {
-            // TODO: Handle file click (preview)
+            if (file.type === "file") {
+              setPreviewFile({
+                id: file.id,
+                name: file.name,
+                mimeType: file.mimeType || "application/octet-stream",
+                size: file.size || 0,
+                url: file.url,
+                thumbnailUrl: file.thumbnailUrl,
+                uploadedBy: file.uploadedBy,
+                uploadedAt: file.uploadedAt,
+              });
+            }
           }}
           onUpload={() => {
-            // TODO: Open upload dialog
+            setUploadDialogOpen(true);
           }}
         />
       }
@@ -318,8 +336,48 @@ export function WorkspaceView({
       open={addSectionDialogOpen}
       onOpenChange={setAddSectionDialogOpen}
       workspaceId={currentWorkspaceId}
-      currentSectionCount={workspace.sections.length}
+      currentSectionCount={(workspace.sections || []).length}
       onSectionCreated={() => router.refresh()}
+    />
+
+    {/* Upload Dialog */}
+    <UploadDialog
+      open={uploadDialogOpen}
+      onOpenChange={setUploadDialogOpen}
+      workspaceId={currentWorkspaceId}
+      onUploadComplete={(uploadedFiles) => {
+        // Add newly uploaded files to the list
+        const newFiles: FileItem[] = uploadedFiles.map((f) => ({
+          id: f.id,
+          name: f.name,
+          type: "file" as const,
+          mimeType: f.mimeType,
+          size: f.size,
+          uploadedAt: new Date(),
+        }));
+        setWorkspaceFiles((prev) => [...newFiles, ...prev]);
+        toast.success(`${uploadedFiles.length} file(s) uploaded successfully`);
+      }}
+      multiple
+    />
+
+    {/* File Preview Modal */}
+    <FilePreviewModal
+      open={previewFile !== null}
+      onOpenChange={(open) => {
+        if (!open) setPreviewFile(null);
+      }}
+      file={previewFile}
+      onDelete={async (fileId) => {
+        try {
+          // TODO: Implement file deletion API
+          setWorkspaceFiles((prev) => prev.filter((f) => f.id !== fileId));
+          setPreviewFile(null);
+          toast.success("File deleted");
+        } catch (error) {
+          toast.error("Failed to delete file");
+        }
+      }}
     />
 
     {/* Workspace Menu Sheet */}
