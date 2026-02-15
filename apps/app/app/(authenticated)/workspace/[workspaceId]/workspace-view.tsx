@@ -13,6 +13,7 @@ import { TaskDetailsPanel } from "./components/task-details-panel";
 import { FilesView, type FileItem } from "./components/files-view";
 import { MembersPanel } from "./components/members-panel";
 import { RealtimeChat } from "./components/realtime-chat";
+import { RealtimeWorkspaceEvents } from "./components/realtime-workspace-events";
 import type { Message } from "./components/chat-panel";
 import { AddTaskDialog } from "./components/add-task-dialog";
 import { AddSectionDialog } from "./components/add-section-dialog";
@@ -224,6 +225,12 @@ export function WorkspaceView({
 
   return (
     <>
+    {/* Real-time workspace event subscriptions */}
+    <RealtimeWorkspaceEvents
+      workspaceId={currentWorkspaceId}
+      onWorkspaceUpdate={() => router.refresh()}
+    />
+
     <MoxoLayout
       sidebar={
         <WorkspaceSidebar

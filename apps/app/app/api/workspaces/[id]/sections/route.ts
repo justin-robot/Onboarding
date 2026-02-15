@@ -1,4 +1,5 @@
 import { sectionService } from "@repo/database";
+import { ablyService, WORKSPACE_EVENTS } from "@repo/database/services/ably";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
@@ -38,6 +39,20 @@ export async function POST(request: NextRequest, { params }: Params) {
       workspaceId,
       title: body.title,
       position: body.position,
+    });
+
+    // Broadcast section creation via Ably (non-blocking)
+    ablyService.broadcastToWorkspace(
+      workspaceId,
+      WORKSPACE_EVENTS.SECTION_CREATED,
+      {
+        id: section.id,
+        title: section.title,
+        position: section.position,
+        workspaceId: section.workspaceId,
+      }
+    ).catch((err) => {
+      console.error("Failed to broadcast section creation:", err);
     });
 
     return json(section, 201);

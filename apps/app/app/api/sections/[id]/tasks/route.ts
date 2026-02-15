@@ -1,4 +1,5 @@
-import { taskService, configService } from "@repo/database";
+import { taskService, configService, sectionService } from "@repo/database";
+import { ablyService, WORKSPACE_EVENTS } from "@repo/database/services/ably";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 import type { TaskType, DueDateType } from "@repo/database";
@@ -52,6 +53,29 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     // Auto-create config for task types that support it
     await configService.createConfigForTask(task.id, task.type);
+
+    // Broadcast task creation via Ably (non-blocking)
+    (async () => {
+      try {
+        const section = await sectionService.getById(sectionId);
+        if (section) {
+          await ablyService.broadcastToWorkspace(
+            section.workspaceId,
+            WORKSPACE_EVENTS.TASK_CREATED,
+            {
+              id: task.id,
+              title: task.title,
+              type: task.type,
+              status: task.status,
+              sectionId: task.sectionId,
+              position: task.position,
+            }
+          );
+        }
+      } catch (err) {
+        console.error("Failed to broadcast task creation:", err);
+      }
+    })();
 
     return json(task, 201);
   });
