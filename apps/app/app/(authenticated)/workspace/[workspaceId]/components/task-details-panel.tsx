@@ -2,9 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { TaskAction } from "./task-actions";
+import { TaskConfigDialog } from "./task-config-dialog";
 import { Button } from "@repo/design/components/ui/button";
 import { Badge } from "@repo/design/components/ui/badge";
 import { ScrollArea } from "@repo/design/components/ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@repo/design/components/ui/alert-dialog";
 import {
   Loader2,
   X,
@@ -14,8 +26,11 @@ import {
   Calendar,
   FileSignature,
   ThumbsUp,
+  Trash2,
+  Settings,
 } from "lucide-react";
 import { cn } from "@repo/design/lib/utils";
+import { toast } from "sonner";
 
 interface Task {
   id: string;
@@ -73,6 +88,7 @@ interface TaskDetailsPanelProps {
   task: Task;
   onClose: () => void;
   onTaskComplete: () => void;
+  onTaskDelete?: () => void;
   isAdmin?: boolean;
 }
 
@@ -80,11 +96,90 @@ export function TaskDetailsPanel({
   task,
   onClose,
   onTaskComplete,
+  onTaskDelete,
   isAdmin,
 }: TaskDetailsPanelProps) {
   const [config, setConfig] = useState<TaskConfig>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [configDialogOpen, setConfigDialogOpen] = useState(false);
+
+  // Check if this task type needs configuration
+  const needsConfiguration = () => {
+    if (loading || !isAdmin) return false;
+
+    switch (task.type) {
+      case "booking":
+        // TIME_BOOKING needs a booking link
+        return !config || !(config as TimeBookingConfig).bookingLink;
+      case "esign":
+        // E_SIGN needs fileId and signerEmail
+        if (!config) return true;
+        const esignConfig = config as ESignConfig;
+        return !esignConfig.fileId || !esignConfig.signerEmail;
+      default:
+        return false;
+    }
+  };
+
+  // Check if this task type is configurable
+  const isConfigurable = () => {
+    return ["booking", "esign", "acknowledgement"].includes(task.type);
+  };
+
+  // Get existing config for the dialog
+  const getExistingConfig = () => {
+    if (!config) return null;
+    switch (task.type) {
+      case "booking":
+        return { bookingLink: (config as TimeBookingConfig).bookingLink };
+      case "esign":
+        const esignConfig = config as ESignConfig;
+        return { fileId: esignConfig.fileId, signerEmail: esignConfig.signerEmail };
+      case "acknowledgement":
+        return { instructions: (config as AcknowledgementConfig).instructions };
+      default:
+        return null;
+    }
+  };
+
+  const handleConfigSaved = () => {
+    // Refetch task details to get updated config
+    setLoading(true);
+    fetch(`/api/tasks/${task.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setConfig(data.config);
+        onTaskComplete(); // Refresh the parent view
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete task");
+      }
+
+      toast.success("Task deleted successfully");
+      setDeleteDialogOpen(false);
+      onTaskDelete?.();
+      onClose();
+    } catch (err) {
+      console.error("Error deleting task:", err);
+      toast.error("Failed to delete task");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // Fetch task details with config when task changes
   useEffect(() => {
@@ -174,6 +269,60 @@ export function TaskDetailsPanel({
                 Complete
               </Badge>
             )}
+            {isAdmin && isConfigurable() && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-8 w-8",
+                  needsConfiguration()
+                    ? "text-amber-500 hover:text-amber-600"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+                onClick={() => setConfigDialogOpen(true)}
+                title={needsConfiguration() ? "Configuration required" : "Configure task"}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            )}
+            {isAdmin && (
+              <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Task</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete "{task.title}"? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDelete}
+                      disabled={isDeleting}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {isDeleting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        "Delete"
+                      )}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>
@@ -223,6 +372,26 @@ export function TaskDetailsPanel({
               <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-center text-sm text-destructive">
                 {error}
               </div>
+            ) : needsConfiguration() ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center dark:border-amber-900/30 dark:bg-amber-950/20">
+                <Settings className="mx-auto h-8 w-8 text-amber-500" />
+                <p className="mt-2 text-sm font-medium text-amber-700 dark:text-amber-400">
+                  Configuration Required
+                </p>
+                <p className="mt-1 text-xs text-amber-600 dark:text-amber-500">
+                  {task.type === "booking"
+                    ? "Set up a booking link to allow users to schedule meetings"
+                    : "Upload a document and specify the signer to enable e-signatures"}
+                </p>
+                <Button
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => setConfigDialogOpen(true)}
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  Configure Now
+                </Button>
+              </div>
             ) : (
               <TaskAction
                 taskId={task.id}
@@ -239,6 +408,19 @@ export function TaskDetailsPanel({
           </div>
         </div>
       </ScrollArea>
+
+      {/* Task Configuration Dialog */}
+      {isConfigurable() && (
+        <TaskConfigDialog
+          open={configDialogOpen}
+          onOpenChange={setConfigDialogOpen}
+          taskId={task.id}
+          taskType={task.type}
+          taskTitle={task.title}
+          existingConfig={getExistingConfig()}
+          onConfigSaved={handleConfigSaved}
+        />
+      )}
     </div>
   );
 }

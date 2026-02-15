@@ -294,6 +294,10 @@ export function WorkspaceView({
             onTaskComplete={() => {
               router.refresh();
             }}
+            onTaskDelete={() => {
+              setSelectedTaskId(null);
+              router.refresh();
+            }}
             isAdmin={currentUserRole === "admin"}
           />
         ) : messagesLoaded ? (
