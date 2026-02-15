@@ -257,13 +257,12 @@ function AcknowledgementTaskAction({
   const handleAcknowledge = async () => {
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/tasks/${taskId}/complete`, {
+      const response = await fetch(`/api/tasks/${taskId}/acknowledge`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
       });
 
       if (!response.ok) {
-        throw new Error("Failed to complete task");
+        throw new Error("Failed to acknowledge task");
       }
 
       toast.success("Task acknowledged successfully");
@@ -528,10 +527,8 @@ function ApprovalTaskAction({
   const handleApprove = async () => {
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/tasks/${taskId}/complete`, {
+      const response = await fetch(`/api/tasks/${taskId}/approve`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ approved: true }),
       });
 
       if (!response.ok) {
@@ -555,10 +552,10 @@ function ApprovalTaskAction({
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`/api/tasks/${taskId}/complete`, {
+      const response = await fetch(`/api/tasks/${taskId}/reject`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ approved: false, reason: rejectReason }),
+        body: JSON.stringify({ reason: rejectReason }),
       });
 
       if (!response.ok) {

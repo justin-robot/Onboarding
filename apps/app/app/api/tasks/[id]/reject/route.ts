@@ -1,0 +1,92 @@
+import { taskService, configService, sectionService } from "@repo/database";
+import { ablyService, WORKSPACE_EVENTS } from "@repo/database/services/ably";
+import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
+import type { NextRequest } from "next/server";
+
+type Params = { params: Promise<{ id: string }> };
+
+/**
+ * POST /api/tasks/[id]/reject - Reject a task
+ *
+ * Used for APPROVAL type tasks where user rejects submitted content.
+ * Body: { reason: string }
+ */
+export async function POST(request: NextRequest, { params }: Params) {
+  return withErrorHandler(async () => {
+    const user = await requireAuth();
+    const { id } = await params;
+
+    // Get task to verify type
+    const task = await taskService.getById(id);
+    if (!task) {
+      return errorResponse("Task not found", 404);
+    }
+
+    if (task.type !== "APPROVAL") {
+      return errorResponse("This endpoint is only for approval tasks", 400);
+    }
+
+    if (task.status === "completed") {
+      return errorResponse("Task is already completed", 400);
+    }
+
+    // Parse body for rejection reason
+    let reason: string | undefined;
+    try {
+      const body = await request.json();
+      reason = body.reason;
+    } catch {
+      // No body or invalid JSON
+    }
+
+    if (!reason) {
+      return errorResponse("Rejection reason is required", 400);
+    }
+
+    // Record the rejection decision
+    const result = await configService.recordApprovalDecision(id, user.id, {
+      approved: false,
+      comments: reason,
+    });
+
+    if (!result.success) {
+      return errorResponse(result.error || "Failed to record rejection", 500);
+    }
+
+    // For rejection, we keep the task open (not completed) so the submitter can revise
+    // Just update the task to reflect it needs revision
+    const updatedTask = await taskService.getById(id);
+
+    // Broadcast rejection via Ably (non-blocking)
+    (async () => {
+      try {
+        const section = await sectionService.getById(task.sectionId);
+        if (section) {
+          await ablyService.broadcastToWorkspace(
+            section.workspaceId,
+            WORKSPACE_EVENTS.TASK_UPDATED,
+            {
+              id: task.id,
+              title: task.title,
+              type: task.type,
+              status: task.status,
+              sectionId: task.sectionId,
+              rejected: true,
+              rejectedBy: user.id,
+              rejectionReason: reason,
+            }
+          );
+        }
+      } catch (err) {
+        console.error("Failed to broadcast rejection:", err);
+      }
+    })();
+
+    return json({
+      success: true,
+      rejected: true,
+      reason,
+      task: updatedTask,
+    });
+  });
+}
