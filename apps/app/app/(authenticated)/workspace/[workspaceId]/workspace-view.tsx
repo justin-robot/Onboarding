@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   MoxoLayout,
@@ -12,6 +12,8 @@ import type { SectionStatus } from "@repo/design/components/moxo-layout";
 import { TaskDetailsPanel } from "./components/task-details-panel";
 import { FilesView, type FileItem } from "./components/files-view";
 import { MembersPanel } from "./components/members-panel";
+import { RealtimeChat } from "./components/realtime-chat";
+import type { Message } from "./components/chat-panel";
 import { AddTaskDialog } from "./components/add-task-dialog";
 import { AddSectionDialog } from "./components/add-section-dialog";
 import {
@@ -97,6 +99,46 @@ export function WorkspaceView({
   const [addTaskSectionId, setAddTaskSectionId] = useState<string | null>(null);
   const [addSectionDialogOpen, setAddSectionDialogOpen] = useState(false);
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
+
+  // Initial messages state (fetched once, then real-time takes over)
+  const [initialMessages, setInitialMessages] = useState<Message[]>([]);
+  const [messagesLoaded, setMessagesLoaded] = useState(false);
+
+  // Fetch initial messages once on mount
+  useEffect(() => {
+    const fetchInitialMessages = async () => {
+      try {
+        const response = await fetch(`/api/workspaces/${currentWorkspaceId}/messages`);
+        if (response.ok) {
+          const data = await response.json();
+          const formattedMessages: Message[] = data.messages.reverse().map((msg: {
+            id: string;
+            type: string;
+            content: string;
+            senderId: string;
+            senderName: string;
+            senderAvatarUrl?: string;
+            createdAt: string;
+          }) => ({
+            id: msg.id,
+            type: msg.type as Message["type"],
+            content: msg.content,
+            senderId: msg.senderId,
+            senderName: msg.senderName,
+            senderAvatarUrl: msg.senderAvatarUrl,
+            createdAt: new Date(msg.createdAt),
+          }));
+          setInitialMessages(formattedMessages);
+        }
+      } catch (error) {
+        console.error("Failed to fetch initial messages:", error);
+      } finally {
+        setMessagesLoaded(true);
+      }
+    };
+
+    fetchInitialMessages();
+  }, [currentWorkspaceId]);
 
   // Transform workspace sections for FlowView
   const flowSections: FlowSection[] = workspace.sections.map((section) => ({
@@ -229,9 +271,15 @@ export function WorkspaceView({
             }}
             isAdmin={currentUserRole === "admin"}
           />
+        ) : messagesLoaded ? (
+          <RealtimeChat
+            workspaceId={currentWorkspaceId}
+            currentUserId={currentUserId}
+            initialMessages={initialMessages}
+          />
         ) : (
-          <div className="flex h-full items-center justify-center p-6 text-muted-foreground">
-            Select a task to view details
+          <div className="flex h-full items-center justify-center">
+            <div className="text-sm text-muted-foreground">Loading chat...</div>
           </div>
         )
       }
@@ -240,7 +288,7 @@ export function WorkspaceView({
       onTabChange={setActiveTab}
       showRightPanel={true}
       sidebarTitle="Workspaces"
-      rightPanelTitle={showMembersPanel ? "Members" : selectedTask ? selectedTask.title : "Details"}
+      rightPanelTitle={showMembersPanel ? "Members" : selectedTask ? selectedTask.title : "Chat"}
       sidebarOpen={sidebarOpen}
       onSidebarOpenChange={setSidebarOpen}
       rightPanelOpen={rightPanelOpen}
