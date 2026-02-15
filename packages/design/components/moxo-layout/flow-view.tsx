@@ -172,7 +172,7 @@ export function FlowView({
                 onToggleCollapse={() => toggleSection(section.id)}
               >
                 <div className={cn("space-y-2", isCompact && "space-y-1.5")}>
-                  {section.tasks.map((task) => (
+                  {(section.tasks || []).map((task) => (
                     <TaskCard
                       key={task.id}
                       id={task.id}
