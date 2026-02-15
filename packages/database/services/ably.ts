@@ -65,13 +65,15 @@ export type WorkspaceEvent = (typeof WORKSPACE_EVENTS)[keyof typeof WORKSPACE_EV
 export type ChatEvent = (typeof CHAT_EVENTS)[keyof typeof CHAT_EVENTS];
 export type UserEvent = (typeof USER_EVENTS)[keyof typeof USER_EVENTS];
 
-// Token request result
+// Token request result - matches Ably's TokenRequest structure
 export interface AblyTokenRequest {
-  token: string;
-  issued: number;
-  expires: number;
-  capability: string;
-  clientId: string;
+  keyName?: string;
+  clientId?: string;
+  timestamp?: number;
+  nonce?: string;
+  mac?: string;
+  capability?: string;
+  ttl?: number;
 }
 
 // Get Ably REST client (async to support dynamic import)
@@ -128,13 +130,8 @@ export const ablyService = {
       ttl: 60 * 60 * 1000, // 1 hour
     });
 
-    return {
-      token: tokenRequest.token || "",
-      issued: tokenRequest.timestamp || Date.now(),
-      expires: (tokenRequest.timestamp || Date.now()) + (tokenRequest.ttl || 3600000),
-      capability: JSON.stringify(capability),
-      clientId: userId,
-    };
+    // Return the token request - client SDK will use this to authenticate
+    return tokenRequest as AblyTokenRequest;
   },
 
   /**
@@ -177,13 +174,7 @@ export const ablyService = {
       ttl: 60 * 60 * 1000,
     });
 
-    return {
-      token: tokenRequest.token || "",
-      issued: tokenRequest.timestamp || Date.now(),
-      expires: (tokenRequest.timestamp || Date.now()) + (tokenRequest.ttl || 3600000),
-      capability: JSON.stringify(capability),
-      clientId: userId,
-    };
+    return tokenRequest as AblyTokenRequest;
   },
 
   /**

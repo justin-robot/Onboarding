@@ -3,29 +3,37 @@
 import Ably from "ably";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
-type AblyClientProviderProps = {
-  children: ReactNode;
-  tokenRequest: {
-    token: string;
-    issued: number;
-    expires: number;
-    capability: string;
-    clientId?: string;
-  };
+// TokenRequest type from Ably - this is what the server returns
+type TokenRequestData = {
+  keyName?: string;
+  clientId?: string;
+  timestamp?: number;
+  nonce?: string;
+  mac?: string;
+  capability?: string;
+  ttl?: number;
+  // Additional fields we add
+  token?: string;
+  issued?: number;
+  expires?: number;
 };
 
-const ablyApiKey = process.env.NEXT_PUBLIC_ABLY_API_KEY;
+type AblyClientProviderProps = {
+  children: ReactNode;
+  tokenRequest: TokenRequestData;
+};
 
 /**
- * Create an Ably client instance
+ * Create an Ably client instance using token-based authentication
  */
-export const createAblyClient = (tokenRequest: AblyClientProviderProps["tokenRequest"]) => {
-  if (!ablyApiKey) {
-    console.warn("NEXT_PUBLIC_ABLY_API_KEY not configured");
-    return null;
-  }
-
-  return new Ably.Realtime({ authCallback: async () => tokenRequest });
+export const createAblyClient = (tokenRequest: TokenRequestData) => {
+  // Use authCallback to authenticate with the server-provided token request
+  return new Ably.Realtime({
+    authCallback: (tokenParams, callback) => {
+      // Return the token request data - Ably SDK will exchange this for a token
+      callback(null, tokenRequest as Ably.TokenRequest);
+    },
+  });
 };
 
 /**

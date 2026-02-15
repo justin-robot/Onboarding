@@ -27,3 +27,4 @@ export const getAblyServer = () => {
 
 // Client-side exports (must be in separate file due to "use client")
 export * from "./client";
+export * from "./hooks";
