@@ -175,7 +175,7 @@ function FormTaskAction({
             </p>
             <Button
               className="w-full"
-              onClick={() => router.push(`/forms/edit/${taskId}`)}
+              onClick={() => router.push(`/forms/${taskId}/edit`)}
             >
               <FileText className="mr-2 h-4 w-4" />
               Edit Form
