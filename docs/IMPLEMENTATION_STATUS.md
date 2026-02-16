@@ -11,9 +11,9 @@ Last updated: 2026-02-15
 | Category | Status | Details |
 |----------|--------|---------|
 | Database Models | **95% Complete** | All 25 models implemented |
-| API Endpoints | **94% Complete** | Core CRUD, comments, activity, notifications complete |
+| API Endpoints | **96% Complete** | Core CRUD, comments, activity, notifications, integrations complete |
 | UI Components | **90% Complete** | Comments, notifications, activity, dnd-kit added |
-| Integrations | **80% Complete** | All Knock workflows wired, Google Calendar partial |
+| Integrations | **95% Complete** | SignNow complete, Google Calendar backend complete, Knock 11/12 |
 | Task Flow Engine | **85% Complete** | Due date cascading complete, dependencies working |
 
 ---
@@ -111,28 +111,31 @@ Not yet implemented:
 - [ ] **UI: Relative due date selector** - "X days after [Task]"
 
 #### 8. SignNow E-Sign Integration
-**Status:** Partial implementation
+**Status:** Complete
 **Spec Reference:** Technical Spec - SignNow Integration
 
 - [x] ESignConfig schema with provider fields
 - [x] Webhook handler endpoint exists
 - [x] Signing URL generation endpoint
-- [ ] **Push document to SignNow API** on task configuration
-- [ ] **Store provider_document_id and provider_signing_url**
-- [ ] **Handle SignNow webhook events** (viewed, signed, declined, etc.)
-- [ ] **Store completed_document_url** after signing
-- [ ] **Audit log entries** for all SignNow events
+- [x] **Push document to SignNow API** via signNowService.pushAndUpdateConfig()
+- [x] **Store provider_document_id and provider_signing_url**
+- [x] **Handle SignNow webhook events** (viewed, signed, declined, complete)
+- [x] **Store completed_document_url** after signing
+- [x] **Audit log entries** for all SignNow events (esign.sent, esign.viewed, esign.signed, esign.completed, esign.declined)
 
 #### 9. Google Calendar/Meet Integration
-**Status:** Partial implementation
+**Status:** Complete
 **Spec Reference:** Technical Spec - Google Calendar/Meet Integration
 
 - [x] OAuth connect/callback endpoints exist
 - [x] WorkspaceIntegration table for tokens
 - [x] **Meeting starting reminders** via Knock (cron endpoint ready)
-- [ ] **List calendar events** for workspace
-- [ ] **Create meeting with Meet link**
-- [ ] **Display meetings in Meetings tab**
+- [x] **List calendar events** for workspace via GET /api/workspaces/[id]/meetings
+- [x] **Create meeting with Meet link** via POST /api/workspaces/[id]/meetings
+- [x] **Token encryption** (AES-256) and auto-refresh
+- [x] **Integration status endpoint** GET /api/workspaces/[id]/integrations
+- [x] **Disconnect endpoint** DELETE /api/workspaces/[id]/integrations/google
+- [ ] **Display meetings in Meetings tab** (UI component)
 
 #### 10. File Versioning
 **Status:** Schema done, UI missing
@@ -316,8 +319,9 @@ Not yet implemented:
 5. ~~**dnd-kit integration** - Task/section reordering complete~~
 6. ~~**Due date cascading** - Backend complete~~
 7. ~~**Form Builder dnd-kit** - Element drag-and-drop complete~~
-8. **Due date UI** - Relative due date selector ("X days after Task")
-9. **SignNow completion** - Handle webhook events, completed doc URL
-10. **Google Calendar** - List events, create meetings
-11. **File versioning UI** - Version history dropdown
-12. **Polish remaining features** (workspace settings, member management, etc.)
+8. ~~**SignNow** - Backend complete (webhook events, completed doc URL, audit logs)~~
+9. ~~**Google Calendar** - Backend complete (list events, create meetings)~~
+10. **Due date UI** - Relative due date selector ("X days after Task")
+11. **Meetings tab UI** - Display Google Calendar meetings in workspace
+12. **File versioning UI** - Version history dropdown
+13. **Polish remaining features** (workspace settings, member management, etc.)
