@@ -167,7 +167,9 @@ export function TaskConfigDialog({
       });
 
       if (!uploadResponse.ok) {
-        throw new Error("Failed to get upload URL");
+        const errorData = await uploadResponse.json().catch(() => ({}));
+        console.error("Upload API error:", uploadResponse.status, errorData);
+        throw new Error(errorData.error || `Failed to get upload URL (${uploadResponse.status})`);
       }
 
       const { uploadUrl, key } = await uploadResponse.json();
@@ -206,6 +208,7 @@ export function TaskConfigDialog({
       setFileId(uploadedFile.id);
       toast.success("Document uploaded");
     } catch (error) {
+      console.error("File upload error:", error);
       toast.error(error instanceof Error ? error.message : "Failed to upload document");
       setSelectedFile(null);
     } finally {
