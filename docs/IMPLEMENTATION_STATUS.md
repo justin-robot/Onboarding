@@ -11,8 +11,8 @@ Last updated: 2026-02-15
 | Category | Status | Details |
 |----------|--------|---------|
 | Database Models | **95% Complete** | All 25 models implemented |
-| API Endpoints | **85% Complete** | Core CRUD done, some features missing |
-| UI Components | **80% Complete** | Most components done, dnd-kit missing |
+| API Endpoints | **90% Complete** | Core CRUD done, comments complete |
+| UI Components | **85% Complete** | Comments, notifications added; dnd-kit missing |
 | Integrations | **70% Complete** | SignNow partial, Google Calendar partial |
 | Task Flow Engine | **75% Complete** | Core logic done, some edge cases missing |
 
@@ -70,12 +70,13 @@ Last updated: 2026-02-15
 ### MEDIUM PRIORITY - Incomplete Features
 
 #### 5. Knock Notification Workflows
-**Status:** Partially implemented
+**Status:** Partially implemented (4/12)
 **Spec Reference:** Technical Spec - 12 Knock workflows
 
 Implemented:
 - [x] task-assigned
 - [x] task-your-turn
+- [x] comment-added
 - [ ] approval-requested
 - [ ] approval-rejected
 
@@ -86,7 +87,6 @@ Missing workflows:
 - [ ] **file-ready-for-review** - Trigger on file upload requiring review
 - [ ] **file-rejected** - Trigger on file rejection
 - [ ] **meeting-starting** - 15-minute reminder (cron job)
-- [ ] **comment-added** - Trigger when comment posted
 - [ ] **due-date-cleared** - Notify admins when anchor deleted
 
 #### 6. Due Date Reminder Scheduler (Cron)
@@ -276,11 +276,11 @@ Missing workflows:
 ### UI Components (Verified Working)
 - [x] MoxoLayout (three-panel responsive)
 - [x] WorkspaceSidebar
-- [x] WorkspaceHeader with banner
+- [x] WorkspaceHeader with banner + actions slot
 - [x] SectionHeader with progress
 - [x] TaskCard with status badges
 - [x] Timeline component
-- [x] TaskDetailsPanel
+- [x] TaskDetailsPanel with Comments tab
 - [x] TaskAction (all 6 types)
 - [x] TaskConfigDialog
 - [x] ChatPanel with emoji picker
@@ -290,6 +290,8 @@ Missing workflows:
 - [x] UploadDialog
 - [x] FormBuilder (basic)
 - [x] FormRenderer
+- [x] NotificationBell (Knock integration)
+- [x] CommentSection with real-time updates
 
 ---
 
