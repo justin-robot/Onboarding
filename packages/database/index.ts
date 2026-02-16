@@ -110,6 +110,9 @@ export type { ThumbnailResult } from "./services/thumbnail";
 export { chatService } from "./services/chat";
 export type { SendMessageOptions, MessageWithUser, PaginatedMessages } from "./services/chat";
 
+export { commentService } from "./services/comment";
+export type { CreateCommentOptions, CommentWithUser } from "./services/comment";
+
 export { signNowService } from "./services/signnow";
 export type { PushDocumentResult } from "./services/signnow";
 
@@ -120,3 +123,6 @@ export { googleCalendarService } from "./services/googleCalendar";
 export type { WorkspaceIntegration, IntegrationProvider } from "./schemas/main";
 
 export { accessService, AccessDeniedError, WorkspaceNotFoundError, NotWorkspaceMemberError, InsufficientPermissionsError } from "./services/access";
+
+export { meetingReminderService } from "./services/meetingReminder";
+export type { UpcomingMeeting, MeetingReminderResult } from "./services/meetingReminder";

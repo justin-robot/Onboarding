@@ -34,19 +34,40 @@ export interface CommentAddedData {
   commentPreview: string;
 }
 
+export interface ESignReadyData {
+  workspaceId: string;
+  workspaceName: string;
+  taskId: string;
+  taskTitle: string;
+  documentName: string;
+}
+
+export interface MeetingStartingData {
+  workspaceId: string;
+  workspaceName: string;
+  taskId: string;
+  taskTitle: string;
+  meetingLink: string;
+  startsIn: number; // minutes
+}
+
 // Union of workflow data types used in database services
 export type NotificationWorkflowData =
   | TaskAssignedData
   | TaskYourTurnData
   | ApprovalRequestedData
-  | CommentAddedData;
+  | CommentAddedData
+  | ESignReadyData
+  | MeetingStartingData;
 
 // Workflow IDs used in database services
 export type NotificationWorkflowId =
   | "task-assigned"
   | "task-your-turn"
   | "approval-requested"
-  | "comment-added";
+  | "comment-added"
+  | "esign-ready"
+  | "meeting-starting";
 
 // Trigger options
 export interface TriggerWorkflowOptions {

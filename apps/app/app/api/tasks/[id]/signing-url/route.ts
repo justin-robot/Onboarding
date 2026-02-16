@@ -1,7 +1,8 @@
-import { taskService, configService, signNowService, sectionService } from "@repo/database";
+import { taskService, configService, signNowService, sectionService, type NotificationContext } from "@repo/database";
 import type { ESignConfig } from "@repo/database";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
+import { notificationService } from "@repo/notifications";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -61,6 +62,18 @@ export async function POST(_request: NextRequest, { params }: Params) {
       return errorResponse("Section not found", 404);
     }
 
+    // Create notification context
+    const notificationContext: NotificationContext = {
+      triggerWorkflow: async (options) => {
+        return notificationService.triggerWorkflow({
+          workflowId: options.workflowId as Parameters<typeof notificationService.triggerWorkflow>[0]["workflowId"],
+          recipientId: options.recipientId,
+          data: options.data as Parameters<typeof notificationService.triggerWorkflow>[0]["data"],
+          tenant: options.tenant,
+        });
+      },
+    };
+
     // Push document to SignNow and update config
     const updatedConfig = await signNowService.pushAndUpdateConfig(
       esignConfig.id,
@@ -70,7 +83,8 @@ export async function POST(_request: NextRequest, { params }: Params) {
         workspaceId: section.workspaceId,
         actorId: user.id,
         taskId,
-      }
+      },
+      notificationContext
     );
 
     if (!updatedConfig?.providerSigningUrl) {
