@@ -15,6 +15,7 @@ import type { SectionStatus } from "@repo/design/components/moxo-layout";
 import { TaskDetailsPanel } from "./components/task-details-panel";
 import { FilesView, type FileItem } from "./components/files-view";
 import { MembersPanel } from "./components/members-panel";
+import { WorkspaceActivity } from "./components/workspace-activity";
 import { RealtimeChat } from "./components/realtime-chat";
 import { RealtimeWorkspaceEvents } from "./components/realtime-workspace-events";
 import type { Message } from "./components/chat-panel";
@@ -28,6 +29,7 @@ import {
 } from "@repo/design/components/ui/sheet";
 import { Button } from "@repo/design/components/ui/button";
 import {
+  Activity,
   FolderPlus,
   Plus,
   Settings,
@@ -100,6 +102,7 @@ export function WorkspaceView({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [showMembersPanel, setShowMembersPanel] = useState(false);
+  const [showActivityPanel, setShowActivityPanel] = useState(false);
   const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
   const [addTaskSectionId, setAddTaskSectionId] = useState<string | null>(null);
   const [addSectionDialogOpen, setAddSectionDialogOpen] = useState(false);
@@ -176,6 +179,7 @@ export function WorkspaceView({
   const handleTaskSelect = (taskId: string) => {
     setSelectedTaskId(taskId);
     setShowMembersPanel(false);
+    setShowActivityPanel(false);
     setRightPanelOpen(true);
   };
 
@@ -183,6 +187,15 @@ export function WorkspaceView({
   const handleMembersClick = () => {
     setSelectedTaskId(null);
     setShowMembersPanel(true);
+    setShowActivityPanel(false);
+    setRightPanelOpen(true);
+  };
+
+  // Handle activity panel
+  const handleActivityClick = () => {
+    setSelectedTaskId(null);
+    setShowMembersPanel(false);
+    setShowActivityPanel(true);
     setRightPanelOpen(true);
   };
 
@@ -214,6 +227,48 @@ export function WorkspaceView({
     // Use the first section by default, or show section picker
     setAddTaskSectionId(sections[0].id);
     setAddTaskDialogOpen(true);
+  };
+
+  // Handle task reordering within a section
+  const handleTaskReorder = async (sectionId: string, taskIds: string[]) => {
+    try {
+      const response = await fetch(`/api/sections/${sectionId}/tasks/reorder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskIds }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to reorder tasks");
+      }
+
+      // Optimistically update the UI (router.refresh will sync with server)
+      router.refresh();
+    } catch (error) {
+      toast.error("Failed to reorder tasks");
+      router.refresh(); // Revert to server state
+    }
+  };
+
+  // Handle section reordering
+  const handleSectionReorder = async (sectionIds: string[]) => {
+    try {
+      const response = await fetch(`/api/workspaces/${currentWorkspaceId}/sections/reorder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sectionIds }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to reorder sections");
+      }
+
+      // Optimistically update the UI (router.refresh will sync with server)
+      router.refresh();
+    } catch (error) {
+      toast.error("Failed to reorder sections");
+      router.refresh(); // Revert to server state
+    }
   };
 
   // Workspace header data
@@ -255,6 +310,9 @@ export function WorkspaceView({
           selectedTaskId={selectedTaskId || undefined}
           onTaskSelect={handleTaskSelect}
           onAddTask={currentUserRole === "admin" ? handleAddTask : undefined}
+          onTaskReorder={currentUserRole === "admin" ? handleTaskReorder : undefined}
+          onSectionReorder={currentUserRole === "admin" ? handleSectionReorder : undefined}
+          enableDragAndDrop={currentUserRole === "admin"}
           showTimeline={true}
           timelinePosition="left"
         />
@@ -289,6 +347,11 @@ export function WorkspaceView({
             onClose={() => setShowMembersPanel(false)}
             currentUserRole={currentUserRole}
           />
+        ) : showActivityPanel ? (
+          <WorkspaceActivity
+            workspaceId={currentWorkspaceId}
+            currentUserId={currentUserId}
+          />
         ) : selectedTask ? (
           <TaskDetailsPanel
             task={selectedTask}
@@ -321,7 +384,7 @@ export function WorkspaceView({
       onTabChange={setActiveTab}
       showRightPanel={true}
       sidebarTitle="Workspaces"
-      rightPanelTitle={showMembersPanel ? "Members" : selectedTask ? selectedTask.title : "Chat"}
+      rightPanelTitle={showMembersPanel ? "Members" : showActivityPanel ? "Activity" : selectedTask ? selectedTask.title : "Chat"}
       sidebarOpen={sidebarOpen}
       onSidebarOpenChange={setSidebarOpen}
       rightPanelOpen={rightPanelOpen}
@@ -432,6 +495,17 @@ export function WorkspaceView({
           >
             <Users className="mr-2 h-4 w-4" />
             Members
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => {
+              setShowWorkspaceMenu(false);
+              handleActivityClick();
+            }}
+          >
+            <Activity className="mr-2 h-4 w-4" />
+            Activity
           </Button>
           <Button variant="ghost" className="w-full justify-start">
             <Bookmark className="mr-2 h-4 w-4" />
