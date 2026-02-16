@@ -330,14 +330,16 @@ export function TaskDetailsPanel({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to unassign user");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to unassign user (${response.status})`);
       }
 
       setAssignees(prev => prev.filter(a => a.userId !== userId));
       toast.success("User removed from task");
       onTaskComplete(); // Refresh parent
     } catch (err) {
-      toast.error("Failed to unassign user");
+      console.error("Unassign error:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to unassign user");
     }
   };
 
