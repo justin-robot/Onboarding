@@ -11,8 +11,8 @@ Last updated: 2026-02-15
 | Category | Status | Details |
 |----------|--------|---------|
 | Database Models | **95% Complete** | All 25 models implemented |
-| API Endpoints | **90% Complete** | Core CRUD done, comments complete |
-| UI Components | **85% Complete** | Comments, notifications added; dnd-kit missing |
+| API Endpoints | **92% Complete** | Core CRUD done, comments + activity complete |
+| UI Components | **88% Complete** | Comments, notifications, activity added; dnd-kit missing |
 | Integrations | **70% Complete** | SignNow partial, Google Calendar partial |
 | Task Flow Engine | **75% Complete** | Core logic done, some edge cases missing |
 
@@ -57,13 +57,13 @@ Last updated: 2026-02-15
 - [x] **Mark as read functionality** - Built into Knock's `NotificationFeedPopover`
 
 #### 4. Activity Feed in Right Panel
-**Status:** Component exists, not wired to API
+**Status:** Complete
 **Spec Reference:** Technical Spec - Activity Feed from audit log
 
-- [ ] **API: Get audit log entries** `GET /api/workspaces/[id]/activity`
-- [ ] **Wire ActivityFeed component** to fetch from audit log
-- [ ] **Pagination support** (cursor-based)
-- [ ] **Real-time updates** via Ably broadcast
+- [x] **API: Get audit log entries** `GET /api/workspaces/[id]/activity`
+- [x] **Wire ActivityFeed component** to fetch from audit log
+- [x] **Pagination support** (offset-based with hasMore)
+- [x] **Real-time updates** via workspace event subscriptions (refreshes on task/section updates)
 
 ---
 
@@ -272,6 +272,7 @@ Missing workflows:
 - [x] Realtime token
 - [x] Webhook handlers
 - [x] Comments CRUD (create, list, delete)
+- [x] Activity feed (audit log entries with user/task info)
 
 ### UI Components (Verified Working)
 - [x] MoxoLayout (three-panel responsive)
@@ -310,7 +311,7 @@ Missing workflows:
 
 1. ~~**Comments System** - Complete~~
 2. ~~**Notification Bell** - Complete~~
-3. **Activity Feed wiring** - Visibility into workspace activity
+3. ~~**Activity Feed wiring** - Complete~~
 4. **dnd-kit integration** - Form builder and reordering UX
 5. **Due date cascading** - Complete dependency system
 6. **SignNow completion** - E-sign feature completion
