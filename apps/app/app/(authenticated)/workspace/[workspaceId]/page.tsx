@@ -130,6 +130,7 @@ export default async function WorkspacePage({ params }: PageProps) {
             isLocked: task.locked,
             description: task.description,
             dueDate: task.dueDateValue?.toISOString(),
+            dueDateType: task.dueDateType as "absolute" | "relative" | undefined,
           };
         }),
       };

@@ -34,6 +34,7 @@ import {
 import { cn } from "@repo/design/lib/utils";
 import { toast } from "sonner";
 import { CommentSection } from "./comment-section";
+import { DueDateSelector } from "./due-date-selector";
 
 interface Task {
   id: string;
@@ -45,6 +46,7 @@ interface Task {
   isLocked: boolean;
   description: string | null;
   dueDate?: string;
+  dueDateType?: "absolute" | "relative";
 }
 
 // Config types for each task type
@@ -389,11 +391,19 @@ export function TaskDetailsPanel({
               )}
 
               {/* Due date */}
-              {task.dueDate && (
-                <div>
-                  <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
-                    Due Date
-                  </h3>
+              <div>
+                <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
+                  Due Date
+                </h3>
+                {isAdmin ? (
+                  <DueDateSelector
+                    taskId={task.id}
+                    currentDueDate={task.dueDate}
+                    dueDateType={task.dueDateType}
+                    onDueDateChange={onTaskComplete}
+                    disabled={loading}
+                  />
+                ) : task.dueDate ? (
                   <p className="text-sm text-foreground">
                     {new Date(task.dueDate).toLocaleDateString("en-US", {
                       month: "short",
@@ -401,8 +411,10 @@ export function TaskDetailsPanel({
                       year: "numeric",
                     })}
                   </p>
-                </div>
-              )}
+                ) : (
+                  <p className="text-sm text-muted-foreground">No due date set</p>
+                )}
+              </div>
 
               {/* Task action area */}
               <div className="pt-2">

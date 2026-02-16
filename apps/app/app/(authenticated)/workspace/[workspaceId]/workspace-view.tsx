@@ -60,6 +60,7 @@ interface WorkspaceData {
       isLocked: boolean;
       description: string | null;
       dueDate?: string;
+      dueDateType?: "absolute" | "relative";
     }>;
   }>;
 }

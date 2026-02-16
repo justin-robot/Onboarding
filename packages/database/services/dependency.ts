@@ -185,4 +185,190 @@ export const dependencyService = {
       },
     }));
   },
+
+  /**
+   * Get the date anchor dependency for a task (if any)
+   * Returns the dependency and the anchor task info
+   */
+  async getDateAnchorDependency(taskId: string): Promise<{
+    dependency: TaskDependency;
+    anchorTask: { id: string; title: string; status: string };
+  } | null> {
+    const result = await database
+      .selectFrom("task_dependency")
+      .innerJoin("task", "task.id", "task_dependency.dependsOnTaskId")
+      .select([
+        "task_dependency.id",
+        "task_dependency.taskId",
+        "task_dependency.dependsOnTaskId",
+        "task_dependency.type",
+        "task_dependency.offsetDays",
+        "task_dependency.createdAt",
+        "task.id as anchorTaskId",
+        "task.title as anchorTaskTitle",
+        "task.status as anchorTaskStatus",
+      ])
+      .where("task_dependency.taskId", "=", taskId)
+      .where("task_dependency.type", "in", ["date_anchor", "both"])
+      .where("task.deletedAt", "is", null)
+      .executeTakeFirst();
+
+    if (!result) return null;
+
+    return {
+      dependency: {
+        id: result.id,
+        taskId: result.taskId,
+        dependsOnTaskId: result.dependsOnTaskId,
+        type: result.type,
+        offsetDays: result.offsetDays,
+        createdAt: result.createdAt,
+      },
+      anchorTask: {
+        id: result.anchorTaskId,
+        title: result.anchorTaskTitle,
+        status: result.anchorTaskStatus,
+      },
+    };
+  },
+
+  /**
+   * Set or update the date anchor dependency for a task
+   * This creates a date_anchor dependency with the specified offset
+   * If the task already has a date_anchor/both dependency, it will be replaced
+   */
+  async setDateAnchorDependency(
+    taskId: string,
+    anchorTaskId: string,
+    offsetDays: number
+  ): Promise<TaskDependency> {
+    // Check for self-dependency
+    if (taskId === anchorTaskId) {
+      throw new CircularDependencyError(taskId, anchorTaskId);
+    }
+
+    // Check for circular dependency
+    const chain = await this.getFullChain(anchorTaskId);
+    if (chain.includes(taskId)) {
+      throw new CircularDependencyError(taskId, anchorTaskId);
+    }
+
+    // Remove any existing date_anchor or both dependencies for this task
+    await database
+      .deleteFrom("task_dependency")
+      .where("taskId", "=", taskId)
+      .where("type", "in", ["date_anchor", "both"])
+      .execute();
+
+    // Create the new dependency
+    const dependency = await database
+      .insertInto("task_dependency")
+      .values({
+        taskId,
+        dependsOnTaskId: anchorTaskId,
+        type: "date_anchor",
+        offsetDays,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    // Clear any existing absolute due date since we're now using relative
+    await database
+      .updateTable("task")
+      .set({
+        dueDateValue: null,
+        dueDateType: "relative",
+        updatedAt: new Date(),
+      })
+      .where("id", "=", taskId)
+      .execute();
+
+    return dependency;
+  },
+
+  /**
+   * Remove the date anchor dependency for a task
+   * This converts the task back to using an absolute due date (or no due date)
+   */
+  async removeDateAnchorDependency(taskId: string): Promise<boolean> {
+    const result = await database
+      .deleteFrom("task_dependency")
+      .where("taskId", "=", taskId)
+      .where("type", "in", ["date_anchor", "both"])
+      .executeTakeFirst();
+
+    // Update the task to use absolute due date type
+    await database
+      .updateTable("task")
+      .set({
+        dueDateType: "absolute",
+        updatedAt: new Date(),
+      })
+      .where("id", "=", taskId)
+      .execute();
+
+    return (result.numDeletedRows ?? 0n) > 0n;
+  },
+
+  /**
+   * Get all tasks in the same workspace that can be used as date anchors
+   * Excludes the task itself and any tasks that would create a circular dependency
+   */
+  async getAvailableAnchorTasks(
+    taskId: string
+  ): Promise<Array<{ id: string; title: string; sectionTitle: string }>> {
+    // Get the task's workspace ID
+    const task = await database
+      .selectFrom("task")
+      .innerJoin("section", "section.id", "task.sectionId")
+      .select(["section.workspaceId"])
+      .where("task.id", "=", taskId)
+      .executeTakeFirst();
+
+    if (!task) return [];
+
+    // Get tasks that would create a circular dependency (tasks that depend on this one)
+    const wouldCreateCycle = await this.getDependentsRecursive(taskId);
+    const excludeIds = new Set([taskId, ...wouldCreateCycle]);
+
+    // Get all tasks in the workspace
+    const tasks = await database
+      .selectFrom("task")
+      .innerJoin("section", "section.id", "task.sectionId")
+      .select(["task.id", "task.title", "section.title as sectionTitle"])
+      .where("section.workspaceId", "=", task.workspaceId)
+      .where("task.deletedAt", "is", null)
+      .orderBy("section.position")
+      .orderBy("task.position")
+      .execute();
+
+    return tasks.filter((t) => !excludeIds.has(t.id));
+  },
+
+  /**
+   * Get all tasks that depend on a task (recursively)
+   */
+  async getDependentsRecursive(taskId: string): Promise<string[]> {
+    const visited = new Set<string>();
+    const dependents: string[] = [];
+
+    async function traverse(currentTaskId: string) {
+      const deps = await database
+        .selectFrom("task_dependency")
+        .select(["taskId"])
+        .where("dependsOnTaskId", "=", currentTaskId)
+        .execute();
+
+      for (const dep of deps) {
+        if (!visited.has(dep.taskId)) {
+          visited.add(dep.taskId);
+          dependents.push(dep.taskId);
+          await traverse(dep.taskId);
+        }
+      }
+    }
+
+    await traverse(taskId);
+    return dependents;
+  },
 };
