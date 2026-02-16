@@ -25,6 +25,8 @@ export const WORKSPACE_EVENTS = {
   FILE_DELETED: "file:deleted",
   MEMBER_ADDED: "member:added",
   MEMBER_REMOVED: "member:removed",
+  COMMENT_CREATED: "comment.created",
+  COMMENT_DELETED: "comment.deleted",
 } as const;
 
 // Event types for chat channel
@@ -67,6 +69,17 @@ export interface TaskPayload {
 export interface TypingPayload {
   userId: string;
   userName: string;
+}
+
+// Comment payload from workspace events
+export interface CommentPayload {
+  id: string;
+  taskId: string;
+  userId: string;
+  userName?: string;
+  userImage?: string;
+  content: string;
+  createdAt: string;
 }
 
 /**
@@ -126,6 +139,53 @@ export function useWorkspaceChat(
   );
 
   return { publishTyping };
+}
+
+/**
+ * Hook to subscribe to task comment events
+ * Filters workspace events to only handle comments for a specific task
+ */
+export function useTaskComments(
+  workspaceId: string,
+  taskId: string,
+  callbacks: {
+    onCommentCreated?: (comment: CommentPayload) => void;
+    onCommentDeleted?: (commentId: string) => void;
+  }
+) {
+  const ably = useAbly();
+  const channelName = CHANNELS.workspace(workspaceId);
+
+  useEffect(() => {
+    const channel = ably.channels.get(channelName);
+
+    const handleMessage = (message: Ably.Message) => {
+      switch (message.name) {
+        case WORKSPACE_EVENTS.COMMENT_CREATED: {
+          const comment = message.data as CommentPayload;
+          // Only handle comments for this specific task
+          if (comment.taskId === taskId) {
+            callbacks.onCommentCreated?.(comment);
+          }
+          break;
+        }
+        case WORKSPACE_EVENTS.COMMENT_DELETED: {
+          const data = message.data as { id: string; taskId: string };
+          // Only handle deletions for this specific task
+          if (data.taskId === taskId) {
+            callbacks.onCommentDeleted?.(data.id);
+          }
+          break;
+        }
+      }
+    };
+
+    channel.subscribe(handleMessage);
+
+    return () => {
+      channel.unsubscribe(handleMessage);
+    };
+  }, [ably, channelName, taskId, callbacks]);
 }
 
 /**

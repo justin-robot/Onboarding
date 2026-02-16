@@ -290,6 +290,8 @@ export function WorkspaceView({
         ) : selectedTask ? (
           <TaskDetailsPanel
             task={selectedTask}
+            workspaceId={currentWorkspaceId}
+            currentUserId={currentUserId}
             onClose={() => setSelectedTaskId(null)}
             onTaskComplete={() => {
               router.refresh();

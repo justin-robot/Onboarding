@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { TaskAction } from "./task-actions";
 import { TaskConfigDialog } from "./task-config-dialog";
 import { Button } from "@repo/design/components/ui/button";
 import { Badge } from "@repo/design/components/ui/badge";
 import { ScrollArea } from "@repo/design/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/design/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,9 +29,11 @@ import {
   ThumbsUp,
   Trash2,
   Settings,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@repo/design/lib/utils";
 import { toast } from "sonner";
+import { CommentSection } from "./comment-section";
 
 interface Task {
   id: string;
@@ -86,6 +89,8 @@ type TaskConfig = FormConfig | AcknowledgementConfig | ESignConfig | FileRequest
 
 interface TaskDetailsPanelProps {
   task: Task;
+  workspaceId: string;
+  currentUserId: string;
   onClose: () => void;
   onTaskComplete: () => void;
   onTaskDelete?: () => void;
@@ -94,6 +99,8 @@ interface TaskDetailsPanelProps {
 
 export function TaskDetailsPanel({
   task,
+  workspaceId,
+  currentUserId,
   onClose,
   onTaskComplete,
   onTaskDelete,
@@ -356,84 +363,106 @@ export function TaskDetailsPanel({
         </div>
       </div>
 
-      {/* Content area with description and action */}
-      <ScrollArea className="flex-1">
-        <div className="p-4 space-y-4">
-          {/* Description */}
-          {task.description && (
-            <div>
-              <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
-                Description
-              </h3>
-              <p className="text-sm text-foreground">{task.description}</p>
-            </div>
-          )}
+      {/* Content area with tabs */}
+      <Tabs defaultValue="details" className="flex-1 flex flex-col overflow-hidden">
+        <TabsList className="flex-shrink-0 w-full justify-start rounded-none border-b bg-transparent px-4">
+          <TabsTrigger value="details" className="text-xs">
+            Details
+          </TabsTrigger>
+          <TabsTrigger value="comments" className="text-xs">
+            <MessageSquare className="h-3 w-3 mr-1" />
+            Comments
+          </TabsTrigger>
+        </TabsList>
 
-          {/* Due date */}
-          {task.dueDate && (
-            <div>
-              <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
-                Due Date
-              </h3>
-              <p className="text-sm text-foreground">
-                {new Date(task.dueDate).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </p>
-            </div>
-          )}
+        <TabsContent value="details" className="flex-1 mt-0 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="p-4 space-y-4">
+              {/* Description */}
+              {task.description && (
+                <div>
+                  <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
+                    Description
+                  </h3>
+                  <p className="text-sm text-foreground">{task.description}</p>
+                </div>
+              )}
 
-          {/* Task action area */}
-          <div className="pt-2">
-            <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
-              Action
-            </h3>
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              {/* Due date */}
+              {task.dueDate && (
+                <div>
+                  <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
+                    Due Date
+                  </h3>
+                  <p className="text-sm text-foreground">
+                    {new Date(task.dueDate).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </p>
+                </div>
+              )}
+
+              {/* Task action area */}
+              <div className="pt-2">
+                <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
+                  Action
+                </h3>
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : error ? (
+                  <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-center text-sm text-destructive">
+                    {error}
+                  </div>
+                ) : needsConfiguration() ? (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center dark:border-amber-900/30 dark:bg-amber-950/20">
+                    <Settings className="mx-auto h-8 w-8 text-amber-500" />
+                    <p className="mt-2 text-sm font-medium text-amber-700 dark:text-amber-400">
+                      Configuration Required
+                    </p>
+                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-500">
+                      {task.type === "booking"
+                        ? "Set up a booking link to allow users to schedule meetings"
+                        : "Upload a document and specify the signer to enable e-signatures"}
+                    </p>
+                    <Button
+                      size="sm"
+                      className="mt-3"
+                      onClick={() => setConfigDialogOpen(true)}
+                    >
+                      <Settings className="mr-2 h-4 w-4" />
+                      Configure Now
+                    </Button>
+                  </div>
+                ) : (
+                  <TaskAction
+                    taskId={task.id}
+                    type={task.type}
+                    isYourTurn={task.isYourTurn}
+                    isCompleted={task.isCompleted}
+                    isLocked={task.isLocked}
+                    isAdmin={isAdmin}
+                    instructions={task.description || undefined}
+                    onComplete={onTaskComplete}
+                    {...getConfigProps()}
+                  />
+                )}
               </div>
-            ) : error ? (
-              <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-center text-sm text-destructive">
-                {error}
-              </div>
-            ) : needsConfiguration() ? (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center dark:border-amber-900/30 dark:bg-amber-950/20">
-                <Settings className="mx-auto h-8 w-8 text-amber-500" />
-                <p className="mt-2 text-sm font-medium text-amber-700 dark:text-amber-400">
-                  Configuration Required
-                </p>
-                <p className="mt-1 text-xs text-amber-600 dark:text-amber-500">
-                  {task.type === "booking"
-                    ? "Set up a booking link to allow users to schedule meetings"
-                    : "Upload a document and specify the signer to enable e-signatures"}
-                </p>
-                <Button
-                  size="sm"
-                  className="mt-3"
-                  onClick={() => setConfigDialogOpen(true)}
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  Configure Now
-                </Button>
-              </div>
-            ) : (
-              <TaskAction
-                taskId={task.id}
-                type={task.type}
-                isYourTurn={task.isYourTurn}
-                isCompleted={task.isCompleted}
-                isLocked={task.isLocked}
-                isAdmin={isAdmin}
-                instructions={task.description || undefined}
-                onComplete={onTaskComplete}
-                {...getConfigProps()}
-              />
-            )}
-          </div>
-        </div>
-      </ScrollArea>
+            </div>
+          </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="comments" className="flex-1 mt-0 overflow-hidden">
+          <CommentSection
+            taskId={task.id}
+            currentUserId={currentUserId}
+            className="h-full"
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Task Configuration Dialog */}
       {isConfigurable() && (
