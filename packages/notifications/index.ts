@@ -1,9 +1,3 @@
-// Only enforce server-only in Next.js context (not for tests)
-if (typeof process !== "undefined" && process.env.NEXT_RUNTIME) {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  require("server-only");
-}
-
 import { Knock } from "@knocklabs/node";
 
 const knockSecretKey = process.env.KNOCK_SECRET_API_KEY;
