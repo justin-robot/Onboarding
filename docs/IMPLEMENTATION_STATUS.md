@@ -11,10 +11,10 @@ Last updated: 2026-02-15
 | Category | Status | Details |
 |----------|--------|---------|
 | Database Models | **95% Complete** | All 25 models implemented |
-| API Endpoints | **92% Complete** | Core CRUD done, comments + activity complete |
-| UI Components | **88% Complete** | Comments, notifications, activity added; dnd-kit missing |
-| Integrations | **75% Complete** | SignNow + notifications wired, Google Calendar partial |
-| Task Flow Engine | **80% Complete** | Core logic done, due date cascading with notifications |
+| API Endpoints | **94% Complete** | Core CRUD, comments, activity, notifications complete |
+| UI Components | **90% Complete** | Comments, notifications, activity, dnd-kit added |
+| Integrations | **80% Complete** | All Knock workflows wired, Google Calendar partial |
+| Task Flow Engine | **85% Complete** | Due date cascading complete, dependencies working |
 
 ---
 
@@ -36,14 +36,14 @@ Last updated: 2026-02-15
 - [x] **Notifications: Trigger 'comment-added' Knock workflow** in commentService.create()
 
 #### 2. Drag-and-Drop (dnd-kit)
-**Status:** Not implemented
+**Status:** Complete
 **Spec Reference:** Technical Spec - Form Builder, Task/Section reordering
 
-- [ ] **Install dnd-kit** (`@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`)
-- [ ] **Form Builder: Element drag-and-drop** from palette to canvas
-- [ ] **Form Builder: Element reordering** within canvas
-- [ ] **Task reordering** within sections (admin only)
-- [ ] **Section reordering** within workspace (admin only)
+- [x] **Install dnd-kit** (`@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`)
+- [x] **Task reordering** within sections (admin only)
+- [x] **Section reordering** within workspace (admin only)
+- [x] **Form Builder: Element drag-and-drop** from palette to canvas
+- [x] **Form Builder: Element reordering** within canvas
 - [ ] **Cross-section task moves** via drag-and-drop
 
 #### 3. Notification Bell Component
@@ -100,14 +100,14 @@ Not yet implemented:
 - [ ] **Configure Vercel cron** - Add to vercel.json for production
 
 #### 7. Task Dependencies - Date Anchoring
-**Status:** Schema done, partial implementation
+**Status:** Backend complete, UI missing
 **Spec Reference:** Data Model - TaskDependency with date_anchor type
 
 - [x] TaskDependency table exists with unlock/date_anchor/both types
 - [x] Circular dependency detection
-- [ ] **Due date cascading on completion** - Resolve relative dates
-- [ ] **Due date cascading on reopen** - Null out dependent dates
-- [ ] **Due date cascading on delete** - Clear + notify admins
+- [x] **Due date cascading on completion** - Resolve relative dates (cascadeService)
+- [x] **Due date cascading on reopen** - Null out dependent dates (cascadeService)
+- [x] **Due date cascading on delete** - Clear + notify admins (cascadeService)
 - [ ] **UI: Relative due date selector** - "X days after [Task]"
 
 #### 8. SignNow E-Sign Integration
@@ -129,10 +129,10 @@ Not yet implemented:
 
 - [x] OAuth connect/callback endpoints exist
 - [x] WorkspaceIntegration table for tokens
+- [x] **Meeting starting reminders** via Knock (cron endpoint ready)
 - [ ] **List calendar events** for workspace
 - [ ] **Create meeting with Meet link**
 - [ ] **Display meetings in Meetings tab**
-- [ ] **Meeting starting reminders** via Knock
 
 #### 10. File Versioning
 **Status:** Schema done, UI missing
@@ -156,7 +156,7 @@ Not yet implemented:
 - [x] Element types (14 types)
 - [x] Form renderer with react-hook-form
 - [x] Draft auto-save
-- [ ] **dnd-kit integration** for element reordering
+- [x] **dnd-kit integration** for element reordering
 - [ ] **Multi-page support via tabs** - UI exists but needs work
 - [ ] **Auto-save on 500ms debounce** - Verify timing
 - [ ] **Image element upload** - Preview in builder
@@ -313,9 +313,11 @@ Not yet implemented:
 2. ~~**Notification Bell** - Complete~~
 3. ~~**Activity Feed wiring** - Complete~~
 4. ~~**Knock workflows** - 11/12 implemented~~
-5. **dnd-kit integration** - Form builder and reordering UX
-6. **Due date cascading UI** - Relative due date selector
-7. **SignNow completion** - Handle webhook events, completed doc URL
-8. **Google Calendar** - Meeting creation
-9. **File versioning UI** - Document management
-10. **Polish remaining features**
+5. ~~**dnd-kit integration** - Task/section reordering complete~~
+6. ~~**Due date cascading** - Backend complete~~
+7. ~~**Form Builder dnd-kit** - Element drag-and-drop complete~~
+8. **Due date UI** - Relative due date selector ("X days after Task")
+9. **SignNow completion** - Handle webhook events, completed doc URL
+10. **Google Calendar** - List events, create meetings
+11. **File versioning UI** - Version history dropdown
+12. **Polish remaining features** (workspace settings, member management, etc.)

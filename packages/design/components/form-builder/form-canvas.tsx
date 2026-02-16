@@ -1,6 +1,13 @@
 "use client";
 
 import React, { useCallback } from "react";
+import { useDroppable } from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   Type,
   AlignLeft,
@@ -19,9 +26,8 @@ import {
   Trash2,
   GripVertical,
 } from "lucide-react";
-import { SortableList, type SortableItem } from "../ui/sortable-list";
 import { cn } from "../../lib/utils";
-import { type FormElement, type FormElementType, getDefaultElement } from "./types";
+import { type FormElement, type FormElementType } from "./types";
 
 // Icon mapping
 const ICONS: Record<FormElementType, React.ComponentType<{ className?: string }>> = {
@@ -46,34 +52,54 @@ interface FormCanvasProps {
   onElementsChange: (elements: FormElement[]) => void;
   selectedElementId: string | null;
   onSelectElement: (id: string | null) => void;
-  onAddElement: (type: FormElementType) => void;
   className?: string;
+  isOver?: boolean;
 }
 
-interface CanvasElementProps {
+interface SortableCanvasElementProps {
   element: FormElement;
   isSelected: boolean;
   onSelect: () => void;
   onDelete: () => void;
-  isDragging: boolean;
 }
 
-function CanvasElement({
+function SortableCanvasElement({
   element,
   isSelected,
   onSelect,
   onDelete,
-  isDragging,
-}: CanvasElementProps) {
+}: SortableCanvasElementProps) {
   const Icon = ICONS[element.type] ?? Type;
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: element.id,
+    data: {
+      type: "canvas-element",
+      element,
+    },
+  });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
 
   return (
     <div
+      ref={setNodeRef}
+      style={style}
       className={cn(
         "group relative flex items-start gap-3 p-4 rounded-lg border bg-card",
-        "transition-all",
+        "transition-all touch-none",
         isSelected && "ring-2 ring-primary border-primary",
-        isDragging && "opacity-50",
+        isDragging && "opacity-50 shadow-lg",
         !isSelected && "hover:border-muted-foreground/50"
       )}
       onClick={onSelect}
@@ -81,7 +107,11 @@ function CanvasElement({
       tabIndex={0}
       onKeyDown={(e) => e.key === "Enter" && onSelect()}
     >
-      <div className="flex-shrink-0 mt-0.5 cursor-grab">
+      <div
+        className="flex-shrink-0 mt-0.5 cursor-grab active:cursor-grabbing"
+        {...attributes}
+        {...listeners}
+      >
         <GripVertical className="h-5 w-5 text-muted-foreground" />
       </div>
 
@@ -127,28 +157,22 @@ function CanvasElement({
   );
 }
 
-// Extend FormElement with SortableItem
-interface SortableFormElement extends FormElement, SortableItem {}
-
 export function FormCanvas({
   elements,
   onElementsChange,
   selectedElementId,
   onSelectElement,
-  onAddElement,
   className,
+  isOver,
 }: FormCanvasProps) {
-  const handleReorder = useCallback(
-    (newElements: SortableFormElement[]) => {
-      // Update positions based on new order
-      const updatedElements = newElements.map((el, index) => ({
-        ...el,
-        position: index,
-      }));
-      onElementsChange(updatedElements);
+  const { setNodeRef, isOver: isOverDroppable } = useDroppable({
+    id: "form-canvas",
+    data: {
+      type: "canvas",
     },
-    [onElementsChange]
-  );
+  });
+
+  const isHighlighted = isOver || isOverDroppable;
 
   const handleDelete = useCallback(
     (id: string) => {
@@ -163,61 +187,76 @@ export function FormCanvas({
     [elements, onElementsChange, selectedElementId, onSelectElement]
   );
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      const elementType = e.dataTransfer.getData("application/form-element-type") as FormElementType;
-      if (elementType) {
-        onAddElement(elementType);
-      }
-    },
-    [onAddElement]
-  );
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
-  }, []);
-
-  // Cast elements to sortable elements
-  const sortableElements: SortableFormElement[] = elements.map((el) => ({
-    ...el,
-    id: el.id,
-  }));
-
   return (
     <div
-      className={cn("flex-1 p-6 overflow-auto", className)}
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
+      ref={setNodeRef}
+      className={cn(
+        "flex-1 p-6 overflow-auto transition-colors",
+        isHighlighted && "bg-accent/20",
+        className
+      )}
     >
       {elements.length === 0 ? (
         <div
           className={cn(
             "flex flex-col items-center justify-center h-64",
-            "border-2 border-dashed border-muted-foreground/25 rounded-lg",
-            "text-muted-foreground"
+            "border-2 border-dashed rounded-lg",
+            "text-muted-foreground",
+            isHighlighted
+              ? "border-primary bg-primary/5"
+              : "border-muted-foreground/25"
           )}
         >
           <p className="text-sm">Drag elements here to build your form</p>
           <p className="text-xs mt-1">or click an element in the palette</p>
         </div>
       ) : (
-        <SortableList
-          items={sortableElements}
-          onReorder={handleReorder}
-          className="space-y-2"
-          renderItem={(element, _index, isDragging) => (
-            <CanvasElement
-              element={element}
-              isSelected={selectedElementId === element.id}
-              onSelect={() => onSelectElement(element.id)}
-              onDelete={() => handleDelete(element.id)}
-              isDragging={isDragging}
-            />
-          )}
-        />
+        <SortableContext
+          items={elements.map((el) => el.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-2">
+            {elements.map((element) => (
+              <SortableCanvasElement
+                key={element.id}
+                element={element}
+                isSelected={selectedElementId === element.id}
+                onSelect={() => onSelectElement(element.id)}
+                onDelete={() => handleDelete(element.id)}
+              />
+            ))}
+          </div>
+        </SortableContext>
       )}
+    </div>
+  );
+}
+
+// Export a drag overlay component for canvas elements
+export function CanvasElementDragOverlay({ element }: { element: FormElement }) {
+  const Icon = ICONS[element.type] ?? Type;
+
+  return (
+    <div
+      className={cn(
+        "flex items-start gap-3 p-4 rounded-lg border bg-card",
+        "shadow-lg cursor-grabbing"
+      )}
+    >
+      <div className="flex-shrink-0 mt-0.5">
+        <GripVertical className="h-5 w-5 text-muted-foreground" />
+      </div>
+
+      <div className="flex-shrink-0 mt-0.5">
+        <Icon className="h-5 w-5 text-muted-foreground" />
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <div className="font-medium text-sm truncate">{element.label}</div>
+        <div className="text-xs text-muted-foreground/70 mt-1">
+          {element.type}
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useDraggable } from "@dnd-kit/core";
 import {
   Type,
   AlignLeft,
@@ -44,29 +45,36 @@ interface ElementPaletteProps {
   className?: string;
 }
 
-interface PaletteItemButtonProps {
+interface DraggablePaletteItemProps {
   item: PaletteItem;
   onAdd: () => void;
 }
 
-function PaletteItemButton({ item, onAdd }: PaletteItemButtonProps) {
+function DraggablePaletteItem({ item, onAdd }: DraggablePaletteItemProps) {
   const Icon = ICONS[item.icon] ?? Type;
+
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `palette-${item.type}`,
+    data: {
+      type: "palette-item",
+      elementType: item.type,
+    },
+  });
 
   return (
     <button
+      ref={setNodeRef}
       type="button"
       onClick={onAdd}
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.setData("application/form-element-type", item.type);
-        e.dataTransfer.effectAllowed = "copy";
-      }}
       className={cn(
         "flex items-center gap-2 w-full p-2 rounded-md text-sm",
         "hover:bg-accent hover:text-accent-foreground",
         "cursor-grab active:cursor-grabbing",
-        "transition-colors"
+        "transition-colors touch-none",
+        isDragging && "opacity-50"
       )}
+      {...listeners}
+      {...attributes}
     >
       <GripVertical className="h-4 w-4 text-muted-foreground" />
       <Icon className="h-4 w-4" />
@@ -89,7 +97,7 @@ function PaletteSection({ title, items, onAddElement }: PaletteSectionProps) {
       </h4>
       <div className="space-y-0.5">
         {items.map((item) => (
-          <PaletteItemButton
+          <DraggablePaletteItem
             key={item.type}
             item={item}
             onAdd={() => onAddElement(item.type)}
@@ -115,6 +123,28 @@ export function ElementPalette({ onAddElement, className }: ElementPaletteProps)
         <PaletteSection title="Display" items={displayItems} onAddElement={onAddElement} />
         <PaletteSection title="Contact" items={contactItems} onAddElement={onAddElement} />
       </div>
+    </div>
+  );
+}
+
+// Export a drag overlay component for the palette item
+export function PaletteItemDragOverlay({ type }: { type: FormElementType }) {
+  const item = PALETTE_ITEMS.find((i) => i.type === type);
+  if (!item) return null;
+
+  const Icon = ICONS[item.icon] ?? Type;
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2 p-2 rounded-md text-sm",
+        "bg-accent text-accent-foreground",
+        "shadow-lg border cursor-grabbing"
+      )}
+    >
+      <GripVertical className="h-4 w-4 text-muted-foreground" />
+      <Icon className="h-4 w-4" />
+      <span>{item.label}</span>
     </div>
   );
 }

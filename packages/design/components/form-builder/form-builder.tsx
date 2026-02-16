@@ -1,10 +1,23 @@
 "use client";
 
 import React, { useCallback, useState } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+  type DragOverEvent,
+} from "@dnd-kit/core";
+import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { cn } from "../../lib/utils";
-import { ElementPalette } from "./element-palette";
+import { ElementPalette, PaletteItemDragOverlay } from "./element-palette";
 import { ElementPropertyEditor } from "./element-property-editor";
-import { FormCanvas } from "./form-canvas";
+import { FormCanvas, CanvasElementDragOverlay } from "./form-canvas";
 import { PageTabs } from "./page-tabs";
 import {
   type FormConfig,
@@ -28,6 +41,19 @@ function generatePageId(): string {
   return `page_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
+// Types for drag data
+interface PaletteDragData {
+  type: "palette-item";
+  elementType: FormElementType;
+}
+
+interface CanvasElementDragData {
+  type: "canvas-element";
+  element: FormElement;
+}
+
+type DragData = PaletteDragData | CanvasElementDragData;
+
 export function FormBuilder({
   config,
   onConfigChange,
@@ -39,9 +65,23 @@ export function FormBuilder({
   const [selectedElementId, setSelectedElementId] = useState<string | null>(
     null
   );
+  const [activeDragData, setActiveDragData] = useState<DragData | null>(null);
+  const [isOverCanvas, setIsOverCanvas] = useState(false);
 
   const activePage = config.pages.find((p) => p.id === activePageId);
   const activeElements = activePage?.elements ?? [];
+
+  // Configure sensors for dnd-kit
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Page management
   const handleAddPage = useCallback(() => {
@@ -161,53 +201,138 @@ export function FormBuilder({
     [config, onConfigChange, activePageId, activePage]
   );
 
+  // DnD handlers
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const data = event.active.data.current as DragData | undefined;
+    if (data) {
+      setActiveDragData(data);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const isOverCanvasArea =
+      event.over?.data.current?.type === "canvas" ||
+      event.over?.data.current?.type === "canvas-element";
+    setIsOverCanvas(isOverCanvasArea);
+  }, []);
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      const activeData = active.data.current as DragData | undefined;
+
+      setActiveDragData(null);
+      setIsOverCanvas(false);
+
+      if (!activeData || !over) return;
+
+      // Handle palette item dropped on canvas
+      if (activeData.type === "palette-item") {
+        const overData = over.data.current;
+        if (overData?.type === "canvas" || overData?.type === "canvas-element") {
+          handleAddElement(activeData.elementType);
+        }
+        return;
+      }
+
+      // Handle canvas element reordering
+      if (activeData.type === "canvas-element") {
+        if (active.id !== over.id) {
+          const oldIndex = activeElements.findIndex((el) => el.id === active.id);
+          const newIndex = activeElements.findIndex((el) => el.id === over.id);
+
+          if (oldIndex !== -1 && newIndex !== -1) {
+            const newElements = arrayMove(activeElements, oldIndex, newIndex).map(
+              (el, index) => ({ ...el, position: index })
+            );
+            handleElementsChange(newElements);
+          }
+        }
+      }
+    },
+    [activeElements, handleAddElement, handleElementsChange]
+  );
+
+  const handleDragCancel = useCallback(() => {
+    setActiveDragData(null);
+    setIsOverCanvas(false);
+  }, []);
+
   // Get the currently selected element
   const selectedElement = selectedElementId
     ? activeElements.find((el) => el.id === selectedElementId) ?? null
     : null;
 
-  return (
-    <div className={cn("flex flex-col h-full", className)}>
-      {/* Page tabs */}
-      <div className="flex-shrink-0 px-4 py-2 border-b">
-        <PageTabs
-          pages={config.pages}
-          activePageId={activePageId}
-          onPageChange={handlePageChange}
-          onAddPage={handleAddPage}
-          onDeletePage={handleDeletePage}
-          onRenamePage={handleRenamePage}
-        />
-      </div>
+  // Render drag overlay based on what's being dragged
+  const renderDragOverlay = () => {
+    if (!activeDragData) return null;
 
-      {/* Main content area */}
-      <div className="flex flex-1 min-h-0">
-        {/* Element palette sidebar */}
-        <div className="flex-shrink-0 w-56 border-r overflow-y-auto">
-          <ElementPalette onAddElement={handleAddElement} />
+    if (activeDragData.type === "palette-item") {
+      return <PaletteItemDragOverlay type={activeDragData.elementType} />;
+    }
+
+    if (activeDragData.type === "canvas-element") {
+      return <CanvasElementDragOverlay element={activeDragData.element} />;
+    }
+
+    return null;
+  };
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <div className={cn("flex flex-col h-full", className)}>
+        {/* Page tabs */}
+        <div className="flex-shrink-0 px-4 py-2 border-b">
+          <PageTabs
+            pages={config.pages}
+            activePageId={activePageId}
+            onPageChange={handlePageChange}
+            onAddPage={handleAddPage}
+            onDeletePage={handleDeletePage}
+            onRenamePage={handleRenamePage}
+          />
         </div>
 
-        {/* Canvas area */}
-        <FormCanvas
-          elements={activeElements}
-          onElementsChange={handleElementsChange}
-          selectedElementId={selectedElementId}
-          onSelectElement={setSelectedElementId}
-          onAddElement={handleAddElement}
-          className="flex-1"
-        />
-
-        {/* Property editor sidebar */}
-        {selectedElement && (
-          <div className="flex-shrink-0 w-72 border-l overflow-y-auto">
-            <ElementPropertyEditor
-              element={selectedElement}
-              onElementChange={handleElementUpdate}
-            />
+        {/* Main content area */}
+        <div className="flex flex-1 min-h-0">
+          {/* Element palette sidebar */}
+          <div className="flex-shrink-0 w-56 border-r overflow-y-auto">
+            <ElementPalette onAddElement={handleAddElement} />
           </div>
-        )}
+
+          {/* Canvas area */}
+          <FormCanvas
+            elements={activeElements}
+            onElementsChange={handleElementsChange}
+            selectedElementId={selectedElementId}
+            onSelectElement={setSelectedElementId}
+            isOver={isOverCanvas}
+            className="flex-1"
+          />
+
+          {/* Property editor sidebar */}
+          {selectedElement && (
+            <div className="flex-shrink-0 w-72 border-l overflow-y-auto">
+              <ElementPropertyEditor
+                element={selectedElement}
+                onElementChange={handleElementUpdate}
+              />
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      <DragOverlay dropAnimation={null}>
+        {renderDragOverlay()}
+      </DragOverlay>
+    </DndContext>
   );
 }
 
