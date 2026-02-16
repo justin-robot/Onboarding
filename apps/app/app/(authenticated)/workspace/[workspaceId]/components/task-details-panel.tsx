@@ -518,7 +518,7 @@ export function TaskDetailsPanel({
                   <div className="space-y-2">
                     {assignees.map((assignee) => (
                       <div
-                        key={assignee.id}
+                        key={assignee.id || assignee.userId}
                         className="flex items-center justify-between gap-2 rounded-md border p-2"
                       >
                         <div className="flex items-center gap-2">
