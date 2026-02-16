@@ -30,11 +30,37 @@ import {
   Trash2,
   Settings,
   MessageSquare,
+  UserPlus,
+  Users,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/design/components/ui/select";
+import { Avatar, AvatarFallback } from "@repo/design/components/ui/avatar";
 import { cn } from "@repo/design/lib/utils";
 import { toast } from "sonner";
 import { CommentSection } from "./comment-section";
 import { DueDateSelector } from "./due-date-selector";
+
+interface Assignee {
+  id: string;
+  userId: string;
+  userName?: string;
+  userEmail?: string;
+  status: string;
+}
+
+interface WorkspaceMember {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  role: string;
+}
 
 interface Task {
   id: string;
@@ -115,6 +141,9 @@ export function TaskDetailsPanel({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
   const [fileInfo, setFileInfo] = useState<{ name: string; url?: string } | null>(null);
+  const [assignees, setAssignees] = useState<Assignee[]>([]);
+  const [members, setMembers] = useState<WorkspaceMember[]>([]);
+  const [isAssigning, setIsAssigning] = useState(false);
 
   // Check if this task type needs configuration
   const needsConfiguration = () => {
@@ -230,6 +259,91 @@ export function TaskDetailsPanel({
 
     fetchTaskDetails();
   }, [task.id, task.type]);
+
+  // Fetch assignees and members
+  useEffect(() => {
+    const fetchAssigneesAndMembers = async () => {
+      try {
+        // Fetch assignees
+        const assigneesRes = await fetch(`/api/tasks/${task.id}/assignees`);
+        if (assigneesRes.ok) {
+          const data = await assigneesRes.json();
+          setAssignees(data.assignees || []);
+        }
+
+        // Fetch workspace members (for admin dropdown)
+        if (isAdmin) {
+          const membersRes = await fetch(`/api/workspaces/${workspaceId}/members`);
+          if (membersRes.ok) {
+            const data = await membersRes.json();
+            setMembers(data.members || []);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching assignees/members:", err);
+      }
+    };
+
+    fetchAssigneesAndMembers();
+  }, [task.id, workspaceId, isAdmin]);
+
+  // Handle assigning a user
+  const handleAssign = async (userId: string) => {
+    setIsAssigning(true);
+    try {
+      const response = await fetch(`/api/tasks/${task.id}/assignees`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to assign user");
+      }
+
+      const data = await response.json();
+
+      // Find member info to add to assignees list
+      const member = members.find(m => m.userId === userId);
+      setAssignees(prev => [...prev, {
+        ...data.assignee,
+        userName: member?.name,
+        userEmail: member?.email,
+      }]);
+
+      toast.success("User assigned to task");
+      onTaskComplete(); // Refresh parent
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to assign user");
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  // Handle unassigning a user
+  const handleUnassign = async (userId: string) => {
+    try {
+      const response = await fetch(`/api/tasks/${task.id}/assignees/${userId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to unassign user");
+      }
+
+      setAssignees(prev => prev.filter(a => a.userId !== userId));
+      toast.success("User removed from task");
+      onTaskComplete(); // Refresh parent
+    } catch (err) {
+      toast.error("Failed to unassign user");
+    }
+  };
+
+  // Get members not yet assigned
+  const availableMembers = members.filter(
+    m => !assignees.some(a => a.userId === m.userId)
+  );
 
   // Extract config-specific props based on task type
   const getConfigProps = () => {
@@ -389,6 +503,79 @@ export function TaskDetailsPanel({
                   <p className="text-sm text-foreground">{task.description}</p>
                 </div>
               )}
+
+              {/* Assignees */}
+              <div>
+                <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
+                  <Users className="inline h-3 w-3 mr-1" />
+                  Assignees
+                </h3>
+
+                {assignees.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No one assigned</p>
+                ) : (
+                  <div className="space-y-2">
+                    {assignees.map((assignee) => (
+                      <div
+                        key={assignee.id}
+                        className="flex items-center justify-between gap-2 rounded-md border p-2"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-xs">
+                              {(assignee.userName || assignee.userEmail || "?")[0].toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">
+                              {assignee.userName || assignee.userEmail || "Unknown"}
+                            </p>
+                            {assignee.status === "completed" && (
+                              <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
+                                Completed
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        {isAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                            onClick={() => handleUnassign(assignee.userId)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add assignee dropdown (admin only) */}
+                {isAdmin && availableMembers.length > 0 && (
+                  <div className="mt-2">
+                    <Select
+                      onValueChange={handleAssign}
+                      disabled={isAssigning}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={isAssigning ? "Assigning..." : "Add assignee..."} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableMembers.map((member) => (
+                          <SelectItem key={member.userId} value={member.userId}>
+                            <div className="flex items-center gap-2">
+                              <UserPlus className="h-3 w-3" />
+                              <span>{member.name || member.email}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
 
               {/* Due date */}
               <div>
