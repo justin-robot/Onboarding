@@ -379,8 +379,8 @@ export function MeetingsPanel({ workspaceId, onClose }: MeetingsPanelProps) {
   }, [fetchMeetings]);
 
   const handleConnectCalendar = () => {
-    // Redirect to Google OAuth flow
-    window.location.href = `/api/integrations/google/connect?workspaceId=${workspaceId}`;
+    // Redirect to Google OAuth flow (uses workspace-scoped endpoint that gets userId from session)
+    window.location.href = `/api/workspaces/${workspaceId}/integrations/google/connect`;
   };
 
   // Loading state
