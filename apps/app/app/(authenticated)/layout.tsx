@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { PendingInviteHandler } from "./components/pending-invite-handler";
+import { NotificationsWrapper } from "./components/notifications-wrapper";
 
 type AppLayoutProperties = {
   readonly children: ReactNode;
@@ -19,7 +20,9 @@ const AppLayout = async ({ children }: AppLayoutProperties) => {
   return (
     <main className="min-h-screen bg-background">
       <PendingInviteHandler />
-      {children}
+      <NotificationsWrapper userId={session.user.id}>
+        {children}
+      </NotificationsWrapper>
     </main>
   );
 };

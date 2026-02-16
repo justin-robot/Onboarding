@@ -36,6 +36,7 @@ import {
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
+import { NotificationsTrigger } from "@repo/notifications";
 
 interface WorkspaceData {
   id: string;
@@ -228,6 +229,7 @@ export function WorkspaceView({
     onMoreClick: () => {
       setShowWorkspaceMenu(true);
     },
+    actions: <NotificationsTrigger />,
   };
 
   return (

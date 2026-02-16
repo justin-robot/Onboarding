@@ -47,14 +47,14 @@ Last updated: 2026-02-15
 - [ ] **Cross-section task moves** via drag-and-drop
 
 #### 3. Notification Bell Component
-**Status:** Not implemented
+**Status:** Complete
 **Spec Reference:** Technical Spec - NotificationBell using Knock React components
 
-- [ ] **Install Knock React components** if not already installed
-- [ ] **Create NotificationBell component** using `@knocklabs/react-notification-feed`
-- [ ] **Add to workspace header** (top-right area)
-- [ ] **Connect to Knock workflows** for real-time updates
-- [ ] **Mark as read functionality**
+- [x] **Install Knock React components** - `@knocklabs/react` already installed
+- [x] **Create NotificationBell component** - Using existing `NotificationsTrigger` from `@repo/notifications`
+- [x] **Add to workspace header** - Added via `actions` prop in WorkspaceHeader
+- [x] **Connect to Knock workflows** - Integrated via `NotificationsProvider` in authenticated layout
+- [x] **Mark as read functionality** - Built into Knock's `NotificationFeedPopover`
 
 #### 4. Activity Feed in Right Panel
 **Status:** Component exists, not wired to API
@@ -307,7 +307,7 @@ Missing workflows:
 ## Priority Order for Remaining Work
 
 1. ~~**Comments System** - Complete~~
-2. **Notification Bell** - User engagement
+2. ~~**Notification Bell** - Complete~~
 3. **Activity Feed wiring** - Visibility into workspace activity
 4. **dnd-kit integration** - Form builder and reordering UX
 5. **Due date cascading** - Complete dependency system
