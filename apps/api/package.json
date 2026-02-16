@@ -16,6 +16,7 @@
     "@repo/database": "workspace:*",
     "@repo/design": "workspace:*",
     "@repo/next-config": "workspace:*",
+    "@repo/notifications": "workspace:*",
     "@repo/observability": "workspace:*",
     "import-in-the-middle": "^2.0.0",
     "next": "16.0.10",

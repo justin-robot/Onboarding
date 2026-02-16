@@ -1,4 +1,4 @@
-import { workspaceService } from "@repo/database";
+import { workspaceService, memberService } from "@repo/database";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
@@ -18,7 +18,7 @@ export async function GET() {
  */
 export async function POST(request: NextRequest) {
   return withErrorHandler(async () => {
-    await requireAuth();
+    const user = await requireAuth();
     const body = await request.json();
 
     if (!body.name || typeof body.name !== "string") {
@@ -29,6 +29,13 @@ export async function POST(request: NextRequest) {
       name: body.name,
       description: body.description,
       dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
+    });
+
+    // Add creator as admin member
+    await memberService.addMember({
+      workspaceId: workspace.id,
+      userId: user.id,
+      role: "admin",
     });
 
     return json(workspace, 201);

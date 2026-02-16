@@ -138,14 +138,14 @@ export const configService = {
 
   async createESignConfig(
     taskId: string,
-    options: { providerDocumentId: string; providerSigningUrl: string }
+    options: { fileId: string; signerEmail: string }
   ): Promise<ESignConfig> {
     return database
       .insertInto("esign_config")
       .values({
         taskId,
-        providerDocumentId: options.providerDocumentId,
-        providerSigningUrl: options.providerSigningUrl,
+        fileId: options.fileId,
+        signerEmail: options.signerEmail,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -243,6 +243,108 @@ export const configService = {
       .executeTakeFirst();
 
     return config ?? null;
+  },
+
+  /**
+   * Record an approval decision
+   */
+  async recordApprovalDecision(
+    taskId: string,
+    userId: string,
+    decision: { approved: boolean; comments?: string }
+  ): Promise<{ success: boolean; error?: string }> {
+    // Get the approval config
+    const config = await this.getApprovalConfigByTaskId(taskId);
+    if (!config) {
+      return { success: false, error: "Approval config not found" };
+    }
+
+    // Check if user already has an approver record, update or create
+    const existingApprover = await database
+      .selectFrom("approver")
+      .selectAll()
+      .where("configId", "=", config.id)
+      .where("userId", "=", userId)
+      .executeTakeFirst();
+
+    const status = decision.approved ? "approved" : "rejected";
+
+    if (existingApprover) {
+      await database
+        .updateTable("approver")
+        .set({
+          status,
+          decidedAt: new Date(),
+          comments: decision.comments || null,
+          updatedAt: new Date(),
+        })
+        .where("id", "=", existingApprover.id)
+        .execute();
+    } else {
+      await database
+        .insertInto("approver")
+        .values({
+          configId: config.id,
+          userId,
+          status,
+          decidedAt: new Date(),
+          comments: decision.comments || null,
+        })
+        .execute();
+    }
+
+    return { success: true };
+  },
+
+  /**
+   * Record a booking
+   */
+  async recordBooking(
+    taskId: string,
+    userId: string,
+    bookingData: { bookedAt: Date; calendarEventId?: string; meetLink?: string }
+  ): Promise<{ success: boolean; error?: string }> {
+    // Get the time booking config
+    const config = await this.getTimeBookingConfigByTaskId(taskId);
+    if (!config) {
+      return { success: false, error: "Time booking config not found" };
+    }
+
+    // Check if user already has a booking record
+    const existingBooking = await database
+      .selectFrom("booking")
+      .selectAll()
+      .where("configId", "=", config.id)
+      .where("userId", "=", userId)
+      .executeTakeFirst();
+
+    if (existingBooking) {
+      await database
+        .updateTable("booking")
+        .set({
+          status: "booked",
+          bookedAt: bookingData.bookedAt,
+          calendarEventId: bookingData.calendarEventId || null,
+          meetLink: bookingData.meetLink || null,
+          updatedAt: new Date(),
+        })
+        .where("id", "=", existingBooking.id)
+        .execute();
+    } else {
+      await database
+        .insertInto("booking")
+        .values({
+          configId: config.id,
+          userId,
+          status: "booked",
+          bookedAt: bookingData.bookedAt,
+          calendarEventId: bookingData.calendarEventId || null,
+          meetLink: bookingData.meetLink || null,
+        })
+        .execute();
+    }
+
+    return { success: true };
   },
 
   // =====================

@@ -2,6 +2,7 @@ import { describe, it, expect, afterAll } from "vitest";
 import { database } from "../index";
 import { sectionService } from "../services/section";
 import { workspaceService } from "../services/workspace";
+import { taskService } from "../services/task";
 import type { NewSection } from "../schemas/main";
 
 describe("SectionService", () => {
@@ -626,6 +627,258 @@ describe("SectionService", () => {
       expect(progress.total).toBe(1);
       expect(progress.completed).toBe(1);
       expect(progress.percentage).toBe(100);
+    });
+  });
+
+  describe("getStatus", () => {
+    it("should return 'not_started' when all tasks are not_started", async () => {
+      const workspace = await workspaceService.create({ name: "Not Started Section" });
+      createdWorkspaceIds.push(workspace.id);
+
+      const section = await sectionService.create({
+        workspaceId: workspace.id,
+        title: "Test Section",
+        position: 0,
+      });
+      createdSectionIds.push(section.id);
+
+      const task1 = await taskService.create({
+        sectionId: section.id,
+        title: "Task 1",
+        position: 0,
+        type: "ACKNOWLEDGEMENT",
+      });
+      createdTaskIds.push(task1.id);
+
+      const task2 = await taskService.create({
+        sectionId: section.id,
+        title: "Task 2",
+        position: 1,
+        type: "ACKNOWLEDGEMENT",
+      });
+      createdTaskIds.push(task2.id);
+
+      const status = await sectionService.getStatus(section.id);
+      expect(status).toBe("not_started");
+    });
+
+    it("should return 'in_progress' when any task is in_progress", async () => {
+      const workspace = await workspaceService.create({ name: "In Progress Section" });
+      createdWorkspaceIds.push(workspace.id);
+
+      const section = await sectionService.create({
+        workspaceId: workspace.id,
+        title: "Test Section",
+        position: 0,
+      });
+      createdSectionIds.push(section.id);
+
+      const task1 = await taskService.create({
+        sectionId: section.id,
+        title: "Task 1",
+        position: 0,
+        type: "ACKNOWLEDGEMENT",
+      });
+      createdTaskIds.push(task1.id);
+
+      // Set task1 to in_progress
+      await database
+        .updateTable("task")
+        .set({ status: "in_progress" })
+        .where("id", "=", task1.id)
+        .execute();
+
+      const task2 = await taskService.create({
+        sectionId: section.id,
+        title: "Task 2",
+        position: 1,
+        type: "ACKNOWLEDGEMENT",
+      });
+      createdTaskIds.push(task2.id);
+
+      const status = await sectionService.getStatus(section.id);
+      expect(status).toBe("in_progress");
+    });
+
+    it("should return 'in_progress' when some tasks completed but not all", async () => {
+      const workspace = await workspaceService.create({ name: "Partial Section" });
+      createdWorkspaceIds.push(workspace.id);
+
+      const section = await sectionService.create({
+        workspaceId: workspace.id,
+        title: "Test Section",
+        position: 0,
+      });
+      createdSectionIds.push(section.id);
+
+      const task1 = await taskService.create({
+        sectionId: section.id,
+        title: "Task 1",
+        position: 0,
+        type: "ACKNOWLEDGEMENT",
+      });
+      createdTaskIds.push(task1.id);
+
+      // Set task1 to completed
+      await database
+        .updateTable("task")
+        .set({ status: "completed", completedAt: new Date() })
+        .where("id", "=", task1.id)
+        .execute();
+
+      const task2 = await taskService.create({
+        sectionId: section.id,
+        title: "Task 2",
+        position: 1,
+        type: "ACKNOWLEDGEMENT",
+      });
+      createdTaskIds.push(task2.id);
+
+      const status = await sectionService.getStatus(section.id);
+      expect(status).toBe("in_progress");
+    });
+
+    it("should return 'completed' when all tasks are completed", async () => {
+      const workspace = await workspaceService.create({ name: "Completed Section" });
+      createdWorkspaceIds.push(workspace.id);
+
+      const section = await sectionService.create({
+        workspaceId: workspace.id,
+        title: "Test Section",
+        position: 0,
+      });
+      createdSectionIds.push(section.id);
+
+      const task1 = await taskService.create({
+        sectionId: section.id,
+        title: "Task 1",
+        position: 0,
+        type: "ACKNOWLEDGEMENT",
+      });
+      createdTaskIds.push(task1.id);
+
+      const task2 = await taskService.create({
+        sectionId: section.id,
+        title: "Task 2",
+        position: 1,
+        type: "ACKNOWLEDGEMENT",
+      });
+      createdTaskIds.push(task2.id);
+
+      // Complete both tasks
+      await database
+        .updateTable("task")
+        .set({ status: "completed", completedAt: new Date() })
+        .where("id", "in", [task1.id, task2.id])
+        .execute();
+
+      const status = await sectionService.getStatus(section.id);
+      expect(status).toBe("completed");
+    });
+
+    it("should return 'not_started' for empty section", async () => {
+      const workspace = await workspaceService.create({ name: "Empty Section" });
+      createdWorkspaceIds.push(workspace.id);
+
+      const section = await sectionService.create({
+        workspaceId: workspace.id,
+        title: "Test Section",
+        position: 0,
+      });
+      createdSectionIds.push(section.id);
+
+      const status = await sectionService.getStatus(section.id);
+      expect(status).toBe("not_started");
+    });
+
+    it("should not count soft-deleted tasks", async () => {
+      const workspace = await workspaceService.create({ name: "Deleted Tasks Section" });
+      createdWorkspaceIds.push(workspace.id);
+
+      const section = await sectionService.create({
+        workspaceId: workspace.id,
+        title: "Test Section",
+        position: 0,
+      });
+      createdSectionIds.push(section.id);
+
+      const task1 = await taskService.create({
+        sectionId: section.id,
+        title: "Task 1",
+        position: 0,
+        type: "ACKNOWLEDGEMENT",
+      });
+      createdTaskIds.push(task1.id);
+
+      // Complete task1
+      await database
+        .updateTable("task")
+        .set({ status: "completed", completedAt: new Date() })
+        .where("id", "=", task1.id)
+        .execute();
+
+      // Create and soft-delete task2 (not_started)
+      const task2 = await taskService.create({
+        sectionId: section.id,
+        title: "Task 2",
+        position: 1,
+        type: "ACKNOWLEDGEMENT",
+      });
+      createdTaskIds.push(task2.id);
+
+      await database
+        .updateTable("task")
+        .set({ deletedAt: new Date() })
+        .where("id", "=", task2.id)
+        .execute();
+
+      // Only task1 (completed) counts, so section should be completed
+      const status = await sectionService.getStatus(section.id);
+      expect(status).toBe("completed");
+    });
+  });
+
+  describe("getByIdWithStatus", () => {
+    it("should return section with computed status and progress", async () => {
+      const workspace = await workspaceService.create({ name: "Full Section" });
+      createdWorkspaceIds.push(workspace.id);
+
+      const section = await sectionService.create({
+        workspaceId: workspace.id,
+        title: "Test Section",
+        position: 0,
+      });
+      createdSectionIds.push(section.id);
+
+      const task1 = await taskService.create({
+        sectionId: section.id,
+        title: "Task 1",
+        position: 0,
+        type: "ACKNOWLEDGEMENT",
+      });
+      createdTaskIds.push(task1.id);
+
+      // Complete task1
+      await database
+        .updateTable("task")
+        .set({ status: "completed", completedAt: new Date() })
+        .where("id", "=", task1.id)
+        .execute();
+
+      const task2 = await taskService.create({
+        sectionId: section.id,
+        title: "Task 2",
+        position: 1,
+        type: "ACKNOWLEDGEMENT",
+      });
+      createdTaskIds.push(task2.id);
+
+      const result = await sectionService.getByIdWithStatus(section.id);
+
+      expect(result).not.toBeNull();
+      expect(result!.status).toBe("in_progress");
+      expect(result!.completedCount).toBe(1);
+      expect(result!.totalCount).toBe(2);
     });
   });
 });

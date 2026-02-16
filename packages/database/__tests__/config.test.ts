@@ -203,15 +203,17 @@ describe("ConfigService", () => {
       createdTaskIds.push(task.id);
 
       const config = await configService.createESignConfig(task.id, {
-        providerDocumentId: "doc-123",
-        providerSigningUrl: "https://signnow.com/sign/abc",
+        fileId: "test-file-id",
+        signerEmail: "signer@example.com",
       });
       createdConfigIds.push({ table: "esign_config", id: config.id });
 
       expect(config.taskId).toBe(task.id);
-      expect(config.providerDocumentId).toBe("doc-123");
-      expect(config.providerSigningUrl).toBe("https://signnow.com/sign/abc");
+      expect(config.fileId).toBe("test-file-id");
+      expect(config.signerEmail).toBe("signer@example.com");
       expect(config.status).toBe("pending");
+      expect(config.providerDocumentId).toBeNull();
+      expect(config.providerSigningUrl).toBeNull();
     });
 
     it("should get e-sign config by task ID", async () => {
@@ -225,15 +227,16 @@ describe("ConfigService", () => {
       createdTaskIds.push(task.id);
 
       const created = await configService.createESignConfig(task.id, {
-        providerDocumentId: "doc-456",
-        providerSigningUrl: "https://signnow.com/sign/xyz",
+        fileId: "test-file-id-2",
+        signerEmail: "signer2@example.com",
       });
       createdConfigIds.push({ table: "esign_config", id: created.id });
 
       const config = await configService.getESignConfigByTaskId(task.id);
 
       expect(config).toBeDefined();
-      expect(config!.providerDocumentId).toBe("doc-456");
+      expect(config!.fileId).toBe("test-file-id-2");
+      expect(config!.signerEmail).toBe("signer2@example.com");
     });
   });
 

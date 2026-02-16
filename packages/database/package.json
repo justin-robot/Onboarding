@@ -21,11 +21,16 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
+    "@repo/storage": "workspace:*",
+    "@signnow/api-client": "^3.1.0",
+    "ably": "^2.4.2",
     "better-auth": "^1.4.7",
     "dotenv": "^17.2.3",
+    "googleapis": "^171.4.0",
     "kysely": "^0.28",
     "kysely-neon": "^2.0.2",
     "server-only": "^0.0.1",
+    "sharp": "^0.34.5",
     "zod": "^4.1.13"
   },
   "devDependencies": {

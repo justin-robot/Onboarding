@@ -13,7 +13,7 @@ export const auth = betterAuth({
   baseURL: process.env.NEXT_PUBLIC_APP_URL,
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: true, // Users must verify email before signing in
+    requireEmailVerification: false, // Disabled for development
     sendResetPassword: async ({ user, url }) => {
       await sendPasswordResetEmail({
         to: user.email,

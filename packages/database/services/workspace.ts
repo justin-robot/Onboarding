@@ -1,5 +1,6 @@
 import { database } from "../index";
 import { dependencyService } from "./dependency";
+import { auditLogService, type AuditContext } from "./auditLog";
 import type {
   Workspace,
   NewWorkspace,
@@ -34,12 +35,25 @@ export const workspaceService = {
   /**
    * Create a new workspace
    */
-  async create(input: NewWorkspace): Promise<Workspace> {
-    return database
+  async create(input: NewWorkspace, auditContext?: AuditContext): Promise<Workspace> {
+    const workspace = await database
       .insertInto("workspace")
       .values(input)
       .returningAll()
       .executeTakeFirstOrThrow();
+
+    if (auditContext) {
+      await auditLogService.logEvent({
+        workspaceId: workspace.id,
+        eventType: "workspace.created",
+        actorId: auditContext.actorId,
+        source: auditContext.source,
+        ipAddress: auditContext.ipAddress,
+        metadata: { workspaceName: workspace.name },
+      });
+    }
+
+    return workspace;
   },
 
   /**
@@ -175,8 +189,12 @@ export const workspaceService = {
    */
   async update(
     id: string,
-    input: Omit<WorkspaceUpdate, "id" | "createdAt" | "deletedAt">
+    input: Omit<WorkspaceUpdate, "id" | "createdAt" | "deletedAt">,
+    auditContext?: AuditContext
   ): Promise<Workspace | null> {
+    // Get current state for change tracking
+    const current = auditContext ? await this.getById(id) : null;
+
     const result = await database
       .updateTable("workspace")
       .set({
@@ -188,13 +206,34 @@ export const workspaceService = {
       .returningAll()
       .executeTakeFirst();
 
+    if (result && auditContext && current) {
+      // Build changes metadata
+      const changes: Record<string, { from: unknown; to: unknown }> = {};
+      for (const [key, value] of Object.entries(input)) {
+        if (value !== undefined && current[key as keyof typeof current] !== value) {
+          changes[key] = { from: current[key as keyof typeof current], to: value };
+        }
+      }
+
+      if (Object.keys(changes).length > 0) {
+        await auditLogService.logEvent({
+          workspaceId: id,
+          eventType: "workspace.updated",
+          actorId: auditContext.actorId,
+          source: auditContext.source,
+          ipAddress: auditContext.ipAddress,
+          metadata: { changes },
+        });
+      }
+    }
+
     return result ?? null;
   },
 
   /**
    * Soft delete a workspace
    */
-  async softDelete(id: string): Promise<boolean> {
+  async softDelete(id: string, auditContext?: AuditContext): Promise<boolean> {
     const result = await database
       .updateTable("workspace")
       .set({ deletedAt: new Date() })
@@ -202,7 +241,19 @@ export const workspaceService = {
       .where("deletedAt", "is", null)
       .executeTakeFirst();
 
-    return (result.numUpdatedRows ?? 0n) > 0n;
+    const deleted = (result.numUpdatedRows ?? 0n) > 0n;
+
+    if (deleted && auditContext) {
+      await auditLogService.logEvent({
+        workspaceId: id,
+        eventType: "workspace.deleted",
+        actorId: auditContext.actorId,
+        source: auditContext.source,
+        ipAddress: auditContext.ipAddress,
+      });
+    }
+
+    return deleted;
   },
 
   /**
