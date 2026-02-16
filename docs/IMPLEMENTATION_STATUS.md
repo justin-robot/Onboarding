@@ -135,7 +135,7 @@ Not yet implemented:
 - [x] **Token encryption** (AES-256) and auto-refresh
 - [x] **Integration status endpoint** GET /api/workspaces/[id]/integrations
 - [x] **Disconnect endpoint** DELETE /api/workspaces/[id]/integrations/google
-- [ ] **Display meetings in Meetings tab** (UI component)
+- [x] **Display meetings in Meetings tab** (MeetingsPanel component)
 
 #### 10. File Versioning
 **Status:** Schema done, UI missing
@@ -321,7 +321,7 @@ Not yet implemented:
 7. ~~**Form Builder dnd-kit** - Element drag-and-drop complete~~
 8. ~~**SignNow** - Backend complete (webhook events, completed doc URL, audit logs)~~
 9. ~~**Google Calendar** - Backend complete (list events, create meetings)~~
-10. **Due date UI** - Relative due date selector ("X days after Task")
-11. **Meetings tab UI** - Display Google Calendar meetings in workspace
+10. ~~**Meetings tab UI** - MeetingsPanel component complete~~
+11. **Due date UI** - Relative due date selector ("X days after Task")
 12. **File versioning UI** - Version history dropdown
 13. **Polish remaining features** (workspace settings, member management, etc.)

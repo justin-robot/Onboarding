@@ -15,6 +15,7 @@ import type { SectionStatus } from "@repo/design/components/moxo-layout";
 import { TaskDetailsPanel } from "./components/task-details-panel";
 import { FilesView, type FileItem } from "./components/files-view";
 import { MembersPanel } from "./components/members-panel";
+import { MeetingsPanel } from "./components/meetings-panel";
 import { WorkspaceActivity } from "./components/workspace-activity";
 import { RealtimeChat } from "./components/realtime-chat";
 import { RealtimeWorkspaceEvents } from "./components/realtime-workspace-events";
@@ -30,6 +31,7 @@ import {
 import { Button } from "@repo/design/components/ui/button";
 import {
   Activity,
+  Calendar,
   FolderPlus,
   Plus,
   Settings,
@@ -104,6 +106,7 @@ export function WorkspaceView({
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [showMembersPanel, setShowMembersPanel] = useState(false);
   const [showActivityPanel, setShowActivityPanel] = useState(false);
+  const [showMeetingsPanel, setShowMeetingsPanel] = useState(false);
   const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
   const [addTaskSectionId, setAddTaskSectionId] = useState<string | null>(null);
   const [addSectionDialogOpen, setAddSectionDialogOpen] = useState(false);
@@ -181,6 +184,7 @@ export function WorkspaceView({
     setSelectedTaskId(taskId);
     setShowMembersPanel(false);
     setShowActivityPanel(false);
+    setShowMeetingsPanel(false);
     setRightPanelOpen(true);
   };
 
@@ -189,6 +193,7 @@ export function WorkspaceView({
     setSelectedTaskId(null);
     setShowMembersPanel(true);
     setShowActivityPanel(false);
+    setShowMeetingsPanel(false);
     setRightPanelOpen(true);
   };
 
@@ -197,6 +202,16 @@ export function WorkspaceView({
     setSelectedTaskId(null);
     setShowMembersPanel(false);
     setShowActivityPanel(true);
+    setShowMeetingsPanel(false);
+    setRightPanelOpen(true);
+  };
+
+  // Handle meetings panel
+  const handleMeetingsClick = () => {
+    setSelectedTaskId(null);
+    setShowMembersPanel(false);
+    setShowActivityPanel(false);
+    setShowMeetingsPanel(true);
     setRightPanelOpen(true);
   };
 
@@ -348,6 +363,11 @@ export function WorkspaceView({
             onClose={() => setShowMembersPanel(false)}
             currentUserRole={currentUserRole}
           />
+        ) : showMeetingsPanel ? (
+          <MeetingsPanel
+            workspaceId={currentWorkspaceId}
+            onClose={() => setShowMeetingsPanel(false)}
+          />
         ) : showActivityPanel ? (
           <WorkspaceActivity
             workspaceId={currentWorkspaceId}
@@ -385,7 +405,7 @@ export function WorkspaceView({
       onTabChange={setActiveTab}
       showRightPanel={true}
       sidebarTitle="Workspaces"
-      rightPanelTitle={showMembersPanel ? "Members" : showActivityPanel ? "Activity" : selectedTask ? selectedTask.title : "Chat"}
+      rightPanelTitle={showMembersPanel ? "Members" : showMeetingsPanel ? "Meetings" : showActivityPanel ? "Activity" : selectedTask ? selectedTask.title : "Chat"}
       sidebarOpen={sidebarOpen}
       onSidebarOpenChange={setSidebarOpen}
       rightPanelOpen={rightPanelOpen}
@@ -507,6 +527,17 @@ export function WorkspaceView({
           >
             <Activity className="mr-2 h-4 w-4" />
             Activity
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full justify-start"
+            onClick={() => {
+              setShowWorkspaceMenu(false);
+              handleMeetingsClick();
+            }}
+          >
+            <Calendar className="mr-2 h-4 w-4" />
+            Meetings
           </Button>
           <Button variant="ghost" className="w-full justify-start">
             <Bookmark className="mr-2 h-4 w-4" />
