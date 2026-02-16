@@ -1,4 +1,5 @@
-import { fileService, taskService, sectionService } from "@repo/database";
+import { fileService, taskService, sectionService, workspaceService, assigneeService } from "@repo/database";
+import { notificationService } from "@repo/notifications";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
@@ -56,6 +57,40 @@ export async function POST(request: NextRequest) {
       sourceTaskId: taskId,
       generateThumbnail: true,
     });
+
+    // For FILE_REQUEST tasks, notify reviewers/admins about the new file (non-blocking)
+    if (task.type === "FILE_REQUEST") {
+      (async () => {
+        try {
+          const workspace = await workspaceService.getById(section.workspaceId);
+          if (!workspace) return;
+
+          // Get all assignees (excluding the uploader)
+          const assignees = await assigneeService.getByTaskId(taskId);
+          const reviewers = assignees.filter((a) => a.userId !== user.id);
+
+          // Send file-ready-for-review notification to each reviewer
+          for (const reviewer of reviewers) {
+            await notificationService.triggerWorkflow({
+              workflowId: "file-ready-for-review",
+              recipientId: reviewer.userId,
+              actorId: user.id,
+              data: {
+                workspaceId: section.workspaceId,
+                workspaceName: workspace.name,
+                taskId: task.id,
+                taskTitle: task.title,
+                fileName: name,
+                uploadedBy: user.name || user.email,
+              },
+              tenant: section.workspaceId,
+            });
+          }
+        } catch (err) {
+          console.error("Failed to send file-ready-for-review notifications:", err);
+        }
+      })();
+    }
 
     return json(file);
   });

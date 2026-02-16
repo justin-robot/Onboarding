@@ -1,5 +1,6 @@
-import { taskService, configService, sectionService } from "@repo/database";
+import { taskService, configService, sectionService, assigneeService, workspaceService } from "@repo/database";
 import { ablyService, WORKSPACE_EVENTS } from "@repo/database/services/ably";
+import { notificationService } from "@repo/notifications";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
@@ -56,6 +57,41 @@ export async function POST(request: NextRequest, { params }: Params) {
     // For rejection, we keep the task open (not completed) so the submitter can revise
     // Just update the task to reflect it needs revision
     const updatedTask = await taskService.getById(id);
+
+    // Get workspace info and notify assignees of rejection (non-blocking)
+    (async () => {
+      try {
+        const section = await sectionService.getById(task.sectionId);
+        if (!section) return;
+
+        const workspace = await workspaceService.getById(section.workspaceId);
+        if (!workspace) return;
+
+        // Get all assignees (excluding the rejector)
+        const assignees = await assigneeService.getByTaskId(id);
+        const otherAssignees = assignees.filter((a) => a.userId !== user.id);
+
+        // Send approval-rejected notification to each assignee
+        for (const assignee of otherAssignees) {
+          await notificationService.triggerWorkflow({
+            workflowId: "approval-rejected",
+            recipientId: assignee.userId,
+            actorId: user.id,
+            data: {
+              workspaceId: section.workspaceId,
+              workspaceName: workspace.name,
+              taskId: task.id,
+              taskTitle: task.title,
+              rejectedBy: user.name || user.email,
+              rejectionReason: reason,
+            },
+            tenant: section.workspaceId,
+          });
+        }
+      } catch (err) {
+        console.error("Failed to send rejection notifications:", err);
+      }
+    })();
 
     // Broadcast rejection via Ably (non-blocking)
     (async () => {

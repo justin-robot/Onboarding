@@ -13,8 +13,8 @@ Last updated: 2026-02-15
 | Database Models | **95% Complete** | All 25 models implemented |
 | API Endpoints | **92% Complete** | Core CRUD done, comments + activity complete |
 | UI Components | **88% Complete** | Comments, notifications, activity added; dnd-kit missing |
-| Integrations | **70% Complete** | SignNow partial, Google Calendar partial |
-| Task Flow Engine | **75% Complete** | Core logic done, some edge cases missing |
+| Integrations | **75% Complete** | SignNow + notifications wired, Google Calendar partial |
+| Task Flow Engine | **80% Complete** | Core logic done, due date cascading with notifications |
 
 ---
 
@@ -70,34 +70,34 @@ Last updated: 2026-02-15
 ### MEDIUM PRIORITY - Incomplete Features
 
 #### 5. Knock Notification Workflows
-**Status:** Partially implemented (4/12)
+**Status:** Implemented (11/12)
 **Spec Reference:** Technical Spec - 12 Knock workflows
 
 Implemented:
-- [x] task-assigned
-- [x] task-your-turn
-- [x] comment-added
-- [ ] approval-requested
-- [ ] approval-rejected
+- [x] task-assigned - Via completion service on task unlock
+- [x] task-your-turn - Via completion service on task unlock
+- [x] comment-added - Via comment service
+- [x] approval-requested - Via completion service for APPROVAL tasks
+- [x] approval-rejected - Via reject endpoint
+- [x] due-date-approaching - Via due date reminder cron
+- [x] due-date-passed - Via due date reminder cron
+- [x] esign-ready - Via SignNow pushAndUpdateConfig
+- [x] file-ready-for-review - Via file confirm endpoint for FILE_REQUEST tasks
+- [x] meeting-starting - Via meeting reminder cron
+- [x] due-date-cleared - Via cascade service on anchor task delete
 
-Missing workflows:
-- [ ] **due-date-approaching** - Wire to cron job
-- [ ] **due-date-passed** - Wire to cron job
-- [ ] **esign-ready** - Trigger when e-sign document pushed
-- [ ] **file-ready-for-review** - Trigger on file upload requiring review
-- [ ] **file-rejected** - Trigger on file rejection
-- [ ] **meeting-starting** - 15-minute reminder (cron job)
-- [ ] **due-date-cleared** - Notify admins when anchor deleted
+Not yet implemented:
+- [ ] **file-rejected** - Needs file rejection endpoint (not currently in spec)
 
 #### 6. Due Date Reminder Scheduler (Cron)
-**Status:** API exists, needs completion
+**Status:** Complete
 **Spec Reference:** Technical Spec - Due Date Reminder Scheduler
 
 - [x] Cron endpoint exists (`/api/cron/due-date-reminders`)
-- [ ] **Connect to Knock workflows** for approaching/overdue notifications
-- [ ] **Deduplication** - Use task ID + event type + date as key
-- [ ] **Configure Vercel/external cron** to run periodically
-- [ ] **Meeting reminders** - 15-minute before meeting notifications
+- [x] **Connected to Knock workflows** for approaching/overdue notifications
+- [x] **Deduplication helper** - getDeduplicationKey function available
+- [x] **Meeting reminders** - `/api/cron/meeting-reminders` endpoint with 15-min threshold
+- [ ] **Configure Vercel cron** - Add to vercel.json for production
 
 #### 7. Task Dependencies - Date Anchoring
 **Status:** Schema done, partial implementation
@@ -312,10 +312,10 @@ Missing workflows:
 1. ~~**Comments System** - Complete~~
 2. ~~**Notification Bell** - Complete~~
 3. ~~**Activity Feed wiring** - Complete~~
-4. **dnd-kit integration** - Form builder and reordering UX
-5. **Due date cascading** - Complete dependency system
-6. **SignNow completion** - E-sign feature completion
-7. **Knock workflows** - All 12 notification types
+4. ~~**Knock workflows** - 11/12 implemented~~
+5. **dnd-kit integration** - Form builder and reordering UX
+6. **Due date cascading UI** - Relative due date selector
+7. **SignNow completion** - Handle webhook events, completed doc URL
 8. **Google Calendar** - Meeting creation
 9. **File versioning UI** - Document management
 10. **Polish remaining features**

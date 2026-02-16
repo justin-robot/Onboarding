@@ -17,12 +17,47 @@ export interface TaskYourTurnData {
   taskTitle: string;
 }
 
+export interface DueDateApproachingData {
+  workspaceId: string;
+  workspaceName: string;
+  taskId: string;
+  taskTitle: string;
+  dueDate: string; // ISO date string
+  hoursRemaining: number;
+}
+
+export interface DueDatePassedData {
+  workspaceId: string;
+  workspaceName: string;
+  taskId: string;
+  taskTitle: string;
+  dueDate: string;
+  hoursOverdue: number;
+}
+
+export interface DueDateClearedData {
+  workspaceId: string;
+  workspaceName: string;
+  taskId: string;
+  taskTitle: string;
+  reason: string;
+}
+
 export interface ApprovalRequestedData {
   workspaceId: string;
   workspaceName: string;
   taskId: string;
   taskTitle: string;
   requestedBy?: string;
+}
+
+export interface ApprovalRejectedData {
+  workspaceId: string;
+  workspaceName: string;
+  taskId: string;
+  taskTitle: string;
+  rejectedBy: string;
+  rejectionReason?: string;
 }
 
 export interface CommentAddedData {
@@ -42,6 +77,25 @@ export interface ESignReadyData {
   documentName: string;
 }
 
+export interface FileReadyForReviewData {
+  workspaceId: string;
+  workspaceName: string;
+  taskId: string;
+  taskTitle: string;
+  fileName: string;
+  uploadedBy: string;
+}
+
+export interface FileRejectedData {
+  workspaceId: string;
+  workspaceName: string;
+  taskId: string;
+  taskTitle: string;
+  fileName: string;
+  rejectedBy: string;
+  rejectionReason?: string;
+}
+
 export interface MeetingStartingData {
   workspaceId: string;
   workspaceName: string;
@@ -55,25 +109,53 @@ export interface MeetingStartingData {
 export type NotificationWorkflowData =
   | TaskAssignedData
   | TaskYourTurnData
+  | DueDateApproachingData
+  | DueDatePassedData
+  | DueDateClearedData
   | ApprovalRequestedData
+  | ApprovalRejectedData
   | CommentAddedData
   | ESignReadyData
+  | FileReadyForReviewData
+  | FileRejectedData
   | MeetingStartingData;
 
-// Workflow IDs used in database services
+// Workflow IDs used in database services (all 12 workflows)
 export type NotificationWorkflowId =
   | "task-assigned"
   | "task-your-turn"
+  | "due-date-approaching"
+  | "due-date-passed"
+  | "due-date-cleared"
   | "approval-requested"
+  | "approval-rejected"
   | "comment-added"
   | "esign-ready"
+  | "file-ready-for-review"
+  | "file-rejected"
   | "meeting-starting";
 
+// Map workflow to data type for type safety
+export interface WorkflowDataMap {
+  "task-assigned": TaskAssignedData;
+  "task-your-turn": TaskYourTurnData;
+  "due-date-approaching": DueDateApproachingData;
+  "due-date-passed": DueDatePassedData;
+  "due-date-cleared": DueDateClearedData;
+  "approval-requested": ApprovalRequestedData;
+  "approval-rejected": ApprovalRejectedData;
+  "comment-added": CommentAddedData;
+  "esign-ready": ESignReadyData;
+  "file-ready-for-review": FileReadyForReviewData;
+  "file-rejected": FileRejectedData;
+  "meeting-starting": MeetingStartingData;
+}
+
 // Trigger options
-export interface TriggerWorkflowOptions {
-  workflowId: NotificationWorkflowId;
+export interface TriggerWorkflowOptions<W extends NotificationWorkflowId = NotificationWorkflowId> {
+  workflowId: W;
   recipientId: string;
-  data: NotificationWorkflowData;
+  data: W extends keyof WorkflowDataMap ? WorkflowDataMap[W] : NotificationWorkflowData;
   tenant?: string;
 }
 
