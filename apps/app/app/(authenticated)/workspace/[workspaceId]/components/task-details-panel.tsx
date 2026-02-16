@@ -518,9 +518,9 @@ export function TaskDetailsPanel({
                   <p className="text-sm text-muted-foreground">No one assigned</p>
                 ) : (
                   <div className="space-y-2">
-                    {assignees.map((assignee) => (
+                    {assignees.map((assignee, index) => (
                       <div
-                        key={assignee.id || assignee.userId}
+                        key={`${assignee.userId}-${index}`}
                         className="flex items-center justify-between gap-2 rounded-md border p-2"
                       >
                         <div className="flex items-center gap-2">

@@ -1,18 +1,33 @@
-import { assigneeService, memberService, taskService, sectionService } from "@repo/database";
+import { assigneeService, memberService, taskService, sectionService, database } from "@repo/database";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
 type Params = { params: Promise<{ id: string }> };
 
 /**
- * GET /api/tasks/[id]/assignees - Get all assignees for a task
+ * GET /api/tasks/[id]/assignees - Get all assignees for a task with user info
  */
 export async function GET(_request: NextRequest, { params }: Params) {
   return withErrorHandler(async () => {
     await requireAuth();
     const { id: taskId } = await params;
 
-    const assignees = await assigneeService.getByTaskId(taskId);
+    // Get assignees with user info
+    const assignees = await database
+      .selectFrom("task_assignee")
+      .innerJoin("user", "user.id", "task_assignee.userId")
+      .select([
+        "task_assignee.id",
+        "task_assignee.taskId",
+        "task_assignee.userId",
+        "task_assignee.status",
+        "task_assignee.completedAt",
+        "task_assignee.createdAt",
+        "user.name as userName",
+        "user.email as userEmail",
+      ])
+      .where("task_assignee.taskId", "=", taskId)
+      .execute();
 
     return json({ assignees });
   });
