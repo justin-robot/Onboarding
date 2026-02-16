@@ -276,7 +276,8 @@ export function TaskDetailsPanel({
           const membersRes = await fetch(`/api/workspaces/${workspaceId}/members`);
           if (membersRes.ok) {
             const data = await membersRes.json();
-            setMembers(data.members || []);
+            // API returns array directly, not { members: [...] }
+            setMembers(Array.isArray(data) ? data : (data.members || []));
           }
         }
       } catch (err) {
