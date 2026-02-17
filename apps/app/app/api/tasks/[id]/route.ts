@@ -1,4 +1,4 @@
-import { taskService } from "@repo/database";
+import { taskService } from "@/lib/services";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 import type { TaskStatus, CompletionRule } from "@repo/database";

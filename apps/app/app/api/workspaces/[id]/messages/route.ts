@@ -1,5 +1,5 @@
-import { chatService, memberService } from "@repo/database";
-import { ablyService, CHAT_EVENTS } from "@repo/database/services/ably";
+import { chatService, memberService } from "@/lib/services";
+import { ablyService, CHAT_EVENTS } from "@/lib/services/ably";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 

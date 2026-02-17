@@ -1,0 +1,289 @@
+import { database } from "@repo/database";
+import { dependencyService } from "./dependency";
+import type { TaskAssignee, NewTaskAssignee } from "@repo/database";
+import type { NotificationContext } from "./notificationContext";
+
+// Result type for completion operations
+export interface CompletionResult {
+  success: boolean;
+  taskCompleted?: boolean;
+  error?: "USER_NOT_ASSIGNED" | "TASK_LOCKED" | "ALREADY_COMPLETED" | "TASK_ALREADY_COMPLETED";
+}
+
+export const completionService = {
+  /**
+   * Complete a task for a specific user
+   * Handles assignee completion and task completion rule evaluation
+   */
+  async completeTaskForUser(
+    taskId: string,
+    userId: string,
+    notificationContext?: NotificationContext
+  ): Promise<CompletionResult> {
+    // Get the task
+    const task = await database
+      .selectFrom("task")
+      .selectAll()
+      .where("id", "=", taskId)
+      .where("deletedAt", "is", null)
+      .executeTakeFirst();
+
+    if (!task) {
+      return { success: false, error: "USER_NOT_ASSIGNED" };
+    }
+
+    // Check if task is already completed
+    if (task.status === "completed") {
+      return { success: false, error: "TASK_ALREADY_COMPLETED" };
+    }
+
+    // Check if user is assigned to this task
+    const assignee = await database
+      .selectFrom("task_assignee")
+      .selectAll()
+      .where("taskId", "=", taskId)
+      .where("userId", "=", userId)
+      .executeTakeFirst();
+
+    if (!assignee) {
+      return { success: false, error: "USER_NOT_ASSIGNED" };
+    }
+
+    // Check if assignee already completed
+    if (assignee.status === "completed") {
+      return { success: false, error: "ALREADY_COMPLETED" };
+    }
+
+    // Check if task is locked (dependencies not satisfied)
+    const isUnlocked = await dependencyService.isTaskUnlocked(taskId);
+    if (!isUnlocked) {
+      return { success: false, error: "TASK_LOCKED" };
+    }
+
+    // Mark assignee as completed
+    await database
+      .updateTable("task_assignee")
+      .set({
+        status: "completed",
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where("id", "=", assignee.id)
+      .execute();
+
+    // Evaluate completion rule
+    const taskCompleted = await this.evaluateCompletion(taskId, task.completionRule);
+
+    if (taskCompleted) {
+      // Mark task as completed
+      await database
+        .updateTable("task")
+        .set({
+          status: "completed",
+          completedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where("id", "=", taskId)
+        .execute();
+
+      // Trigger notifications for newly unlocked dependent tasks
+      if (notificationContext) {
+        await this.notifyNewlyUnlockedTasks(taskId, notificationContext);
+      }
+    } else if (task.status === "not_started") {
+      // Move to in_progress if this is the first completion
+      await database
+        .updateTable("task")
+        .set({
+          status: "in_progress",
+          updatedAt: new Date(),
+        })
+        .where("id", "=", taskId)
+        .execute();
+    }
+
+    return { success: true, taskCompleted };
+  },
+
+  /**
+   * Notify assignees of tasks that are now unlocked after a task completion
+   */
+  async notifyNewlyUnlockedTasks(
+    completedTaskId: string,
+    notificationContext: NotificationContext
+  ): Promise<void> {
+    // Find tasks that depend on the completed task (unlock type)
+    const dependentTasks = await database
+      .selectFrom("task_dependency")
+      .innerJoin("task", "task.id", "task_dependency.taskId")
+      .innerJoin("section", "section.id", "task.sectionId")
+      .innerJoin("workspace", "workspace.id", "section.workspaceId")
+      .select([
+        "task.id",
+        "task.title",
+        "task.type",
+        "section.workspaceId",
+        "workspace.name as workspaceName",
+      ])
+      .where("task_dependency.dependsOnTaskId", "=", completedTaskId)
+      .where("task_dependency.type", "=", "unlock")
+      .where("task.deletedAt", "is", null)
+      .where("task.status", "!=", "completed")
+      .execute();
+
+    for (const depTask of dependentTasks) {
+      // Check if the dependent task is now fully unlocked
+      const isUnlocked = await dependencyService.isTaskUnlocked(depTask.id);
+      if (!isUnlocked) {
+        continue; // Still has other blocking dependencies
+      }
+
+      // Get assignees for the newly unlocked task
+      const assignees = await this.getAssigneesByTaskId(depTask.id);
+
+      // Determine workflow based on task type
+      const workflowId = depTask.type === "APPROVAL" ? "approval-requested" : "task-your-turn";
+
+      // Notify each assignee
+      for (const assignee of assignees) {
+        await notificationContext.triggerWorkflow({
+          workflowId,
+          recipientId: assignee.userId,
+          data: {
+            workspaceId: depTask.workspaceId,
+            workspaceName: depTask.workspaceName,
+            taskId: depTask.id,
+            taskTitle: depTask.title,
+          },
+          tenant: depTask.workspaceId,
+        });
+      }
+    }
+  },
+
+  /**
+   * Evaluate whether a task should be marked as completed based on its completion rule
+   */
+  async evaluateCompletion(taskId: string, completionRule: "any" | "all"): Promise<boolean> {
+    const assignees = await this.getAssigneesByTaskId(taskId);
+
+    if (assignees.length === 0) {
+      return false;
+    }
+
+    if (completionRule === "any") {
+      // Task completes when any assignee completes
+      return assignees.some((a) => a.status === "completed");
+    } else {
+      // Task completes when all assignees complete
+      return assignees.every((a) => a.status === "completed");
+    }
+  },
+
+  /**
+   * Get all assignees for a task
+   */
+  async getAssigneesByTaskId(taskId: string): Promise<TaskAssignee[]> {
+    return database
+      .selectFrom("task_assignee")
+      .selectAll()
+      .where("taskId", "=", taskId)
+      .execute();
+  },
+
+  /**
+   * Add an assignee to a task
+   * Throws if user is already assigned
+   */
+  async addAssignee(taskId: string, userId: string): Promise<TaskAssignee> {
+    // Check for existing assignment
+    const existing = await database
+      .selectFrom("task_assignee")
+      .selectAll()
+      .where("taskId", "=", taskId)
+      .where("userId", "=", userId)
+      .executeTakeFirst();
+
+    if (existing) {
+      throw new Error("User is already assigned to this task");
+    }
+
+    return database
+      .insertInto("task_assignee")
+      .values({
+        taskId,
+        userId,
+      })
+      .returningAll()
+      .executeTakeFirstOrThrow();
+  },
+
+  /**
+   * Remove an assignee from a task
+   */
+  async removeAssignee(taskId: string, userId: string): Promise<boolean> {
+    const result = await database
+      .deleteFrom("task_assignee")
+      .where("taskId", "=", taskId)
+      .where("userId", "=", userId)
+      .executeTakeFirst();
+
+    return (result.numDeletedRows ?? 0n) > 0n;
+  },
+
+  /**
+   * Complete a task via system/webhook (no user context)
+   * Used for e-sign completions, external integrations, etc.
+   * Also marks all assignees as completed.
+   */
+  async completeTaskSystem(
+    taskId: string,
+    notificationContext?: NotificationContext
+  ): Promise<CompletionResult> {
+    // Get the task
+    const task = await database
+      .selectFrom("task")
+      .selectAll()
+      .where("id", "=", taskId)
+      .where("deletedAt", "is", null)
+      .executeTakeFirst();
+
+    if (!task) {
+      return { success: false };
+    }
+
+    // Check if task is already completed
+    if (task.status === "completed") {
+      return { success: false, error: "TASK_ALREADY_COMPLETED" };
+    }
+
+    // Mark all assignees as completed
+    await database
+      .updateTable("task_assignee")
+      .set({
+        status: "completed",
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where("taskId", "=", taskId)
+      .execute();
+
+    // Mark task as completed
+    await database
+      .updateTable("task")
+      .set({
+        status: "completed",
+        completedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where("id", "=", taskId)
+      .execute();
+
+    // Trigger notifications for newly unlocked dependent tasks
+    if (notificationContext) {
+      await this.notifyNewlyUnlockedTasks(taskId, notificationContext);
+    }
+
+    return { success: true, taskCompleted: true };
+  },
+};

@@ -1,5 +1,5 @@
-import { sectionService } from "@repo/database";
-import { ablyService, WORKSPACE_EVENTS } from "@repo/database/services/ably";
+import { sectionService } from "@/lib/services";
+import { ablyService, WORKSPACE_EVENTS } from "@/lib/services/ably";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 

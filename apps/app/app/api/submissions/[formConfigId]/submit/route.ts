@@ -3,7 +3,7 @@ import {
   submissionService,
   completionService,
   validateSubmission,
-} from "@repo/database";
+} from "@/lib/services";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 import type { FormElement } from "@repo/database";

@@ -1,4 +1,4 @@
-import { assigneeService, memberService, taskService, sectionService } from "@repo/database";
+import { assigneeService, memberService, taskService, sectionService } from "@/lib/services";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 

@@ -36,8 +36,11 @@ importers:
         specifier: 6.3.9
         version: 6.3.9(effect@3.18.4)(typescript@5.9.3)(valibot@1.2.0(typescript@5.9.3))
 
-  apps/api:
+  apps/app:
     dependencies:
+      '@hookform/resolvers':
+        specifier: ^5.2.2
+        version: 5.2.2(react-hook-form@7.68.0(react@19.2.1))
       '@repo/analytics':
         specifier: workspace:*
         version: link:../../packages/analytics
@@ -59,91 +62,39 @@ importers:
       '@repo/observability':
         specifier: workspace:*
         version: link:../../packages/observability
-      import-in-the-middle:
-        specifier: ^2.0.0
-        version: 2.0.0
-      next:
-        specifier: 16.0.10
-        version: 16.0.10(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(@playwright/test@1.58.2)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      react:
-        specifier: 19.2.1
-        version: 19.2.1
-      react-dom:
-        specifier: 19.2.1
-        version: 19.2.1(react@19.2.1)
-      require-in-the-middle:
-        specifier: 8.0.1
-        version: 8.0.1
-      zod:
-        specifier: ^4.1.13
-        version: 4.1.13
-    devDependencies:
-      '@next/env':
-        specifier: ^16.0.10
-        version: 16.0.10
-      '@repo/typescript-config':
-        specifier: workspace:*
-        version: link:../../packages/typescript-config
-      '@types/node':
-        specifier: 24.10.1
-        version: 24.10.1
-      '@types/react':
-        specifier: 19.2.7
-        version: 19.2.7
-      '@types/react-dom':
-        specifier: 19.2.3
-        version: 19.2.3(@types/react@19.2.7)
-      concurrently:
-        specifier: ^9.2.1
-        version: 9.2.1
-      dotenv:
-        specifier: ^17.2.3
-        version: 17.2.3
-      typescript:
-        specifier: ^5.9.3
-        version: 5.9.3
-
-  apps/app:
-    dependencies:
-      '@hookform/resolvers':
-        specifier: ^5.2.2
-        version: 5.2.2(react-hook-form@7.68.0(react@19.2.1))
-      '@repo/analytics':
-        specifier: workspace:*
-        version: link:../../packages/analytics
-      '@repo/auth':
-        specifier: workspace:*
-        version: link:../../packages/auth
-      '@repo/database':
-        specifier: workspace:*
-        version: link:../../packages/database
-      '@repo/design':
-        specifier: workspace:*
-        version: link:../../packages/design
-      '@repo/next-config':
-        specifier: workspace:*
-        version: link:../../packages/next-config
-      '@repo/observability':
-        specifier: workspace:*
-        version: link:../../packages/observability
       '@repo/realtime':
         specifier: workspace:*
         version: link:../../packages/realtime
       '@repo/seo':
         specifier: workspace:*
         version: link:../../packages/seo
+      '@repo/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
+      '@signnow/api-client':
+        specifier: ^3.1.0
+        version: 3.1.0
+      ably:
+        specifier: ^2.4.2
+        version: 2.16.0(bufferutil@4.0.9)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
       fuse.js:
         specifier: ^7.1.0
         version: 7.1.0
+      googleapis:
+        specifier: ^171.4.0
+        version: 171.4.0
       import-in-the-middle:
         specifier: ^2.0.0
         version: 2.0.0
       keyv:
         specifier: ^5.6.0
         version: 5.6.0
+      kysely:
+        specifier: ^0.28
+        version: 0.28.9
       lucide-react:
         specifier: ^0.556.0
         version: 0.556.0(react@19.2.1)
@@ -471,24 +422,12 @@ importers:
       '@neondatabase/serverless':
         specifier: ^1.0.2
         version: 1.0.2
-      '@repo/storage':
-        specifier: workspace:*
-        version: link:../storage
-      '@signnow/api-client':
-        specifier: ^3.1.0
-        version: 3.1.0
-      ably:
-        specifier: ^2.4.2
-        version: 2.16.0(bufferutil@4.0.9)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       better-auth:
         specifier: ^1.4.7
-        version: 1.4.7(mysql2@3.15.3)(next@16.0.10(@opentelemetry/api@1.9.0)(@playwright/test@1.58.2)(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(vitest@3.2.4)
+        version: 1.4.7(mysql2@3.15.3)(next@16.0.10(@opentelemetry/api@1.9.0)(@playwright/test@1.58.2)(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(vitest@4.0.15(@opentelemetry/api@1.9.0)(@types/node@24.10.1)(jiti@2.6.1)(jsdom@27.2.0(bufferutil@4.0.9)(postcss@8.5.6))(lightningcss@1.30.2)(msw@2.12.7(@types/node@24.10.1)(typescript@5.9.3))(terser@5.39.0)(tsx@4.21.0)(yaml@2.7.0))
       dotenv:
         specifier: ^17.2.3
         version: 17.2.3
-      googleapis:
-        specifier: ^171.4.0
-        version: 171.4.0
       kysely:
         specifier: ^0.28
         version: 0.28.9
@@ -498,19 +437,10 @@ importers:
       server-only:
         specifier: ^0.0.1
         version: 0.0.1
-      sharp:
-        specifier: ^0.34.5
-        version: 0.34.5
-      zod:
-        specifier: ^4.1.13
-        version: 4.1.13
     devDependencies:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
-      '@repo/vitest':
-        specifier: workspace:*
-        version: link:../vitest
       '@types/node':
         specifier: 24.10.1
         version: 24.10.1
@@ -520,9 +450,6 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
-      vitest:
-        specifier: ^3.0.0
-        version: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@27.2.0(bufferutil@4.0.9)(postcss@8.5.6))(lightningcss@1.30.2)(msw@2.12.7(@types/node@24.10.1)(typescript@5.9.3))(terser@5.39.0)(tsx@4.21.0)(yaml@2.7.0)
 
   packages/design:
     dependencies:
@@ -4767,11 +4694,6 @@ packages:
   concat-map@0.0.1:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
 
-  concurrently@9.2.1:
-    resolution: {integrity: sha512-fsfrO0MxV64Znoy8/l1vVIjjHa29SZyyqPgQBwhiDcaW8wJc2W3XWVOGx4M3oJBnv/zdUZIIp1gDeS98GzP8Ng==}
-    engines: {node: '>=18'}
-    hasBin: true
-
   conf@15.0.2:
     resolution: {integrity: sha512-JBSrutapCafTrddF9dH3lc7+T2tBycGF4uPkI4Js+g4vLLEhG6RZcFi3aJd5zntdf5tQxAejJt8dihkoQ/eSJw==}
     engines: {node: '>=20'}
@@ -7933,10 +7855,6 @@ packages:
     resolution: {integrity: sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==}
     engines: {node: '>=8'}
 
-  shell-quote@1.8.3:
-    resolution: {integrity: sha512-ObmnIF4hXNg1BqhnHmgbDETF8dLPCggZWBjkQfhZpbszZnYur5DUljTcCHii5LC3J5E0yeO/1LIMyH+UvHQgyw==}
-    engines: {node: '>= 0.4'}
-
   shiki@3.19.0:
     resolution: {integrity: sha512-77VJr3OR/VUZzPiStyRhADmO2jApMM0V2b1qf0RpfWya8Zr1PeZev5AEpPGAAKWdiYUtcZGBE4F5QvJml1PvWA==}
 
@@ -8178,10 +8096,6 @@ packages:
     resolution: {integrity: sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw==}
     engines: {node: '>=8'}
 
-  supports-color@8.1.1:
-    resolution: {integrity: sha512-MpUEN2OodtUzxvKQl72cUF7RQ5EiHsGvSsVG0ia9c5RbWGL2CI4C7EpPS8UTBIplnlzZiNuV56w+FuNxy3ty2Q==}
-    engines: {node: '>=10'}
-
   supports-hyperlinks@2.3.0:
     resolution: {integrity: sha512-RpsAZlpWcDwOPQA22aCH4J0t7L8JmAvsCxfOSEwm7cQs3LshN36QaTkwd70DnBOXDWGssw2eUoc8CaRWT0XunA==}
     engines: {node: '>=8'}
@@ -8331,10 +8245,6 @@ packages:
   tr46@6.0.0:
     resolution: {integrity: sha512-bLVMLPtstlZ4iMQHpFHTR7GAGj2jxi8Dg0s2h2MafAE4uSWF98FC/3MomU51iQAMf8/qDUbKWf5GxuvvVcXEhw==}
     engines: {node: '>=20'}
-
-  tree-kill@1.2.2:
-    resolution: {integrity: sha512-L0Orpi8qGpRG//Nd+H90vFB+3iHnue1zSSGmNOOCh1GLJ7rUKVwV2HvijphGQS2UmhUZewS9VgvxYIdgr+fG1A==}
-    hasBin: true
 
   trim-lines@3.0.1:
     resolution: {integrity: sha512-kRj8B+YHZCc9kQYdWfJB2/oUl9rA99qbowYYBtr4ui4mZyAQ2JpvVBd/6U2YloATfqBhBTSMhTpgBHtU0Mf3Rg==}
@@ -12805,7 +12715,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@27.2.0(bufferutil@4.0.9)(postcss@8.5.6))(lightningcss@1.30.2)(msw@2.12.7(@types/node@24.10.1)(typescript@5.9.3))(terser@5.39.0)(tsx@4.21.0)(yaml@2.7.0)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0(bufferutil@4.0.9))(lightningcss@1.30.2)(msw@2.12.7(@types/node@24.10.1)(typescript@5.9.3))(terser@5.39.0)(tsx@4.21.0)(yaml@2.7.0)
 
   '@vitest/utils@3.2.4':
     dependencies:
@@ -13009,27 +12919,6 @@ snapshots:
   basic-ftp@5.0.5: {}
 
   before-after-hook@2.2.3: {}
-
-  better-auth@1.4.7(mysql2@3.15.3)(next@16.0.10(@opentelemetry/api@1.9.0)(@playwright/test@1.58.2)(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(vitest@3.2.4):
-    dependencies:
-      '@better-auth/core': 1.4.7(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.5(zod@4.1.13))(jose@6.1.0)(kysely@0.28.9)(nanostores@1.1.0)
-      '@better-auth/telemetry': 1.4.7(@better-auth/core@1.4.7(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.21)(better-call@1.1.5(zod@4.1.13))(jose@6.1.0)(kysely@0.28.9)(nanostores@1.1.0))
-      '@better-auth/utils': 0.3.0
-      '@better-fetch/fetch': 1.1.21
-      '@noble/ciphers': 2.1.1
-      '@noble/hashes': 2.0.1
-      better-call: 1.1.5(zod@4.1.13)
-      defu: 6.1.4
-      jose: 6.1.0
-      kysely: 0.28.9
-      nanostores: 1.1.0
-      zod: 4.1.13
-    optionalDependencies:
-      mysql2: 3.15.3
-      next: 16.0.10(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(@playwright/test@1.58.2)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      react: 19.2.1
-      react-dom: 19.2.1(react@19.2.1)
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@27.2.0(bufferutil@4.0.9)(postcss@8.5.6))(lightningcss@1.30.2)(msw@2.12.7(@types/node@24.10.1)(typescript@5.9.3))(terser@5.39.0)(tsx@4.21.0)(yaml@2.7.0)
 
   better-auth@1.4.7(mysql2@3.15.3)(next@16.0.10(@opentelemetry/api@1.9.0)(@playwright/test@1.58.2)(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(vitest@4.0.15(@opentelemetry/api@1.9.0)(@types/node@24.10.1)(jiti@2.6.1)(jsdom@27.2.0(bufferutil@4.0.9)(postcss@8.5.6))(lightningcss@1.30.2)(msw@2.12.7(@types/node@24.10.1)(typescript@5.9.3))(terser@5.39.0)(tsx@4.21.0)(yaml@2.7.0)):
     dependencies:
@@ -13331,15 +13220,6 @@ snapshots:
   compute-scroll-into-view@3.1.1: {}
 
   concat-map@0.0.1: {}
-
-  concurrently@9.2.1:
-    dependencies:
-      chalk: 4.1.2
-      rxjs: 7.8.2
-      shell-quote: 1.8.3
-      supports-color: 8.1.1
-      tree-kill: 1.2.2
-      yargs: 17.7.2
 
   conf@15.0.2:
     dependencies:
@@ -17348,8 +17228,6 @@ snapshots:
 
   shebang-regex@3.0.0: {}
 
-  shell-quote@1.8.3: {}
-
   shiki@3.19.0:
     dependencies:
       '@shikijs/core': 3.19.0
@@ -17648,10 +17526,6 @@ snapshots:
     dependencies:
       has-flag: 4.0.0
 
-  supports-color@8.1.1:
-    dependencies:
-      has-flag: 4.0.0
-
   supports-hyperlinks@2.3.0:
     dependencies:
       has-flag: 4.0.0
@@ -17791,8 +17665,6 @@ snapshots:
   tr46@6.0.0:
     dependencies:
       punycode: 2.3.1
-
-  tree-kill@1.2.2: {}
 
   trim-lines@3.0.1: {}
 

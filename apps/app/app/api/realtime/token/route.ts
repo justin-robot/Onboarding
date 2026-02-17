@@ -1,4 +1,4 @@
-import { ablyService } from "@repo/database/services/ably";
+import { ablyService } from "@/lib/services/ably";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 

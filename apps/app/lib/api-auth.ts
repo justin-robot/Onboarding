@@ -5,8 +5,8 @@ import {
   accessService,
   NotWorkspaceMemberError,
   InsufficientPermissionsError,
-} from "@repo/database";
-import type { MemberRole, AuditContext, AuditSource } from "@repo/database";
+} from "@/lib/services";
+import type { MemberRole, AuditContext, AuditSource } from "@/lib/services";
 
 /**
  * Authenticated user from session

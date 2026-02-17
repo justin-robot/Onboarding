@@ -1,4 +1,4 @@
-import { invitationService, memberService } from "@repo/database";
+import { invitationService, memberService } from "@/lib/services";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 

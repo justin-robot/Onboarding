@@ -1,8 +1,8 @@
-import { commentService, taskService, memberService } from "@repo/database";
+import { commentService, taskService, memberService } from "@/lib/services";
 import { notificationService } from "@repo/notifications";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
-import type { NotificationContext } from "@repo/database/services/notificationContext";
+import type { NotificationContext } from "@/lib/services";
 
 // Create notification context wrapper for the comment service
 const notificationContext: NotificationContext = {

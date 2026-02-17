@@ -1,4 +1,4 @@
-import { sectionService } from "@repo/database";
+import { sectionService } from "@/lib/services";
 import { json, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 

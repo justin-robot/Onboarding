@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { NextRequest } from "next/server";
 
 // Mock dependencies
-vi.mock("@repo/database", () => ({
+vi.mock("@/lib/services", () => ({
   fileService: {
     getPresignedUploadUrl: vi.fn(),
     confirmUpload: vi.fn(),
@@ -27,7 +27,7 @@ vi.mock("../../../../_lib/api-utils", () => ({
   withErrorHandler: vi.fn((fn: () => unknown) => fn()),
 }));
 
-import { fileService, workspaceService, memberService } from "@repo/database";
+import { fileService, workspaceService, memberService } from "@/lib/services";
 import { requireAuth } from "../../../../_lib/api-utils";
 
 describe("Workspace Files API", () => {

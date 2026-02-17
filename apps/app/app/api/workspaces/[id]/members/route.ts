@@ -1,4 +1,4 @@
-import { memberService } from "@repo/database";
+import { memberService } from "@/lib/services";
 import { database } from "@repo/database";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";

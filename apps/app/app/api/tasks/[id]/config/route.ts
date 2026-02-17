@@ -1,4 +1,4 @@
-import { taskService, configService } from "@repo/database";
+import { taskService, configService } from "@/lib/services";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 

@@ -1,4 +1,4 @@
-import { googleCalendarService } from "@repo/database";
+import { googleCalendarService } from "@/lib/services";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 

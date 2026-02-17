@@ -15,30 +15,20 @@
     "migrate:prod:status": "DOTENV_CONFIG_PATH=../../.env.local tsx migrations/run.ts prod status",
     "seed:dev": "DOTENV_CONFIG_PATH=../../.env.local tsx seeds/seed.ts dev",
     "seed:prod": "DOTENV_CONFIG_PATH=../../.env.local tsx seeds/seed.ts prod",
-    "typecheck": "tsc --noEmit --emitDeclarationOnly false",
-    "test": "vitest run",
-    "test:watch": "vitest watch"
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
-    "@repo/storage": "workspace:*",
-    "@signnow/api-client": "^3.1.0",
-    "ably": "^2.4.2",
     "better-auth": "^1.4.7",
     "dotenv": "^17.2.3",
-    "googleapis": "^171.4.0",
     "kysely": "^0.28",
     "kysely-neon": "^2.0.2",
-    "server-only": "^0.0.1",
-    "sharp": "^0.34.5",
-    "zod": "^4.1.13"
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
-    "@repo/vitest": "workspace:*",
     "@types/node": "24.10.1",
     "tsx": "^4.19.2",
-    "typescript": "^5.9.3",
-    "vitest": "^3.0.0"
+    "typescript": "^5.9.3"
   }
 }

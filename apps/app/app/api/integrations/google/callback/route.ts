@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { googleCalendarService } from "@repo/database";
+import { googleCalendarService } from "@/lib/services";
 
 /**
  * GET /api/integrations/google/callback - Handle Google OAuth callback

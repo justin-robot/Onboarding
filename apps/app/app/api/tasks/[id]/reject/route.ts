@@ -1,5 +1,5 @@
-import { taskService, configService, sectionService, assigneeService, workspaceService } from "@repo/database";
-import { ablyService, WORKSPACE_EVENTS } from "@repo/database/services/ably";
+import { taskService, configService, sectionService, assigneeService, workspaceService } from "@/lib/services";
+import { ablyService, WORKSPACE_EVENTS } from "@/lib/services/ably";
 import { notificationService } from "@repo/notifications";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";

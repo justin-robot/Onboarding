@@ -1,5 +1,5 @@
 import { auth } from "@repo/auth/server";
-import { memberService, workspaceService } from "@repo/database";
+import { memberService, workspaceService } from "@/lib/services";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
