@@ -22,8 +22,7 @@ Platform comes with a comprehensive set of features:
 ### Apps
 
 - **Web** — Marketing website (port 3001)
-- **App** — Main application with authentication and database integration (port 3000)
-- **API** — RESTful API server with health checks and cron jobs (port 3002)
+- **App** — Main application with authentication, database integration, and API routes (port 3000)
 - **Email** — Email templates with React Email
 
 ### Packages
@@ -78,17 +77,12 @@ pnpm install
    cd apps/app
    cp .env.local.example .env.local
    # Edit .env.local with your values
-   
+
    # Web (marketing site)
    cd ../web
    cp .env.local.example .env.local
    # Edit .env.local with your values
-   
-   # API (API server)
-   cd ../api
-   cp .env.local.example .env.local
-   # Edit .env.local with your values
-   
+
    cd ../..
    ```
 
@@ -119,9 +113,8 @@ pnpm install
    ```
 
 This will start all apps:
+- App: http://localhost:3000 (includes API routes at /api/*)
 - Web: http://localhost:3001
-- App: http://localhost:3000
-- API: http://localhost:3002
 
 ## Structure
 
@@ -130,9 +123,8 @@ Platform uses a monorepo structure managed by Turborepo:
 ```
 platform/
 ├── apps/                    # Deployable applications
+│   ├── app/                 # Main application with API routes (port 3000)
 │   ├── web/                 # Marketing website (port 3001)
-│   ├── app/                 # Main application (port 3000)
-│   ├── api/                 # API server (port 3002)
 │   └── email/               # Email templates
 └── packages/                # Shared packages
     ├── ai/                  # AI integration utilities
@@ -162,9 +154,8 @@ Each app is self-contained and independently deployable. Packages are shared acr
 
 Environment variables are configured per-application following [Turborepo best practices](https://turborepo.ai/docs/crafting-your-repository/using-environment-variables):
 
-- **apps/app/.env.local** - Main application environment variables
+- **apps/app/.env.local** - Main application environment variables (includes API routes)
 - **apps/web/.env.local** - Marketing website environment variables
-- **apps/api/.env.local** - API server environment variables
 - **Root .env.local** - Database migration admin credentials only
 
 Each app has a `.env.local.example` file showing required variables. See [env.md](./env.md) for detailed documentation.

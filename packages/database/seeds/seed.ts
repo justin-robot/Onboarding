@@ -403,18 +403,19 @@ async function seed() {
     ];
 
     // Add real user (justin@n2o.com) to both workspaces if they exist
-    if ((ids as Record<string, string>).realUser) {
+    const realUserId = (ids as Record<string, string>).realUser as `${string}-${string}-${string}-${string}-${string}` | undefined;
+    if (realUserId) {
       workspaceMembers.push(
         {
           id: uuid(),
           workspaceId: ids.workspace1,
-          userId: (ids as Record<string, string>).realUser,
+          userId: realUserId,
           role: "admin" as const,
         },
         {
           id: uuid(),
           workspaceId: ids.workspace2,
-          userId: (ids as Record<string, string>).realUser,
+          userId: realUserId,
           role: "admin" as const,
         }
       );

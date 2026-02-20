@@ -24,25 +24,16 @@ cp .env.local.example .env.local
 # Edit .env.local with your values
 ```
 
-### API (API Server)
-
-```bash
-cd apps/api
-cp .env.local.example .env.local
-# Edit .env.local with your values
-```
-
 **Note:** All `.env.local` files are in `.gitignore` and will not be committed to git.
 
 ## Environment Variables by Application
 
 ### App (apps/app/.env.local)
 
-The main authenticated application:
+The main application (includes API routes, cron jobs, and webhooks):
 
 ```bash
 # Core
-
 ANALYZE=
 NEXT_RUNTIME=
 NEXT_PUBLIC_APP_URL=http://localhost:3000
@@ -71,6 +62,12 @@ NEXT_PUBLIC_KNOCK_FEED_CHANNEL_ID=
 
 # AI (OpenAI)
 OPENAI_API_KEY=
+
+# Cron Jobs (for due date reminders, meeting reminders)
+CRON_SECRET=
+
+# Webhooks (Svix) - for SignNow and other external services
+SVIX_TOKEN=
 ```
 
 ### Web (apps/web/.env.local)
@@ -79,12 +76,10 @@ The marketing website needs fewer variables:
 
 ```bash
 # Core
-
 ANALYZE=
 NEXT_RUNTIME=
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_WEB_URL=http://localhost:3001
-NEXT_PUBLIC_API_URL=http://localhost:3002
 
 # Email (for contact form)
 RESEND_TOKEN=
@@ -94,24 +89,6 @@ RESEND_FROM=noreply@example.com
 NEXT_PUBLIC_POSTHOG_KEY=
 NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
 NEXT_PUBLIC_GA_MEASUREMENT_ID=
-```
-
-### API (apps/api/.env.local)
-
-The API server needs database and webhook access:
-
-```bash
-# Core
-
-ANALYZE=
-NEXT_RUNTIME=
-
-# Database
-DATABASE_URL_DEV=postgresql://user:password@host:5432/dbname
-DATABASE_URL_PROD=
-
-# Webhooks (Svix)
-SVIX_TOKEN=
 ```
 
 ## Database Migrations
