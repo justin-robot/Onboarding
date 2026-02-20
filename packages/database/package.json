@@ -14,7 +14,9 @@
     "migrate:prod:down": "DOTENV_CONFIG_PATH=../../.env.local tsx migrations/run.ts prod down",
     "migrate:prod:status": "DOTENV_CONFIG_PATH=../../.env.local tsx migrations/run.ts prod status",
     "seed:dev": "DOTENV_CONFIG_PATH=../../.env.local tsx seeds/seed.ts dev",
+    "seed:dev:add": "DOTENV_CONFIG_PATH=../../.env.local tsx seeds/seed.ts dev --no-cleanup",
     "seed:prod": "DOTENV_CONFIG_PATH=../../.env.local tsx seeds/seed.ts prod",
+    "seed:prod:add": "DOTENV_CONFIG_PATH=../../.env.local tsx seeds/seed.ts prod --no-cleanup",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {

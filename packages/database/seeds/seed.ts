@@ -118,7 +118,13 @@ const ids = {
 };
 
 async function seed() {
-  const env = process.argv[2] || "dev";
+  // Parse arguments: seed.ts [env] [--no-cleanup]
+  // env: "dev" or "prod" (default: "dev")
+  // --no-cleanup: skip cleanup step, add data alongside existing data
+  const args = process.argv.slice(2);
+  const noCleanup = args.includes("--no-cleanup") || args.includes("--add");
+  const env = args.find((a) => a === "dev" || a === "prod") || "dev";
+
   const adminUrl =
     env === "prod"
       ? process.env.DATABASE_URL_PROD_ADMIN
@@ -152,44 +158,51 @@ async function seed() {
   const db = createDb(adminUrl) as Kysely<Database>;
   const envLabel = env === "prod" ? "production" : "development";
 
-  console.log(`Seeding ${envLabel} database with mock data...\n`);
+  console.log(`Seeding ${envLabel} database with mock data...`);
+  if (noCleanup) {
+    console.log("  Mode: --no-cleanup (adding data alongside existing)\n");
+  } else {
+    console.log("  Mode: full reset (cleaning existing data first)\n");
+  }
 
   try {
     // =====================
-    // CLEANUP EXISTING DATA
+    // CLEANUP EXISTING DATA (skip if --no-cleanup)
     // =====================
-    console.log("  Cleaning up existing data...");
+    if (!noCleanup) {
+      console.log("  Cleaning up existing data...");
 
-    // Delete in order respecting foreign keys (children first)
-    await db.deleteFrom("moxo_audit_log_entry").execute();
-    await db.deleteFrom("pending_invitation").execute();
-    await db.deleteFrom("notification").execute();
-    await db.deleteFrom("reminder").execute();
-    await db.deleteFrom("message").execute();
-    await db.deleteFrom("comment").execute();
-    await db.deleteFrom("form_field_response").execute();
-    await db.deleteFrom("form_submission").execute();
-    await db.deleteFrom("form_element").execute();
-    await db.deleteFrom("form_page").execute();
-    await db.deleteFrom("form_config").execute();
-    await db.deleteFrom("acknowledgement").execute();
-    await db.deleteFrom("acknowledgement_config").execute();
-    await db.deleteFrom("booking").execute();
-    await db.deleteFrom("time_booking_config").execute();
-    await db.deleteFrom("esign_config").execute();
-    await db.deleteFrom("file_request_config").execute();
-    await db.deleteFrom("approver").execute();
-    await db.deleteFrom("approval_config").execute();
-    await db.deleteFrom("file").execute();
-    await db.deleteFrom("task_assignee").execute();
-    await db.deleteFrom("task_dependency").execute();
-    await db.deleteFrom("task").execute();
-    await db.deleteFrom("section").execute();
-    await db.deleteFrom("workspace_integration").execute();
-    await db.deleteFrom("workspace_member").execute();
-    await db.deleteFrom("workspace").execute();
+      // Delete in order respecting foreign keys (children first)
+      await db.deleteFrom("moxo_audit_log_entry").execute();
+      await db.deleteFrom("pending_invitation").execute();
+      await db.deleteFrom("notification").execute();
+      await db.deleteFrom("reminder").execute();
+      await db.deleteFrom("message").execute();
+      await db.deleteFrom("comment").execute();
+      await db.deleteFrom("form_field_response").execute();
+      await db.deleteFrom("form_submission").execute();
+      await db.deleteFrom("form_element").execute();
+      await db.deleteFrom("form_page").execute();
+      await db.deleteFrom("form_config").execute();
+      await db.deleteFrom("acknowledgement").execute();
+      await db.deleteFrom("acknowledgement_config").execute();
+      await db.deleteFrom("booking").execute();
+      await db.deleteFrom("time_booking_config").execute();
+      await db.deleteFrom("esign_config").execute();
+      await db.deleteFrom("file_request_config").execute();
+      await db.deleteFrom("approver").execute();
+      await db.deleteFrom("approval_config").execute();
+      await db.deleteFrom("file").execute();
+      await db.deleteFrom("task_assignee").execute();
+      await db.deleteFrom("task_dependency").execute();
+      await db.deleteFrom("task").execute();
+      await db.deleteFrom("section").execute();
+      await db.deleteFrom("workspace_integration").execute();
+      await db.deleteFrom("workspace_member").execute();
+      await db.deleteFrom("workspace").execute();
 
-    console.log("  Cleanup complete.\n");
+      console.log("  Cleanup complete.\n");
+    }
 
     // =====================
     // USERS (via Better Auth)
