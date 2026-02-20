@@ -90,6 +90,31 @@ const ids = {
   msg4: uuid(),
   msg5: uuid(),
   msg6: uuid(),
+
+  // Form submissions
+  formSubmission1: uuid(),
+  formSubmission2: uuid(),
+
+  // Form field responses
+  fieldResponse1: uuid(),
+  fieldResponse2: uuid(),
+  fieldResponse3: uuid(),
+  fieldResponse4: uuid(),
+
+  // Acknowledgements
+  ack1: uuid(),
+  ack2: uuid(),
+  ack3: uuid(),
+
+  // Bookings
+  booking1: uuid(),
+
+  // File uploaded for file request
+  uploadedFile1: uuid(),
+
+  // Pending invitations
+  invitation1: uuid(),
+  invitation2: uuid(),
 };
 
 async function seed() {
@@ -131,32 +156,68 @@ async function seed() {
 
   try {
     // =====================
+    // CLEANUP EXISTING DATA
+    // =====================
+    console.log("  Cleaning up existing data...");
+
+    // Delete in order respecting foreign keys (children first)
+    await db.deleteFrom("moxo_audit_log_entry").execute();
+    await db.deleteFrom("pending_invitation").execute();
+    await db.deleteFrom("notification").execute();
+    await db.deleteFrom("reminder").execute();
+    await db.deleteFrom("message").execute();
+    await db.deleteFrom("comment").execute();
+    await db.deleteFrom("form_field_response").execute();
+    await db.deleteFrom("form_submission").execute();
+    await db.deleteFrom("form_element").execute();
+    await db.deleteFrom("form_page").execute();
+    await db.deleteFrom("form_config").execute();
+    await db.deleteFrom("acknowledgement").execute();
+    await db.deleteFrom("acknowledgement_config").execute();
+    await db.deleteFrom("booking").execute();
+    await db.deleteFrom("time_booking_config").execute();
+    await db.deleteFrom("esign_config").execute();
+    await db.deleteFrom("file_request_config").execute();
+    await db.deleteFrom("approver").execute();
+    await db.deleteFrom("approval_config").execute();
+    await db.deleteFrom("file").execute();
+    await db.deleteFrom("task_assignee").execute();
+    await db.deleteFrom("task_dependency").execute();
+    await db.deleteFrom("task").execute();
+    await db.deleteFrom("section").execute();
+    await db.deleteFrom("workspace_integration").execute();
+    await db.deleteFrom("workspace_member").execute();
+    await db.deleteFrom("workspace").execute();
+
+    console.log("  Cleanup complete.\n");
+
+    // =====================
     // USERS (via Better Auth)
     // =====================
     const userData = [
       {
-        id: ids.adminUser,
+        key: "adminUser",
         name: "Admin User",
         username: "admin",
         email: "admin@example.com",
         password: "password123",
       },
       {
-        id: ids.accountManager,
+        key: "accountManager",
         name: "Sarah Chen",
         username: "sarah",
         email: "sarah@example.com",
         password: "password123",
       },
       {
-        id: ids.user1,
+        key: "user1",
         name: "Marcus Johnson",
         username: "marcus",
         email: "marcus@example.com",
         password: "password123",
       },
       {
-        id: ids.user2,
+        key: "user2",
         name: "Emily Rivera",
         username: "emily",
         email: "emily@example.com",
@@ -164,9 +225,42 @@ async function seed() {
       },
     ];
 
+    // Check for existing users first
+    const existingUsers = await db
+      .selectFrom("user")
+      .select(["id", "email"])
+      .where(
+        "email",
+        "in",
+        userData.map((u) => u.email)
+      )
+      .execute();
+
+    const existingUserMap = new Map(existingUsers.map((u) => [u.email, u.id]));
+
+    // Check for real user account to add to workspaces
+    const realUser = await db
+      .selectFrom("user")
+      .select(["id", "email"])
+      .where("email", "=", "justin@n2o.com")
+      .executeTakeFirst();
+
+    if (realUser) {
+      (ids as Record<string, string>)["realUser"] = realUser.id;
+      console.log(`  Found real user account: ${realUser.email}`);
+    }
     const createdUsers: Array<{ id: string; email: string }> = [];
 
     for (const userInfo of userData) {
+      // Check if user already exists
+      const existingId = existingUserMap.get(userInfo.email);
+      if (existingId) {
+        (ids as Record<string, string>)[userInfo.key] = existingId;
+        createdUsers.push({ id: existingId, email: userInfo.email });
+        console.log(`  Found existing user: ${userInfo.name} (${userInfo.email})`);
+        continue;
+      }
+
       try {
         const result = await auth.api.signUpEmail({
           body: {
@@ -186,12 +280,7 @@ async function seed() {
 
         // Update the id mapping to use the actual ID from Better Auth
         const actualId = result.user.id;
-        const key = Object.entries(ids).find(
-          ([, v]) => v === userInfo.id
-        )?.[0];
-        if (key) {
-          (ids as Record<string, string>)[key] = actualId;
-        }
+        (ids as Record<string, string>)[userInfo.key] = actualId;
 
         createdUsers.push({ id: actualId, email: userInfo.email });
         console.log(`  Created user: ${userInfo.name} (${userInfo.email})`);
@@ -201,11 +290,11 @@ async function seed() {
     }
 
     if (createdUsers.length === 0) {
-      console.error("No users created, cannot seed remaining data.");
+      console.error("No users found or created, cannot seed remaining data.");
       process.exit(1);
     }
 
-    console.log(`\n${createdUsers.length} users created.\n`);
+    console.log(`\n${createdUsers.length} users ready.\n`);
 
     // Update user roles
     await db
@@ -253,55 +342,72 @@ async function seed() {
     // =====================
     // WORKSPACE MEMBERS
     // =====================
-    await db
-      .insertInto("workspace_member")
-      .values([
-        // Workspace 1: all 4 users
+    const workspaceMembers = [
+      // Workspace 1: all 4 users
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        userId: ids.adminUser,
+        role: "admin" as const,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        userId: ids.accountManager,
+        role: "account_manager" as const,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        userId: ids.user1,
+        role: "user" as const,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        userId: ids.user2,
+        role: "user" as const,
+      },
+      // Workspace 2: admin, account manager, user1
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        userId: ids.adminUser,
+        role: "admin" as const,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        userId: ids.accountManager,
+        role: "account_manager" as const,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        userId: ids.user1,
+        role: "user" as const,
+      },
+    ];
+
+    // Add real user (justin@n2o.com) to both workspaces if they exist
+    if ((ids as Record<string, string>).realUser) {
+      workspaceMembers.push(
         {
           id: uuid(),
           workspaceId: ids.workspace1,
-          userId: ids.adminUser,
+          userId: (ids as Record<string, string>).realUser,
           role: "admin" as const,
         },
         {
           id: uuid(),
-          workspaceId: ids.workspace1,
-          userId: ids.accountManager,
-          role: "account_manager" as const,
-        },
-        {
-          id: uuid(),
-          workspaceId: ids.workspace1,
-          userId: ids.user1,
-          role: "user" as const,
-        },
-        {
-          id: uuid(),
-          workspaceId: ids.workspace1,
-          userId: ids.user2,
-          role: "user" as const,
-        },
-        // Workspace 2: admin, account manager, user1
-        {
-          id: uuid(),
           workspaceId: ids.workspace2,
-          userId: ids.adminUser,
+          userId: (ids as Record<string, string>).realUser,
           role: "admin" as const,
-        },
-        {
-          id: uuid(),
-          workspaceId: ids.workspace2,
-          userId: ids.accountManager,
-          role: "account_manager" as const,
-        },
-        {
-          id: uuid(),
-          workspaceId: ids.workspace2,
-          userId: ids.user1,
-          role: "user" as const,
-        },
-      ])
-      .execute();
+        }
+      );
+    }
+
+    await db.insertInto("workspace_member").values(workspaceMembers).execute();
 
     console.log("  Created workspace members.");
 
@@ -879,18 +985,169 @@ async function seed() {
     console.log("  Created 4 comments.");
 
     // =====================
-    // MESSAGES (workspace chat)
+    // MESSAGES (workspace chat with system messages for task events)
     // =====================
+    // Timeline timestamps for messages
     const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
     const ninetyMinAgo = new Date(now.getTime() - 90 * 60 * 1000);
     const fortyMinAgo = new Date(now.getTime() - 40 * 60 * 1000);
     const twentyMinAgo = new Date(now.getTime() - 20 * 60 * 1000);
     const fiveMinAgo = new Date(now.getTime() - 5 * 60 * 1000);
 
+    // Workspace setup timestamps (3 days ago)
+    const threeDaysAgoMsg = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+    const threeDaysAgoPlus1m = new Date(threeDaysAgoMsg.getTime() + 1 * 60 * 1000);
+    const threeDaysAgoPlus2m = new Date(threeDaysAgoMsg.getTime() + 2 * 60 * 1000);
+    const threeDaysAgoPlus3m = new Date(threeDaysAgoMsg.getTime() + 3 * 60 * 1000);
+
+    // Yesterday timestamps for task completions
+    const yesterdayMorningMsg = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayAfternoonMsg = new Date(now.getTime() - 20 * 60 * 60 * 1000);
+
+    // One day ago for workspace 2
+    const oneDayAgoMsg = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
+
     await db
       .insertInto("message")
       .values([
-        // Workspace 1 chat
+        // ===== WORKSPACE 1: System messages for workspace setup (3 days ago) =====
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: ids.adminUser,
+          content: "Workspace created",
+          type: "system" as const,
+          createdAt: threeDaysAgoMsg,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: ids.adminUser,
+          content: "Sarah Chen joined as Account Manager",
+          type: "system" as const,
+          createdAt: threeDaysAgoMsg,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: ids.adminUser,
+          content: "Marcus Johnson joined as User",
+          type: "system" as const,
+          createdAt: threeDaysAgoMsg,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: ids.adminUser,
+          content: "Emily Rivera joined as User",
+          type: "system" as const,
+          createdAt: threeDaysAgoMsg,
+        },
+        // Task creation system messages
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: ids.accountManager,
+          content: 'Task "Complete Company Information Form" created and assigned to Marcus Johnson, Emily Rivera',
+          type: "system" as const,
+          referencedTaskId: ids.taskForm,
+          createdAt: threeDaysAgoPlus1m,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: ids.accountManager,
+          content: 'Task "Acknowledge Terms of Service" created and assigned to Marcus Johnson, Emily Rivera',
+          type: "system" as const,
+          referencedTaskId: ids.taskAck,
+          createdAt: threeDaysAgoPlus1m,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: ids.accountManager,
+          content: 'Task "Schedule Kickoff Meeting" created and assigned to Marcus Johnson',
+          type: "system" as const,
+          referencedTaskId: ids.taskBooking,
+          createdAt: threeDaysAgoPlus1m,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: ids.accountManager,
+          content: 'Task "Sign Service Agreement" created and assigned to Marcus Johnson',
+          type: "system" as const,
+          referencedTaskId: ids.taskEsign,
+          createdAt: threeDaysAgoPlus2m,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: ids.accountManager,
+          content: 'Task "Upload Business License" created and assigned to Emily Rivera',
+          type: "system" as const,
+          referencedTaskId: ids.taskFileReq,
+          createdAt: threeDaysAgoPlus2m,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: ids.accountManager,
+          content: 'Task "Approve Client Onboarding" created and assigned to Admin User, Sarah Chen',
+          type: "system" as const,
+          referencedTaskId: ids.taskApproval,
+          createdAt: threeDaysAgoPlus3m,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: ids.accountManager,
+          content: "Service_Agreement_v2.pdf uploaded",
+          type: "system" as const,
+          referencedFileId: ids.file1,
+          createdAt: threeDaysAgoPlus3m,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: ids.accountManager,
+          content: "Onboarding_Welcome_Pack.pdf uploaded",
+          type: "system" as const,
+          referencedFileId: ids.file2,
+          createdAt: threeDaysAgoPlus3m,
+        },
+
+        // ===== WORKSPACE 1: Yesterday - Task completions =====
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: ids.user1,
+          content: 'Marcus Johnson acknowledged "Acknowledge Terms of Service"',
+          type: "system" as const,
+          referencedTaskId: ids.taskAck,
+          createdAt: yesterdayMorningMsg,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: ids.user2,
+          content: 'Emily Rivera acknowledged "Acknowledge Terms of Service"',
+          type: "system" as const,
+          referencedTaskId: ids.taskAck,
+          createdAt: yesterdayAfternoonMsg,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: ids.user2,
+          content: '✓ Task "Acknowledge Terms of Service" completed (all assignees finished)',
+          type: "system" as const,
+          referencedTaskId: ids.taskAck,
+          createdAt: yesterdayAfternoonMsg,
+        },
+
+        // ===== WORKSPACE 1: Today - User messages and task events =====
+        // Welcome message
         {
           id: ids.msg1,
           workspaceId: ids.workspace1,
@@ -908,6 +1165,37 @@ async function seed() {
           type: "text" as const,
           createdAt: ninetyMinAgo,
         },
+        // Form submission
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: ids.user1,
+          content: 'Marcus Johnson submitted form "Complete Company Information Form"',
+          type: "system" as const,
+          referencedTaskId: ids.taskForm,
+          createdAt: oneHourAgo,
+        },
+        // File upload for file request
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: ids.user2,
+          content: 'Emily Rivera uploaded "Business_License_2024.pdf" for "Upload Business License"',
+          type: "system" as const,
+          referencedTaskId: ids.taskFileReq,
+          referencedFileId: ids.uploadedFile1,
+          createdAt: fortyMinAgo,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: ids.user2,
+          content: '✓ Task "Upload Business License" completed',
+          type: "system" as const,
+          referencedTaskId: ids.taskFileReq,
+          createdAt: fortyMinAgo,
+        },
+        // User question about file
         {
           id: ids.msg3,
           workspaceId: ids.workspace1,
@@ -917,6 +1205,25 @@ async function seed() {
           type: "text" as const,
           createdAt: fortyMinAgo,
         },
+        // Meeting booked
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: ids.user1,
+          content: 'Marcus Johnson booked meeting for "Schedule Kickoff Meeting" — Google Meet: https://meet.google.com/abc-defg-hij',
+          type: "system" as const,
+          referencedTaskId: ids.taskBooking,
+          createdAt: thirtyMinAgo,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: ids.user1,
+          content: '✓ Task "Schedule Kickoff Meeting" completed',
+          type: "system" as const,
+          referencedTaskId: ids.taskBooking,
+          createdAt: thirtyMinAgo,
+        },
         {
           id: ids.msg4,
           workspaceId: ids.workspace1,
@@ -925,7 +1232,70 @@ async function seed() {
           type: "text" as const,
           createdAt: thirtyMinAgo,
         },
-        // Workspace 2 chat
+
+        // ===== WORKSPACE 2: System messages (1 day ago) =====
+        {
+          id: uuid(),
+          workspaceId: ids.workspace2,
+          userId: ids.adminUser,
+          content: "Workspace created",
+          type: "system" as const,
+          createdAt: oneDayAgoMsg,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace2,
+          userId: ids.adminUser,
+          content: "Sarah Chen joined as Account Manager",
+          type: "system" as const,
+          createdAt: oneDayAgoMsg,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace2,
+          userId: ids.adminUser,
+          content: "Marcus Johnson joined as User",
+          type: "system" as const,
+          createdAt: oneDayAgoMsg,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace2,
+          userId: ids.adminUser,
+          content: 'Task "Submit Q1 Financial Summary" created and assigned to Marcus Johnson',
+          type: "system" as const,
+          referencedTaskId: ids.taskForm2,
+          createdAt: oneDayAgoMsg,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace2,
+          userId: ids.adminUser,
+          content: 'Task "Acknowledge Audit Guidelines" created and assigned to Marcus Johnson, Sarah Chen',
+          type: "system" as const,
+          referencedTaskId: ids.taskAck2,
+          createdAt: oneDayAgoMsg,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace2,
+          userId: ids.adminUser,
+          content: 'Task "Approve Q1 Financial Report" created and assigned to Admin User',
+          type: "system" as const,
+          referencedTaskId: ids.taskApproval2,
+          createdAt: oneDayAgoMsg,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace2,
+          userId: ids.adminUser,
+          content: "Q1_Audit_Guidelines.pdf uploaded",
+          type: "system" as const,
+          referencedFileId: ids.file3,
+          createdAt: oneDayAgoMsg,
+        },
+
+        // ===== WORKSPACE 2: Today - User messages and task events =====
         {
           id: ids.msg5,
           workspaceId: ids.workspace2,
@@ -934,6 +1304,26 @@ async function seed() {
             "Hi team, the Q1 audit workspace is ready. Please acknowledge the guidelines first and then fill in the financial summary.",
           type: "text" as const,
           createdAt: twentyMinAgo,
+        },
+        // Acknowledgement
+        {
+          id: uuid(),
+          workspaceId: ids.workspace2,
+          userId: ids.user1,
+          content: 'Marcus Johnson acknowledged "Acknowledge Audit Guidelines"',
+          type: "system" as const,
+          referencedTaskId: ids.taskAck2,
+          createdAt: tenMinAgo,
+        },
+        // Approval
+        {
+          id: uuid(),
+          workspaceId: ids.workspace2,
+          userId: ids.adminUser,
+          content: 'Admin User approved "Approve Q1 Financial Report" — "Financial figures look good. Approved."',
+          type: "system" as const,
+          referencedTaskId: ids.taskApproval2,
+          createdAt: fiveMinAgo,
         },
         {
           id: ids.msg6,
@@ -946,7 +1336,7 @@ async function seed() {
       ])
       .execute();
 
-    console.log("  Created 6 messages.");
+    console.log("  Created messages with system event logs.");
 
     // =====================
     // NOTIFICATIONS
@@ -1036,55 +1426,928 @@ async function seed() {
     console.log("  Created 3 reminders.");
 
     // =====================
-    // AUDIT LOG ENTRIES
+    // COMPREHENSIVE AUDIT LOG ENTRIES
+    // =====================
+    // Timeline: workspace1 created 3 days ago, workspace2 created 1 day ago
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+    const threeDaysAgoPlus5m = new Date(threeDaysAgo.getTime() + 5 * 60 * 1000);
+    const threeDaysAgoPlus10m = new Date(threeDaysAgo.getTime() + 10 * 60 * 1000);
+    const threeDaysAgoPlus15m = new Date(threeDaysAgo.getTime() + 15 * 60 * 1000);
+    const threeDaysAgoPlus20m = new Date(threeDaysAgo.getTime() + 20 * 60 * 1000);
+    const threeDaysAgoPlus25m = new Date(threeDaysAgo.getTime() + 25 * 60 * 1000);
+    const threeDaysAgoPlus30m = new Date(threeDaysAgo.getTime() + 30 * 60 * 1000);
+    const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+    const oneDayAgo = new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000);
+    const oneDayAgoPlus5m = new Date(oneDayAgo.getTime() + 5 * 60 * 1000);
+    const oneDayAgoPlus10m = new Date(oneDayAgo.getTime() + 10 * 60 * 1000);
+    const oneDayAgoPlus15m = new Date(oneDayAgo.getTime() + 15 * 60 * 1000);
+    // Yesterday timestamps for workflow progression
+    const yesterdayMorning = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayAfternoon = new Date(now.getTime() - 20 * 60 * 60 * 1000);
+
+    const auditEntries = [
+      // ===== WORKSPACE 1: Created 3 days ago =====
+      // Workspace creation
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: null,
+        eventType: "workspace.created",
+        actorId: ids.adminUser,
+        metadata: { name: "Acme Corp Onboarding", description: "Client onboarding workflow for Acme Corporation" },
+        source: "web",
+        createdAt: threeDaysAgo,
+      },
+      // Members added
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: null,
+        eventType: "workspace.member_added",
+        actorId: ids.adminUser,
+        metadata: { userId: ids.accountManager, role: "account_manager", email: "sarah@example.com" },
+        source: "web",
+        createdAt: threeDaysAgo,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: null,
+        eventType: "workspace.member_added",
+        actorId: ids.adminUser,
+        metadata: { userId: ids.user1, role: "user", email: "marcus@example.com" },
+        source: "web",
+        createdAt: threeDaysAgo,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: null,
+        eventType: "workspace.member_added",
+        actorId: ids.adminUser,
+        metadata: { userId: ids.user2, role: "user", email: "emily@example.com" },
+        source: "web",
+        createdAt: threeDaysAgo,
+      },
+      // Sections created
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: null,
+        eventType: "section.created",
+        actorId: ids.accountManager,
+        metadata: { sectionId: ids.w1Section1, title: "Getting Started", position: 0 },
+        source: "web",
+        createdAt: threeDaysAgoPlus5m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: null,
+        eventType: "section.created",
+        actorId: ids.accountManager,
+        metadata: { sectionId: ids.w1Section2, title: "Documents & Signing", position: 1 },
+        source: "web",
+        createdAt: threeDaysAgoPlus5m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: null,
+        eventType: "section.created",
+        actorId: ids.accountManager,
+        metadata: { sectionId: ids.w1Section3, title: "Final Review", position: 2 },
+        source: "web",
+        createdAt: threeDaysAgoPlus5m,
+      },
+      // Tasks created in Section 1
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskForm,
+        eventType: "task.created",
+        actorId: ids.accountManager,
+        metadata: { title: "Complete Company Information Form", type: "FORM", sectionId: ids.w1Section1 },
+        source: "web",
+        createdAt: threeDaysAgoPlus10m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskForm,
+        eventType: "task.assigned",
+        actorId: ids.accountManager,
+        metadata: { assigneeId: ids.user1, assigneeName: "Marcus Johnson" },
+        source: "web",
+        createdAt: threeDaysAgoPlus10m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskForm,
+        eventType: "task.assigned",
+        actorId: ids.accountManager,
+        metadata: { assigneeId: ids.user2, assigneeName: "Emily Rivera" },
+        source: "web",
+        createdAt: threeDaysAgoPlus10m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskAck,
+        eventType: "task.created",
+        actorId: ids.accountManager,
+        metadata: { title: "Acknowledge Terms of Service", type: "ACKNOWLEDGEMENT", sectionId: ids.w1Section1 },
+        source: "web",
+        createdAt: threeDaysAgoPlus10m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskAck,
+        eventType: "task.assigned",
+        actorId: ids.accountManager,
+        metadata: { assigneeId: ids.user1, assigneeName: "Marcus Johnson" },
+        source: "web",
+        createdAt: threeDaysAgoPlus10m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskAck,
+        eventType: "task.assigned",
+        actorId: ids.accountManager,
+        metadata: { assigneeId: ids.user2, assigneeName: "Emily Rivera" },
+        source: "web",
+        createdAt: threeDaysAgoPlus10m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskBooking,
+        eventType: "task.created",
+        actorId: ids.accountManager,
+        metadata: { title: "Schedule Kickoff Meeting", type: "TIME_BOOKING", sectionId: ids.w1Section1 },
+        source: "web",
+        createdAt: threeDaysAgoPlus10m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskBooking,
+        eventType: "task.assigned",
+        actorId: ids.accountManager,
+        metadata: { assigneeId: ids.user1, assigneeName: "Marcus Johnson" },
+        source: "web",
+        createdAt: threeDaysAgoPlus10m,
+      },
+      // Tasks created in Section 2
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskEsign,
+        eventType: "task.created",
+        actorId: ids.accountManager,
+        metadata: { title: "Sign Service Agreement", type: "E_SIGN", sectionId: ids.w1Section2 },
+        source: "web",
+        createdAt: threeDaysAgoPlus15m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskEsign,
+        eventType: "task.assigned",
+        actorId: ids.accountManager,
+        metadata: { assigneeId: ids.user1, assigneeName: "Marcus Johnson" },
+        source: "web",
+        createdAt: threeDaysAgoPlus15m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskFileReq,
+        eventType: "task.created",
+        actorId: ids.accountManager,
+        metadata: { title: "Upload Business License", type: "FILE_REQUEST", sectionId: ids.w1Section2 },
+        source: "web",
+        createdAt: threeDaysAgoPlus15m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskFileReq,
+        eventType: "task.assigned",
+        actorId: ids.accountManager,
+        metadata: { assigneeId: ids.user2, assigneeName: "Emily Rivera" },
+        source: "web",
+        createdAt: threeDaysAgoPlus15m,
+      },
+      // Tasks created in Section 3
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskApproval,
+        eventType: "task.created",
+        actorId: ids.accountManager,
+        metadata: { title: "Approve Client Onboarding", type: "APPROVAL", sectionId: ids.w1Section3 },
+        source: "web",
+        createdAt: threeDaysAgoPlus20m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskApproval,
+        eventType: "task.assigned",
+        actorId: ids.accountManager,
+        metadata: { assigneeId: ids.adminUser, assigneeName: "Admin User" },
+        source: "web",
+        createdAt: threeDaysAgoPlus20m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskApproval,
+        eventType: "task.assigned",
+        actorId: ids.accountManager,
+        metadata: { assigneeId: ids.accountManager, assigneeName: "Sarah Chen" },
+        source: "web",
+        createdAt: threeDaysAgoPlus20m,
+      },
+      // Dependencies created
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskEsign,
+        eventType: "dependency.created",
+        actorId: ids.accountManager,
+        metadata: { dependsOnTaskId: ids.taskForm, dependsOnTitle: "Complete Company Information Form", type: "unlock" },
+        source: "web",
+        createdAt: threeDaysAgoPlus25m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskApproval,
+        eventType: "dependency.created",
+        actorId: ids.accountManager,
+        metadata: { dependsOnTaskId: ids.taskEsign, dependsOnTitle: "Sign Service Agreement", type: "unlock" },
+        source: "web",
+        createdAt: threeDaysAgoPlus25m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskApproval,
+        eventType: "dependency.created",
+        actorId: ids.accountManager,
+        metadata: { dependsOnTaskId: ids.taskFileReq, dependsOnTitle: "Upload Business License", type: "unlock" },
+        source: "web",
+        createdAt: threeDaysAgoPlus25m,
+      },
+      // Files uploaded by account manager
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: null,
+        eventType: "file.uploaded",
+        actorId: ids.accountManager,
+        metadata: { fileId: ids.file1, fileName: "Service_Agreement_v2.pdf", size: 245000, mimeType: "application/pdf" },
+        source: "web",
+        createdAt: threeDaysAgoPlus30m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: null,
+        eventType: "file.uploaded",
+        actorId: ids.accountManager,
+        metadata: { fileId: ids.file2, fileName: "Onboarding_Welcome_Pack.pdf", size: 1200000, mimeType: "application/pdf" },
+        source: "web",
+        createdAt: threeDaysAgoPlus30m,
+      },
+
+      // ===== WORKFLOW PROGRESSION: Yesterday =====
+      // Acknowledgement task completed by both users
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskAck,
+        eventType: "task.acknowledged",
+        actorId: ids.user1,
+        metadata: { acknowledgedAt: yesterdayMorning.toISOString(), userName: "Marcus Johnson" },
+        source: "web",
+        createdAt: yesterdayMorning,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskAck,
+        eventType: "task.acknowledged",
+        actorId: ids.user2,
+        metadata: { acknowledgedAt: yesterdayAfternoon.toISOString(), userName: "Emily Rivera" },
+        source: "web",
+        createdAt: yesterdayAfternoon,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskAck,
+        eventType: "task.completed",
+        actorId: ids.user2,
+        metadata: { completedAt: yesterdayAfternoon.toISOString(), completionRule: "all", allAssigneesCompleted: true },
+        source: "system",
+        createdAt: yesterdayAfternoon,
+      },
+
+      // ===== WORKFLOW PROGRESSION: Today =====
+      // Form submitted by user1
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskForm,
+        eventType: "form.submitted",
+        actorId: ids.user1,
+        metadata: {
+          submissionId: ids.formSubmission1,
+          userName: "Marcus Johnson",
+          responses: {
+            "Legal Company Name": "Acme Corporation Inc.",
+            "Primary Contact Email": "contact@acmecorp.com",
+          }
+        },
+        source: "web",
+        createdAt: oneHourAgo,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskForm,
+        eventType: "task.assignee_completed",
+        actorId: ids.user1,
+        metadata: { userName: "Marcus Johnson", completedAt: oneHourAgo.toISOString() },
+        source: "system",
+        createdAt: oneHourAgo,
+      },
+      // File uploaded for file request
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskFileReq,
+        eventType: "file.uploaded",
+        actorId: ids.user2,
+        metadata: { fileId: ids.uploadedFile1, fileName: "Business_License_2024.pdf", size: 156000, mimeType: "application/pdf" },
+        source: "web",
+        createdAt: fortyMinAgo,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskFileReq,
+        eventType: "task.assignee_completed",
+        actorId: ids.user2,
+        metadata: { userName: "Emily Rivera", completedAt: fortyMinAgo.toISOString() },
+        source: "system",
+        createdAt: fortyMinAgo,
+      },
+      // Meeting booked
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskBooking,
+        eventType: "meeting.booked",
+        actorId: ids.user1,
+        metadata: {
+          meetLink: "https://meet.google.com/abc-defg-hij",
+          calendarEventId: "cal_evt_abc123",
+          bookedAt: thirtyMinAgo.toISOString(),
+          userName: "Marcus Johnson"
+        },
+        source: "web",
+        createdAt: thirtyMinAgo,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskBooking,
+        eventType: "task.completed",
+        actorId: ids.user1,
+        metadata: { completedAt: thirtyMinAgo.toISOString(), completionRule: "any" },
+        source: "system",
+        createdAt: thirtyMinAgo,
+      },
+      // Comments
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskForm,
+        eventType: "comment.added",
+        actorId: ids.accountManager,
+        metadata: { commentId: ids.comment1, preview: "Hi team, please make sure to use your legal company name..." },
+        source: "web",
+        createdAt: oneHourAgo,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: ids.taskForm,
+        eventType: "comment.added",
+        actorId: ids.user1,
+        metadata: { commentId: ids.comment2, preview: "Got it, thanks Sarah!" },
+        source: "web",
+        createdAt: thirtyMinAgo,
+      },
+
+      // ===== WORKSPACE 2: Created 1 day ago =====
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        taskId: null,
+        eventType: "workspace.created",
+        actorId: ids.adminUser,
+        metadata: { name: "Q1 Audit Preparation", description: "Internal audit preparation for Q1 financials" },
+        source: "web",
+        createdAt: oneDayAgo,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        taskId: null,
+        eventType: "workspace.member_added",
+        actorId: ids.adminUser,
+        metadata: { userId: ids.accountManager, role: "account_manager", email: "sarah@example.com" },
+        source: "web",
+        createdAt: oneDayAgo,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        taskId: null,
+        eventType: "workspace.member_added",
+        actorId: ids.adminUser,
+        metadata: { userId: ids.user1, role: "user", email: "marcus@example.com" },
+        source: "web",
+        createdAt: oneDayAgo,
+      },
+      // Sections
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        taskId: null,
+        eventType: "section.created",
+        actorId: ids.adminUser,
+        metadata: { sectionId: ids.w2Section1, title: "Data Collection", position: 0 },
+        source: "web",
+        createdAt: oneDayAgoPlus5m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        taskId: null,
+        eventType: "section.created",
+        actorId: ids.adminUser,
+        metadata: { sectionId: ids.w2Section2, title: "Approvals", position: 1 },
+        source: "web",
+        createdAt: oneDayAgoPlus5m,
+      },
+      // Tasks
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        taskId: ids.taskForm2,
+        eventType: "task.created",
+        actorId: ids.adminUser,
+        metadata: { title: "Submit Q1 Financial Summary", type: "FORM", sectionId: ids.w2Section1 },
+        source: "web",
+        createdAt: oneDayAgoPlus10m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        taskId: ids.taskForm2,
+        eventType: "task.assigned",
+        actorId: ids.adminUser,
+        metadata: { assigneeId: ids.user1, assigneeName: "Marcus Johnson" },
+        source: "web",
+        createdAt: oneDayAgoPlus10m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        taskId: ids.taskAck2,
+        eventType: "task.created",
+        actorId: ids.adminUser,
+        metadata: { title: "Acknowledge Audit Guidelines", type: "ACKNOWLEDGEMENT", sectionId: ids.w2Section1 },
+        source: "web",
+        createdAt: oneDayAgoPlus10m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        taskId: ids.taskAck2,
+        eventType: "task.assigned",
+        actorId: ids.adminUser,
+        metadata: { assigneeId: ids.user1, assigneeName: "Marcus Johnson" },
+        source: "web",
+        createdAt: oneDayAgoPlus10m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        taskId: ids.taskAck2,
+        eventType: "task.assigned",
+        actorId: ids.adminUser,
+        metadata: { assigneeId: ids.accountManager, assigneeName: "Sarah Chen" },
+        source: "web",
+        createdAt: oneDayAgoPlus10m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        taskId: ids.taskApproval2,
+        eventType: "task.created",
+        actorId: ids.adminUser,
+        metadata: { title: "Approve Q1 Financial Report", type: "APPROVAL", sectionId: ids.w2Section2 },
+        source: "web",
+        createdAt: oneDayAgoPlus15m,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        taskId: ids.taskApproval2,
+        eventType: "task.assigned",
+        actorId: ids.adminUser,
+        metadata: { assigneeId: ids.adminUser, assigneeName: "Admin User" },
+        source: "web",
+        createdAt: oneDayAgoPlus15m,
+      },
+      // Dependency
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        taskId: ids.taskApproval2,
+        eventType: "dependency.created",
+        actorId: ids.adminUser,
+        metadata: { dependsOnTaskId: ids.taskForm2, dependsOnTitle: "Submit Q1 Financial Summary", type: "unlock" },
+        source: "web",
+        createdAt: oneDayAgoPlus15m,
+      },
+      // File upload
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        taskId: null,
+        eventType: "file.uploaded",
+        actorId: ids.adminUser,
+        metadata: { fileId: ids.file3, fileName: "Q1_Audit_Guidelines.pdf", size: 89000, mimeType: "application/pdf" },
+        source: "web",
+        createdAt: oneDayAgoPlus15m,
+      },
+      // Today's activity on workspace 2
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        taskId: ids.taskAck2,
+        eventType: "task.acknowledged",
+        actorId: ids.user1,
+        metadata: { acknowledgedAt: tenMinAgo.toISOString(), userName: "Marcus Johnson" },
+        source: "web",
+        createdAt: tenMinAgo,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        taskId: ids.taskApproval2,
+        eventType: "approval.approved",
+        actorId: ids.adminUser,
+        metadata: {
+          decidedAt: fiveMinAgo.toISOString(),
+          comments: "Financial figures look good. Approved.",
+          userName: "Admin User"
+        },
+        source: "web",
+        createdAt: fiveMinAgo,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        taskId: ids.taskApproval2,
+        eventType: "comment.added",
+        actorId: ids.adminUser,
+        metadata: { commentId: ids.comment4, preview: "I'll review as soon as the financial summary is submitted." },
+        source: "web",
+        createdAt: tenMinAgo,
+      },
+      // Messages in workspace chat (audit log tracks these too)
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: null,
+        eventType: "message.sent",
+        actorId: ids.accountManager,
+        metadata: { messageId: ids.msg1, preview: "Welcome to the Acme Corp onboarding workspace!" },
+        source: "web",
+        createdAt: twoHoursAgo,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace1,
+        taskId: null,
+        eventType: "message.sent",
+        actorId: ids.user1,
+        metadata: { messageId: ids.msg2, preview: "Thanks Sarah! We'll get started on the forms today." },
+        source: "web",
+        createdAt: ninetyMinAgo,
+      },
+      {
+        id: uuid(),
+        workspaceId: ids.workspace2,
+        taskId: null,
+        eventType: "message.sent",
+        actorId: ids.adminUser,
+        metadata: { messageId: ids.msg5, preview: "Hi team, the Q1 audit workspace is ready." },
+        source: "web",
+        createdAt: twentyMinAgo,
+      },
+    ];
+
+    await db.insertInto("moxo_audit_log_entry").values(auditEntries).execute();
+
+    console.log(`  Created ${auditEntries.length} audit log entries.`);
+
+    // =====================
+    // WORKFLOW STATE DATA
+    // =====================
+
+    // Mark taskAck as completed (both users acknowledged)
+    await db
+      .updateTable("task")
+      .set({
+        status: "completed",
+        completedAt: yesterdayAfternoon,
+      })
+      .where("id", "=", ids.taskAck)
+      .execute();
+
+    // Mark taskBooking as completed (user1 booked a meeting)
+    await db
+      .updateTable("task")
+      .set({
+        status: "completed",
+        completedAt: thirtyMinAgo,
+      })
+      .where("id", "=", ids.taskBooking)
+      .execute();
+
+    // Mark taskForm as in_progress (user1 submitted, user2 still pending)
+    await db
+      .updateTable("task")
+      .set({ status: "in_progress" })
+      .where("id", "=", ids.taskForm)
+      .execute();
+
+    // Mark taskAck2 as in_progress (user1 acknowledged, accountManager pending)
+    await db
+      .updateTable("task")
+      .set({ status: "in_progress" })
+      .where("id", "=", ids.taskAck2)
+      .execute();
+
+    console.log("  Updated task statuses (2 completed, 2 in_progress).");
+
+    // =====================
+    // TASK ASSIGNEE COMPLETIONS
+    // =====================
+
+    // taskAck - both users completed
+    await db
+      .updateTable("task_assignee")
+      .set({ status: "completed", completedAt: yesterdayMorning })
+      .where("taskId", "=", ids.taskAck)
+      .where("userId", "=", ids.user1)
+      .execute();
+
+    await db
+      .updateTable("task_assignee")
+      .set({ status: "completed", completedAt: yesterdayAfternoon })
+      .where("taskId", "=", ids.taskAck)
+      .where("userId", "=", ids.user2)
+      .execute();
+
+    // taskBooking - user1 completed
+    await db
+      .updateTable("task_assignee")
+      .set({ status: "completed", completedAt: thirtyMinAgo })
+      .where("taskId", "=", ids.taskBooking)
+      .where("userId", "=", ids.user1)
+      .execute();
+
+    // taskForm - user1 completed (submitted form)
+    await db
+      .updateTable("task_assignee")
+      .set({ status: "completed", completedAt: oneHourAgo })
+      .where("taskId", "=", ids.taskForm)
+      .where("userId", "=", ids.user1)
+      .execute();
+
+    // taskAck2 - user1 completed
+    await db
+      .updateTable("task_assignee")
+      .set({ status: "completed", completedAt: tenMinAgo })
+      .where("taskId", "=", ids.taskAck2)
+      .where("userId", "=", ids.user1)
+      .execute();
+
+    console.log("  Updated task assignee completions.");
+
+    // =====================
+    // FORM SUBMISSIONS
     // =====================
     await db
-      .insertInto("moxo_audit_log_entry")
+      .insertInto("form_submission")
       .values([
         {
-          id: uuid(),
-          workspaceId: ids.workspace1,
-          taskId: null,
-          eventType: "workspace.created",
-          actorId: ids.adminUser,
-          metadata: { name: "Acme Corp Onboarding" },
-          source: "web",
-          createdAt: twoHoursAgo,
+          id: ids.formSubmission1,
+          formConfigId: ids.formConfig1,
+          userId: ids.user1,
+          status: "submitted",
+          submittedAt: oneHourAgo,
         },
         {
-          id: uuid(),
-          workspaceId: ids.workspace1,
-          taskId: ids.taskForm,
-          eventType: "task.created",
-          actorId: ids.accountManager,
-          metadata: { title: "Complete Company Information Form" },
-          source: "web",
-          createdAt: twoHoursAgo,
-        },
-        {
-          id: uuid(),
-          workspaceId: ids.workspace1,
-          taskId: ids.taskForm,
-          eventType: "task.assignee_added",
-          actorId: ids.accountManager,
-          metadata: { assigneeId: ids.user1 },
-          source: "web",
-          createdAt: twoHoursAgo,
-        },
-        {
-          id: uuid(),
-          workspaceId: ids.workspace2,
-          taskId: null,
-          eventType: "workspace.created",
-          actorId: ids.adminUser,
-          metadata: { name: "Q1 Audit Preparation" },
-          source: "web",
-          createdAt: twentyMinAgo,
+          id: ids.formSubmission2,
+          formConfigId: ids.formConfig1,
+          userId: ids.user2,
+          status: "draft",
+          submittedAt: null,
         },
       ])
       .execute();
 
-    console.log("  Created 4 audit log entries.");
+    // Form field responses for user1's submitted form
+    await db
+      .insertInto("form_field_response")
+      .values([
+        {
+          id: ids.fieldResponse1,
+          submissionId: ids.formSubmission1,
+          elementId: ids.formElement1,
+          value: JSON.stringify("Acme Corporation Inc."),
+        },
+        {
+          id: ids.fieldResponse2,
+          submissionId: ids.formSubmission1,
+          elementId: ids.formElement2,
+          value: JSON.stringify("contact@acmecorp.com"),
+        },
+        {
+          id: ids.fieldResponse3,
+          submissionId: ids.formSubmission1,
+          elementId: ids.formElement3,
+          value: JSON.stringify("+1 (555) 123-4567"),
+        },
+        {
+          id: ids.fieldResponse4,
+          submissionId: ids.formSubmission1,
+          elementId: ids.formElement4,
+          value: JSON.stringify("123 Business Park Drive, Suite 400, San Francisco, CA 94105"),
+        },
+      ])
+      .execute();
+
+    console.log("  Created 2 form submissions with 4 field responses.");
+
+    // =====================
+    // ACKNOWLEDGEMENTS
+    // =====================
+    await db
+      .insertInto("acknowledgement")
+      .values([
+        {
+          id: ids.ack1,
+          configId: ids.ackConfig1,
+          userId: ids.user1,
+          status: "acknowledged",
+          acknowledgedAt: yesterdayMorning,
+        },
+        {
+          id: ids.ack2,
+          configId: ids.ackConfig1,
+          userId: ids.user2,
+          status: "acknowledged",
+          acknowledgedAt: yesterdayAfternoon,
+        },
+        {
+          id: ids.ack3,
+          configId: ids.ackConfig2,
+          userId: ids.user1,
+          status: "acknowledged",
+          acknowledgedAt: tenMinAgo,
+        },
+      ])
+      .execute();
+
+    console.log("  Created 3 acknowledgements.");
+
+    // =====================
+    // BOOKINGS
+    // =====================
+    await db
+      .insertInto("booking")
+      .values({
+        id: ids.booking1,
+        configId: ids.bookingConfig1,
+        userId: ids.user1,
+        status: "booked",
+        calendarEventId: "cal_evt_abc123",
+        meetLink: "https://meet.google.com/abc-defg-hij",
+        bookedAt: thirtyMinAgo,
+      })
+      .execute();
+
+    console.log("  Created 1 booking.");
+
+    // =====================
+    // FILE UPLOADED FOR FILE REQUEST
+    // =====================
+    await db
+      .insertInto("file")
+      .values({
+        id: ids.uploadedFile1,
+        workspaceId: ids.workspace1,
+        uploadedBy: ids.user2,
+        name: "Business_License_2024.pdf",
+        mimeType: "application/pdf",
+        size: 156_000,
+        storageKey: `workspaces/${ids.workspace1}/files/business-license-2024.pdf`,
+        sourceType: "task_attachment" as const,
+        sourceTaskId: ids.taskFileReq,
+      })
+      .execute();
+
+    // Mark file request task as in_progress since file was uploaded
+    await db
+      .updateTable("task")
+      .set({ status: "in_progress" })
+      .where("id", "=", ids.taskFileReq)
+      .execute();
+
+    await db
+      .updateTable("task_assignee")
+      .set({ status: "completed", completedAt: fortyMinAgo })
+      .where("taskId", "=", ids.taskFileReq)
+      .where("userId", "=", ids.user2)
+      .execute();
+
+    console.log("  Created 1 uploaded file for file request.");
+
+    // =====================
+    // APPROVER DECISIONS (workspace 2)
+    // =====================
+    // Note: We can't easily update approvers inserted earlier since IDs are uuid()
+    // So we'll update by configId and userId
+    // For taskApproval2, admin has approved
+    await db
+      .updateTable("approver")
+      .set({
+        status: "approved",
+        decidedAt: fiveMinAgo,
+        comments: "Financial figures look good. Approved.",
+      })
+      .where("configId", "=", ids.approvalConfig2)
+      .where("userId", "=", ids.adminUser)
+      .execute();
+
+    console.log("  Updated 1 approver decision.");
+
+    // =====================
+    // PENDING INVITATIONS
+    // =====================
+    const oneWeekFromNowDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    await db
+      .insertInto("pending_invitation")
+      .values([
+        {
+          id: ids.invitation1,
+          workspaceId: ids.workspace1,
+          email: "newclient@acmecorp.com",
+          role: "user",
+          token: "inv_" + uuid().replace(/-/g, ""),
+          expiresAt: oneWeekFromNowDate,
+          invitedBy: ids.accountManager,
+        },
+        {
+          id: ids.invitation2,
+          workspaceId: ids.workspace2,
+          email: "finance@company.com",
+          role: "user",
+          token: "inv_" + uuid().replace(/-/g, ""),
+          expiresAt: oneWeekFromNowDate,
+          invitedBy: ids.adminUser,
+        },
+      ])
+      .execute();
+
+    console.log("  Created 2 pending invitations.");
 
     console.log("\nSeed complete!");
   } catch (error) {
