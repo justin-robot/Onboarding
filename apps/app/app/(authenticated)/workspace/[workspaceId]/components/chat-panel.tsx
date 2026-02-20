@@ -87,7 +87,7 @@ export function ChatPanel({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -98,7 +98,7 @@ export function ChatPanel({
 
   // Handle scroll to show/hide scroll-to-bottom button
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
-    const target = event.target as HTMLDivElement;
+    const target = event.currentTarget;
     const isNearBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 100;
     setShowScrollButton(!isNearBottom);
   };
@@ -179,37 +179,40 @@ export function ChatPanel({
         <TabsContent value="chat" className="flex-1 flex flex-col mt-0 overflow-hidden">
           {/* Messages */}
           <ScrollArea
-            ref={scrollAreaRef}
-            className="flex-1 p-4"
-            onScroll={handleScroll}
+            viewportRef={scrollAreaRef}
+            className="flex-1"
+            onScrollCapture={handleScroll}
+            scrollbarClassName="bg-muted-foreground/20 hover:bg-muted-foreground/40"
           >
-            {messages.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center text-center">
-                <MessageSquare className="h-10 w-10 text-muted-foreground/50 mb-3" />
-                <p className="text-sm font-medium">No messages yet</p>
-                <p className="text-xs text-muted-foreground">
-                  Start the conversation by sending a message
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {Object.entries(groupedMessages).map(([date, dateMessages]) => (
-                  <div key={date}>
-                    <DateSeparator date={date} />
-                    <div className="space-y-3 mt-3">
-                      {dateMessages.map((message) => (
-                        <MessageBubble
-                          key={message.id}
-                          message={message}
-                          isOwn={message.senderId === currentUserId}
-                        />
-                      ))}
+            <div className="p-4">
+              {messages.length === 0 ? (
+                <div className="flex h-full flex-col items-center justify-center text-center">
+                  <MessageSquare className="h-10 w-10 text-muted-foreground/50 mb-3" />
+                  <p className="text-sm font-medium">No messages yet</p>
+                  <p className="text-xs text-muted-foreground">
+                    Start the conversation by sending a message
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(groupedMessages).map(([date, dateMessages]) => (
+                    <div key={date}>
+                      <DateSeparator date={date} />
+                      <div className="space-y-3 mt-3">
+                        {dateMessages.map((message) => (
+                          <MessageBubble
+                            key={message.id}
+                            message={message}
+                            isOwn={message.senderId === currentUserId}
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
-                <div ref={bottomRef} />
-              </div>
-            )}
+                  ))}
+                  <div ref={bottomRef} />
+                </div>
+              )}
+            </div>
           </ScrollArea>
 
           {/* Scroll to bottom button */}
