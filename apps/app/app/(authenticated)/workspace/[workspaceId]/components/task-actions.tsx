@@ -433,18 +433,35 @@ function FileUploadTaskAction({
             ) : (
               <div className="space-y-2">
                 {allFiles.map((file) => (
-                  <div
+                  <button
                     key={file.id}
-                    className="flex items-center justify-between rounded-md border p-2"
+                    type="button"
+                    className="flex w-full items-center justify-between rounded-md border p-2 hover:bg-muted/50 transition-colors cursor-pointer text-left"
+                    onClick={async () => {
+                      try {
+                        const response = await fetch(`/api/files/${file.id}`);
+                        if (response.ok) {
+                          const data = await response.json();
+                          if (data.url) {
+                            window.open(data.url, "_blank");
+                          }
+                        }
+                      } catch (error) {
+                        console.error("Failed to get download URL:", error);
+                      }
+                    }}
                   >
                     <div className="flex items-center gap-2 text-foreground min-w-0">
                       <FileText className="h-4 w-4 shrink-0" />
                       <span className="text-sm truncate">{file.name}</span>
                     </div>
-                    <span className="text-xs text-muted-foreground shrink-0 ml-2">
-                      {formatFileSize(file.size)}
-                    </span>
-                  </div>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <span className="text-xs text-muted-foreground">
+                        {formatFileSize(file.size)}
+                      </span>
+                      <Download className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -496,13 +513,11 @@ function FileUploadTaskAction({
       const { uploadUrl, key } = await uploadResponse.json();
       setUploadProgress(20);
 
-      // Step 2: Upload file to S3
+      // Step 2: Upload file to S3/R2
       const s3Response = await fetch(uploadUrl, {
         method: "PUT",
         body: file,
-        headers: {
-          "Content-Type": file.type || "application/octet-stream",
-        },
+        mode: "cors",
       });
 
       if (!s3Response.ok) {

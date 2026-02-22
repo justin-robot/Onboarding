@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -89,6 +89,15 @@ export function FormBuilder({
   );
   const [activeDragData, setActiveDragData] = useState<DragData | null>(null);
   const [isOverCanvas, setIsOverCanvas] = useState(false);
+
+  // Sync activePageId when config.pages changes (e.g., after loading from API)
+  useEffect(() => {
+    const pageExists = config.pages.some((p) => p.id === activePageId);
+    if (!pageExists && config.pages.length > 0) {
+      console.log("[FormBuilder] Syncing activePageId to first page:", config.pages[0].id);
+      setActivePageId(config.pages[0].id);
+    }
+  }, [config.pages, activePageId]);
 
   const activePage = config.pages.find((p) => p.id === activePageId);
   const activeElements = activePage?.elements ?? [];
