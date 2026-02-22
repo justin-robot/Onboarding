@@ -118,7 +118,7 @@ async function seed(userEmail: string) {
       description: "Please upload a copy of your business license or registration document.",
       type: "FILE_REQUEST" as const,
       position: 1,
-      status: "not_started" as const,
+      status: "completed" as const, // Completed to demonstrate file upload viewer
     },
     {
       sectionId: sections[1].id,
@@ -278,7 +278,7 @@ async function seed(userEmail: string) {
           })
           .execute();
         break;
-      case "FILE_REQUEST":
+      case "FILE_REQUEST": {
         await db
           .insertInto("file_request_config")
           .values({
@@ -286,7 +286,33 @@ async function seed(userEmail: string) {
             taskId,
           })
           .execute();
+
+        // Add sample uploaded files for completed file request tasks
+        if (task.status === "completed") {
+          const sampleFiles = [
+            { name: "business_license_2024.pdf", mimeType: "application/pdf", size: 245000 },
+            { name: "company_registration.pdf", mimeType: "application/pdf", size: 182000 },
+          ];
+          for (const fileData of sampleFiles) {
+            await db
+              .insertInto("file")
+              .values({
+                id: randomUUID(),
+                workspaceId,
+                uploadedBy: user.id,
+                name: fileData.name,
+                mimeType: fileData.mimeType,
+                size: fileData.size,
+                storageKey: `${workspaceId}/seed/${randomUUID()}-${fileData.name}`,
+                sourceType: "task_attachment",
+                sourceTaskId: taskId,
+              })
+              .execute();
+          }
+          console.log(`  ✓ Added ${sampleFiles.length} sample files for file request task`);
+        }
         break;
+      }
       case "E_SIGN":
         await db
           .insertInto("esign_config")

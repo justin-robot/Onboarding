@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@repo/design/components/ui/button";
 import { Textarea } from "@repo/design/components/ui/textarea";
@@ -100,6 +100,19 @@ export function TaskAction({
     );
   }
 
+  // For file_upload tasks, show uploaded files when completed or admin viewing
+  if (type === "file_upload" && (isCompleted || (isAdmin && !isYourTurn))) {
+    return (
+      <FileUploadTaskAction
+        taskId={taskId}
+        isYourTurn={isYourTurn}
+        isAdmin={isAdmin}
+        isCompleted={isCompleted}
+        onComplete={onComplete}
+      />
+    );
+  }
+
   if (isCompleted) {
     // For other task types, show generic completion message
     return (
@@ -137,6 +150,8 @@ export function TaskAction({
         <FileUploadTaskAction
           taskId={taskId}
           isYourTurn={isYourTurn}
+          isAdmin={isAdmin}
+          isCompleted={isCompleted}
           onComplete={onComplete}
         />
       );
@@ -350,15 +365,102 @@ function formatFileSize(bytes: number): string {
 function FileUploadTaskAction({
   taskId,
   isYourTurn,
+  isAdmin,
+  isCompleted,
   onComplete,
 }: {
   taskId: string;
   isYourTurn: boolean;
+  isAdmin?: boolean;
+  isCompleted?: boolean;
   onComplete?: () => void;
 }) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [existingFiles, setExistingFiles] = useState<UploadedFile[]>([]);
+  const [isLoadingFiles, setIsLoadingFiles] = useState(true);
+
+  // Fetch existing uploaded files for this task
+  useEffect(() => {
+    const fetchFiles = async () => {
+      try {
+        const response = await fetch(`/api/tasks/${taskId}/files`);
+        if (response.ok) {
+          const data = await response.json();
+          setExistingFiles(
+            data.files.map((f: { id: string; name: string; size: number }) => ({
+              id: f.id,
+              name: f.name,
+              size: f.size,
+            }))
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch task files:", error);
+      } finally {
+        setIsLoadingFiles(false);
+      }
+    };
+    fetchFiles();
+  }, [taskId]);
+
+  // Combine existing and newly uploaded files
+  const allFiles = [...existingFiles, ...uploadedFiles];
+
+  // If task is completed or admin is viewing, show the uploaded files
+  if (isCompleted || (isAdmin && !isYourTurn)) {
+    if (isLoadingFiles) {
+      return (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-purple-600" />
+              <CardTitle className="text-base">Uploaded Files</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {allFiles.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No files have been uploaded yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {allFiles.map((file) => (
+                  <div
+                    key={file.id}
+                    className="flex items-center justify-between rounded-md border p-2"
+                  >
+                    <div className="flex items-center gap-2 text-foreground min-w-0">
+                      <FileText className="h-4 w-4 shrink-0" />
+                      <span className="text-sm truncate">{file.name}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                      {formatFileSize(file.size)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        {isCompleted && (
+          <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-center dark:border-green-900/30 dark:bg-green-950/20">
+            <CheckSquare className="mx-auto h-6 w-6 text-green-500" />
+            <p className="mt-1 text-sm font-medium text-green-700 dark:text-green-400">
+              Files submitted successfully
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   if (!isYourTurn) {
     return (
