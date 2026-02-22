@@ -182,7 +182,7 @@ export function ChatPanel({
           {/* Messages */}
           <ScrollArea
             viewportRef={scrollAreaRef}
-            className="flex-1"
+            className="flex-1 min-h-0"
             onScrollCapture={handleScroll}
             scrollbarClassName="bg-muted-foreground/20 hover:bg-muted-foreground/40"
           >
