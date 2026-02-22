@@ -15,6 +15,7 @@ import { Loader2, Send, MoreVertical, Trash2 } from "lucide-react";
 import { cn } from "@repo/design/lib/utils";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { isEdited } from "@repo/design/lib/date-utils";
 
 export interface Comment {
   id: string;
@@ -24,6 +25,7 @@ export interface Comment {
   userImage?: string;
   content: string;
   createdAt: Date | string;
+  updatedAt?: Date | string;
 }
 
 interface CommentSectionProps {
@@ -293,6 +295,9 @@ function CommentItem({
           </span>
           <span className="text-xs text-muted-foreground">
             {formatDate(comment.createdAt)}
+            {comment.updatedAt && isEdited(comment.createdAt, comment.updatedAt) && (
+              <span className="ml-1 italic">(edited)</span>
+            )}
           </span>
           {isOwn && (
             <DropdownMenu>

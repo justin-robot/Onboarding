@@ -63,6 +63,9 @@ interface WorkspaceData {
       description: string | null;
       dueDate?: string;
       dueDateType?: "absolute" | "relative";
+      createdAt?: string;
+      updatedAt?: string;
+      completedAt?: string;
     }>;
   }>;
 }

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "../../lib/utils";
+import { formatTaskTimestamp } from "../../lib/date-utils";
 import { Badge } from "../ui/badge";
 import {
   FileText,
@@ -43,6 +44,8 @@ interface TaskCardProps {
   description?: string;
   /** Due date if any */
   dueDate?: Date | string;
+  /** When the task was created */
+  createdAt?: Date | string;
   /** Assignee names */
   assignees?: string[];
   /** Click handler */
@@ -109,6 +112,7 @@ export function TaskCard({
   position,
   description,
   dueDate,
+  createdAt,
   assignees,
   onClick,
   className,
@@ -184,6 +188,12 @@ export function TaskCard({
                 <>
                   <span>•</span>
                   <span>Due {formattedDueDate}</span>
+                </>
+              )}
+              {!formattedDueDate && createdAt && (
+                <>
+                  <span>•</span>
+                  <span>{formatTaskTimestamp(createdAt)}</span>
                 </>
               )}
               {assignees && assignees.length > 0 && (

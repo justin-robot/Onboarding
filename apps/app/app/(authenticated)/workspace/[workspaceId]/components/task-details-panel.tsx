@@ -32,7 +32,9 @@ import {
   MessageSquare,
   UserPlus,
   Users,
+  Clock,
 } from "lucide-react";
+import { formatFullTimestamp } from "@repo/design/lib/date-utils";
 import {
   Select,
   SelectContent,
@@ -73,6 +75,9 @@ interface Task {
   description: string | null;
   dueDate?: string;
   dueDateType?: "absolute" | "relative";
+  createdAt?: string;
+  updatedAt?: string;
+  completedAt?: string;
 }
 
 // Config types for each task type
@@ -605,6 +610,36 @@ export function TaskDetailsPanel({
                   <p className="text-sm text-muted-foreground">No due date set</p>
                 )}
               </div>
+
+              {/* Timeline */}
+              {(task.createdAt || task.updatedAt || task.completedAt) && (
+                <div>
+                  <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
+                    <Clock className="inline h-3 w-3 mr-1" />
+                    Timeline
+                  </h3>
+                  <div className="space-y-1.5 text-sm">
+                    {task.createdAt && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Created</span>
+                        <span>{formatFullTimestamp(task.createdAt)}</span>
+                      </div>
+                    )}
+                    {task.updatedAt && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Updated</span>
+                        <span>{formatFullTimestamp(task.updatedAt)}</span>
+                      </div>
+                    )}
+                    {task.completedAt && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Completed</span>
+                        <span>{formatFullTimestamp(task.completedAt)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Task action area */}
               <div className="pt-2">

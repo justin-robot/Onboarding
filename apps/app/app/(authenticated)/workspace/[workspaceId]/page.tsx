@@ -131,6 +131,9 @@ export default async function WorkspacePage({ params }: PageProps) {
             description: task.description,
             dueDate: task.dueDateValue?.toISOString(),
             dueDateType: task.dueDateType as "absolute" | "relative" | undefined,
+            createdAt: task.createdAt?.toISOString(),
+            updatedAt: task.updatedAt?.toISOString(),
+            completedAt: task.completedAt?.toISOString(),
           };
         }),
       };

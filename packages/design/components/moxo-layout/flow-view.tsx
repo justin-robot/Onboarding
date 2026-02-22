@@ -40,6 +40,7 @@ interface FlowTask {
   isLocked?: boolean;
   description?: string;
   dueDate?: Date | string;
+  createdAt?: Date | string;
   assignees?: string[];
 }
 
@@ -127,6 +128,7 @@ function SortableTaskCard({
         isSelected={isSelected}
         description={isCompact ? undefined : task.description}
         dueDate={task.dueDate}
+        createdAt={task.createdAt}
         assignees={task.assignees}
         onClick={() => onTaskSelect?.(task.id)}
       />
@@ -473,6 +475,7 @@ export function FlowView({
                     isSelected={task.id === selectedTaskId}
                     description={isCompact ? undefined : task.description}
                     dueDate={task.dueDate}
+                    createdAt={task.createdAt}
                     assignees={task.assignees}
                     onClick={() => onTaskSelect?.(task.id)}
                   />
@@ -543,6 +546,7 @@ export function FlowView({
                     isSelected={false}
                     description={isCompact ? undefined : activeItem.item.description}
                     dueDate={activeItem.item.dueDate}
+                    createdAt={activeItem.item.createdAt}
                   />
                 </div>
               )}

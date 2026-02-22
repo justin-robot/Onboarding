@@ -100,6 +100,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       userImage: user.image,
       content: comment.content,
       createdAt: comment.createdAt,
+      updatedAt: comment.updatedAt,
     }, 201);
   });
 }

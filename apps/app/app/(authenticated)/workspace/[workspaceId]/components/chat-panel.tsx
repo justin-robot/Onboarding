@@ -24,6 +24,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { cn } from "@repo/design/lib/utils";
+import { isEdited } from "@repo/design/lib/date-utils";
 import { format, isToday, isYesterday, isSameDay } from "date-fns";
 import { toast } from "sonner";
 
@@ -45,6 +46,7 @@ interface Message {
   senderName: string;
   senderAvatarUrl?: string;
   createdAt: Date;
+  updatedAt?: Date;
   attachment?: {
     name: string;
     type: string;
@@ -396,6 +398,9 @@ function MessageBubble({
           <span className="text-xs font-medium">{message.senderName}</span>
           <span className="text-[10px] text-muted-foreground">
             {format(message.createdAt, "h:mm a")}
+            {message.updatedAt && isEdited(message.createdAt, message.updatedAt) && (
+              <span className="ml-1 italic">(edited)</span>
+            )}
           </span>
         </div>
 
