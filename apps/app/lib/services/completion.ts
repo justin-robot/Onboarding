@@ -93,21 +93,33 @@ export const completionService = {
       }
 
       // Send system message to chat (fire and forget)
-      database
-        .selectFrom("section")
-        .select("workspaceId")
-        .where("id", "=", task.sectionId)
-        .executeTakeFirst()
-        .then((section) => {
+      (async () => {
+        try {
+          const [section, user] = await Promise.all([
+            database
+              .selectFrom("section")
+              .select("workspaceId")
+              .where("id", "=", task.sectionId)
+              .executeTakeFirst(),
+            database
+              .selectFrom("user")
+              .select("name")
+              .where("id", "=", userId)
+              .executeTakeFirst(),
+          ]);
+
           if (section) {
-            chatService.sendSystemMessage(
+            const userName = user?.name || "Someone";
+            await chatService.sendSystemMessage(
               section.workspaceId,
-              `Task completed: ${task.title}`,
+              `${userName} completed ${task.title}`,
               taskId
-            ).catch((err: unknown) => console.error("Failed to send task completion message:", err));
+            );
           }
-        })
-        .catch((err: unknown) => console.error("Failed to get section for chat message:", err));
+        } catch (err) {
+          console.error("Failed to send task completion message:", err);
+        }
+      })();
     } else if (task.status === "not_started") {
       // Move to in_progress if this is the first completion
       await database

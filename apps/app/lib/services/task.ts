@@ -398,11 +398,24 @@ export const taskService = {
         );
 
         // Send system message to chat (fire and forget)
-        chatService.sendSystemMessage(
-          workspaceId,
-          `Task completed: ${result.title}`,
-          result.id
-        ).catch((err: unknown) => console.error("Failed to send task completion message:", err));
+        (async () => {
+          try {
+            let message = `Task completed: ${result.title}`;
+            if (auditContext?.actorId) {
+              const user = await database
+                .selectFrom("user")
+                .select("name")
+                .where("id", "=", auditContext.actorId)
+                .executeTakeFirst();
+              if (user?.name) {
+                message = `${user.name} completed ${result.title}`;
+              }
+            }
+            await chatService.sendSystemMessage(workspaceId, message, result.id);
+          } catch (err) {
+            console.error("Failed to send task completion message:", err);
+          }
+        })();
       }
     }
 
