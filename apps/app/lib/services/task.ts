@@ -16,6 +16,18 @@ async function getAblyService() {
   }
 }
 
+// Dynamically import chat service to avoid circular dependencies
+const CHAT_PATH = "./chat";
+async function getChatService() {
+  if (typeof window !== "undefined") return null; // Client-side guard
+  try {
+    const module = await import(/* webpackIgnore: true */ CHAT_PATH);
+    return module.chatService;
+  } catch {
+    return null;
+  }
+}
+
 // Helper to broadcast section status change (avoids circular dependency)
 async function broadcastSectionStatusChange(sectionId: string): Promise<void> {
   const { sectionService } = await import("./section");
@@ -395,6 +407,17 @@ export const taskService = {
         broadcastSectionStatusChange(result.sectionId).catch((err) =>
           console.error("Failed to broadcast section status:", err)
         );
+
+        // Send system message to chat (fire and forget)
+        getChatService().then((chatService) => {
+          if (chatService) {
+            chatService.sendSystemMessage(
+              workspaceId,
+              `Task completed: ${result.title}`,
+              result.id
+            ).catch((err: unknown) => console.error("Failed to send task completion message:", err));
+          }
+        });
       }
     }
 
