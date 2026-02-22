@@ -47,6 +47,7 @@ import { cn } from "@repo/design/lib/utils";
 import { toast } from "sonner";
 import { CommentSection } from "./comment-section";
 import { DueDateSelector } from "./due-date-selector";
+import { TaskDependencies } from "./task-dependencies";
 
 interface Assignee {
   id: string;
@@ -521,6 +522,13 @@ export function TaskDetailsPanel({
                   <p className="text-sm text-foreground">{task.description}</p>
                 </div>
               )}
+
+              {/* Prerequisites/Dependencies */}
+              <TaskDependencies
+                taskId={task.id}
+                isAdmin={isAdmin}
+                onDependencyChange={onTaskComplete}
+              />
 
               {/* Assignees */}
               <div>

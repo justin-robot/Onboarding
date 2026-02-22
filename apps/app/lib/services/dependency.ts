@@ -141,6 +141,50 @@ export const dependencyService = {
   },
 
   /**
+   * Get all dependencies for a task with their prerequisite task details
+   */
+  async getDependenciesWithDetails(taskId: string): Promise<
+    Array<{
+      id: string;
+      dependsOnTaskId: string;
+      type: string;
+      offsetDays: number | null;
+      task: { id: string; title: string; status: string; sectionTitle: string };
+    }>
+  > {
+    const results = await database
+      .selectFrom("task_dependency")
+      .innerJoin("task", "task.id", "task_dependency.dependsOnTaskId")
+      .innerJoin("section", "section.id", "task.sectionId")
+      .select([
+        "task_dependency.id",
+        "task_dependency.dependsOnTaskId",
+        "task_dependency.type",
+        "task_dependency.offsetDays",
+        "task.id as taskId",
+        "task.title as taskTitle",
+        "task.status as taskStatus",
+        "section.title as sectionTitle",
+      ])
+      .where("task_dependency.taskId", "=", taskId)
+      .where("task.deletedAt", "is", null)
+      .execute();
+
+    return results.map((r) => ({
+      id: r.id,
+      dependsOnTaskId: r.dependsOnTaskId,
+      type: r.type,
+      offsetDays: r.offsetDays,
+      task: {
+        id: r.taskId,
+        title: r.taskTitle,
+        status: r.taskStatus,
+        sectionTitle: r.sectionTitle,
+      },
+    }));
+  },
+
+  /**
    * Get all blocking dependencies with their task details
    */
   async getBlockingDependencies(taskId: string): Promise<
