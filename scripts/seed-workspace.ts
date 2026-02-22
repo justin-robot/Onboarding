@@ -110,7 +110,7 @@ async function seed(userEmail: string) {
       description: "Fill out the company details form with your business information.",
       type: "FORM" as const,
       position: 0,
-      status: "not_started" as const,
+      status: "completed" as const, // Completed to demonstrate form submission viewer
     },
     {
       sectionId: sections[1].id,
@@ -169,15 +169,95 @@ async function seed(userEmail: string) {
 
     // Create task config based on type
     switch (task.type) {
-      case "FORM":
+      case "FORM": {
+        const formConfigId = randomUUID();
         await db
           .insertInto("form_config")
           .values({
-            id: randomUUID(),
+            id: formConfigId,
             taskId,
           })
           .execute();
+
+        // Create form page
+        const formPageId = randomUUID();
+        await db
+          .insertInto("form_page")
+          .values({
+            id: formPageId,
+            formConfigId,
+            title: "Company Information",
+            position: 0,
+          })
+          .execute();
+
+        // Create form elements
+        const formElements = [
+          { id: randomUUID(), type: "text", label: "Company Name", placeholder: "Enter your company name", required: true, position: 0 },
+          { id: randomUUID(), type: "email", label: "Business Email", placeholder: "contact@company.com", required: true, position: 1 },
+          { id: randomUUID(), type: "phone", label: "Phone Number", placeholder: "+1 (555) 000-0000", required: false, position: 2 },
+          { id: randomUUID(), type: "select", label: "Company Size", options: [{ label: "1-10", value: "1-10" }, { label: "11-50", value: "11-50" }, { label: "51-200", value: "51-200" }, { label: "200+", value: "200+" }], required: true, position: 3 },
+          { id: randomUUID(), type: "textarea", label: "Business Description", placeholder: "Tell us about your business...", required: false, position: 4 },
+          { id: randomUUID(), type: "checkbox", label: "Services Interested In", options: [{ label: "Consulting", value: "consulting" }, { label: "Implementation", value: "implementation" }, { label: "Training", value: "training" }, { label: "Support", value: "support" }], required: false, position: 5 },
+        ];
+
+        for (const el of formElements) {
+          await db
+            .insertInto("form_element")
+            .values({
+              id: el.id,
+              formPageId,
+              type: el.type,
+              label: el.label,
+              placeholder: el.placeholder || null,
+              required: el.required,
+              options: el.options ? JSON.stringify(el.options) : null,
+              position: el.position,
+            })
+            .execute();
+        }
+
+        // Create form submission (submitted)
+        const submissionId = randomUUID();
+        const submittedAt = new Date(Date.now() - 12 * 60 * 60 * 1000); // 12 hours ago
+        await db
+          .insertInto("form_submission")
+          .values({
+            id: submissionId,
+            formConfigId,
+            userId: user.id,
+            status: "submitted",
+            submittedAt,
+            createdAt: new Date(submittedAt.getTime() - 30 * 60 * 1000), // Started 30 min before submission
+            updatedAt: submittedAt,
+          })
+          .execute();
+
+        // Create form field responses with sample data
+        const formResponses = [
+          { elementId: formElements[0].id, value: "Acme Corporation" },
+          { elementId: formElements[1].id, value: "contact@acmecorp.com" },
+          { elementId: formElements[2].id, value: "+1 (555) 123-4567" },
+          { elementId: formElements[3].id, value: "51-200" },
+          { elementId: formElements[4].id, value: "Acme Corporation is a leading provider of innovative solutions for businesses of all sizes. We specialize in digital transformation and enterprise software." },
+          { elementId: formElements[5].id, value: JSON.stringify(["consulting", "implementation", "support"]) },
+        ];
+
+        for (const resp of formResponses) {
+          await db
+            .insertInto("form_field_response")
+            .values({
+              id: randomUUID(),
+              submissionId,
+              elementId: resp.elementId,
+              value: resp.value,
+            })
+            .execute();
+        }
+
+        console.log(`  ✓ Created form with ${formElements.length} fields and submitted response`);
         break;
+      }
       case "ACKNOWLEDGEMENT":
         await db
           .insertInto("acknowledgement_config")
