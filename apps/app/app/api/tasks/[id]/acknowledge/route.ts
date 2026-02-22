@@ -1,4 +1,5 @@
-import { taskService, sectionService } from "@/lib/services";
+import { taskService, configService, sectionService, completionService } from "@/lib/services";
+import { database } from "@repo/database";
 import { ablyService, WORKSPACE_EVENTS } from "@/lib/services/ably";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
@@ -30,30 +31,94 @@ export async function POST(_request: NextRequest, { params }: Params) {
       return errorResponse("Task is already completed", 400);
     }
 
-    // Mark the task as completed
-    const completedTask = await taskService.markComplete(id, {
-      actorId: user.id,
-      source: "web",
-    });
-    if (!completedTask) {
-      return errorResponse("Failed to acknowledge task", 500);
+    // Get acknowledgement config
+    const config = await configService.getAcknowledgementConfigByTaskId(id);
+    if (!config) {
+      return errorResponse("Acknowledgement config not found", 404);
     }
 
-    // Broadcast task completion via Ably (non-blocking)
+    // Check if user already acknowledged
+    const existingAck = await database
+      .selectFrom("acknowledgement")
+      .selectAll()
+      .where("configId", "=", config.id)
+      .where("userId", "=", user.id)
+      .executeTakeFirst();
+
+    if (existingAck?.status === "acknowledged") {
+      return errorResponse("You have already acknowledged this task", 400);
+    }
+
+    // Record the acknowledgement
+    if (existingAck) {
+      await database
+        .updateTable("acknowledgement")
+        .set({
+          status: "acknowledged",
+          acknowledgedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where("id", "=", existingAck.id)
+        .execute();
+    } else {
+      await database
+        .insertInto("acknowledgement")
+        .values({
+          configId: config.id,
+          userId: user.id,
+          status: "acknowledged",
+          acknowledgedAt: new Date(),
+        })
+        .execute();
+    }
+
+    // Use completion service to handle completion rule logic
+    const completionResult = await completionService.completeTaskForUser(id, user.id);
+
+    if (!completionResult.success) {
+      // If user wasn't assigned, the acknowledgement was still recorded
+      // but they can't "complete" the task
+      if (completionResult.error === "USER_NOT_ASSIGNED") {
+        return json({
+          success: true,
+          acknowledged: true,
+          taskCompleted: false,
+          message: "Acknowledged, but you are not assigned to this task",
+        });
+      }
+      if (completionResult.error === "ALREADY_COMPLETED") {
+        return json({
+          success: true,
+          acknowledged: true,
+          taskCompleted: false,
+          message: "Already acknowledged",
+        });
+      }
+    }
+
+    // Get updated task
+    const updatedTask = await taskService.getById(id);
+
+    // Broadcast task update via Ably (non-blocking)
     (async () => {
       try {
         const section = await sectionService.getById(task.sectionId);
         if (section) {
+          const eventType = completionResult.taskCompleted
+            ? WORKSPACE_EVENTS.TASK_COMPLETED
+            : WORKSPACE_EVENTS.TASK_UPDATED;
+
           await ablyService.broadcastToWorkspace(
             section.workspaceId,
-            WORKSPACE_EVENTS.TASK_COMPLETED,
+            eventType,
             {
-              id: completedTask.id,
-              title: completedTask.title,
-              type: completedTask.type,
-              status: completedTask.status,
-              sectionId: completedTask.sectionId,
-              completedBy: user.id,
+              id: task.id,
+              title: task.title,
+              type: task.type,
+              status: updatedTask?.status || task.status,
+              sectionId: task.sectionId,
+              acknowledgedBy: user.id,
+              taskCompleted: completionResult.taskCompleted,
             }
           );
         }
@@ -64,7 +129,9 @@ export async function POST(_request: NextRequest, { params }: Params) {
 
     return json({
       success: true,
-      task: completedTask,
+      acknowledged: true,
+      taskCompleted: completionResult.taskCompleted || false,
+      task: updatedTask,
     });
   });
 }

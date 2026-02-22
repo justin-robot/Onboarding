@@ -1,4 +1,4 @@
-import { taskService, configService, sectionService } from "@/lib/services";
+import { taskService, configService, sectionService, completionService } from "@/lib/services";
 import { ablyService, WORKSPACE_EVENTS } from "@/lib/services/ably";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
@@ -52,31 +52,53 @@ export async function POST(request: NextRequest, { params }: Params) {
       return errorResponse(result.error || "Failed to record approval", 500);
     }
 
-    // Mark the task as completed
-    const completedTask = await taskService.markComplete(id, {
-      actorId: user.id,
-      source: "web",
-    });
-    if (!completedTask) {
-      return errorResponse("Failed to complete task", 500);
+    // Use completion service to handle completion rule logic
+    const completionResult = await completionService.completeTaskForUser(id, user.id);
+
+    if (!completionResult.success) {
+      // If user wasn't assigned, the approval was still recorded
+      if (completionResult.error === "USER_NOT_ASSIGNED") {
+        return json({
+          success: true,
+          approved: true,
+          taskCompleted: false,
+          message: "Approval recorded, but you are not assigned to this task",
+        });
+      }
+      if (completionResult.error === "ALREADY_COMPLETED") {
+        return json({
+          success: true,
+          approved: true,
+          taskCompleted: false,
+          message: "Already approved",
+        });
+      }
     }
 
-    // Broadcast task completion via Ably (non-blocking)
+    // Get updated task
+    const updatedTask = await taskService.getById(id);
+
+    // Broadcast task update via Ably (non-blocking)
     (async () => {
       try {
         const section = await sectionService.getById(task.sectionId);
         if (section) {
+          const eventType = completionResult.taskCompleted
+            ? WORKSPACE_EVENTS.TASK_COMPLETED
+            : WORKSPACE_EVENTS.TASK_UPDATED;
+
           await ablyService.broadcastToWorkspace(
             section.workspaceId,
-            WORKSPACE_EVENTS.TASK_COMPLETED,
+            eventType,
             {
-              id: completedTask.id,
-              title: completedTask.title,
-              type: completedTask.type,
-              status: completedTask.status,
-              sectionId: completedTask.sectionId,
+              id: task.id,
+              title: task.title,
+              type: task.type,
+              status: updatedTask?.status || task.status,
+              sectionId: task.sectionId,
               approved: true,
               approvedBy: user.id,
+              taskCompleted: completionResult.taskCompleted,
             }
           );
         }
@@ -88,7 +110,8 @@ export async function POST(request: NextRequest, { params }: Params) {
     return json({
       success: true,
       approved: true,
-      task: completedTask,
+      taskCompleted: completionResult.taskCompleted || false,
+      task: updatedTask,
     });
   });
 }
