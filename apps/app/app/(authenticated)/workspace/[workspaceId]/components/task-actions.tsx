@@ -25,8 +25,9 @@ import {
   Download,
   ExternalLink,
   Loader2,
-  Clock,
+  Lock,
   Users,
+  Circle,
 } from "lucide-react";
 import { cn } from "@repo/design/lib/utils";
 import { toast } from "sonner";
@@ -34,6 +35,12 @@ import { format } from "date-fns";
 import { FormSubmissionViewer } from "./form-submission-viewer";
 
 type TaskType = "form" | "acknowledgement" | "file_upload" | "approval" | "booking" | "esign";
+
+interface BlockingTask {
+  id: string;
+  title: string;
+  status: string;
+}
 
 interface TaskActionProps {
   taskId: string;
@@ -52,6 +59,7 @@ interface TaskActionProps {
   instructions?: string;
   bookingLink?: string;
   signerEmail?: string;
+  blockingTasks?: BlockingTask[]; // Tasks that must be completed to unlock this one
   onComplete?: () => void;
 }
 
@@ -72,15 +80,44 @@ export function TaskAction({
   instructions,
   bookingLink,
   signerEmail,
+  blockingTasks,
   onComplete,
 }: TaskActionProps) {
   if (isLocked) {
     return (
-      <div className="rounded-lg border border-dashed border-muted-foreground/30 p-6 text-center">
-        <Clock className="mx-auto h-8 w-8 text-muted-foreground/50" />
-        <p className="mt-2 text-sm text-muted-foreground">
-          This task is locked. Complete the previous tasks to unlock it.
+      <div className="rounded-lg border border-dashed border-amber-300/50 bg-amber-50/30 p-6 dark:border-amber-700/30 dark:bg-amber-950/20">
+        <Lock className="mx-auto h-8 w-8 text-amber-500/70" />
+        <p className="mt-2 text-sm font-medium text-amber-700 dark:text-amber-400">
+          This task is locked
         </p>
+        {blockingTasks && blockingTasks.length > 0 ? (
+          <div className="mt-4 text-left">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
+              Complete these tasks first:
+            </p>
+            <div className="space-y-2">
+              {blockingTasks.map((task) => (
+                <div
+                  key={task.id}
+                  className="flex items-center gap-2 rounded-md border border-amber-200 bg-white p-2 dark:border-amber-800/50 dark:bg-amber-950/30"
+                >
+                  <Circle className="h-4 w-4 text-amber-500 shrink-0" />
+                  <span className="text-sm text-foreground truncate">{task.title}</span>
+                  <Badge
+                    variant="secondary"
+                    className="ml-auto shrink-0 text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                  >
+                    {task.status === "in_progress" ? "In Progress" : "Pending"}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Complete the prerequisite tasks to unlock this one.
+          </p>
+        )}
       </div>
     );
   }

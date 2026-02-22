@@ -152,6 +152,8 @@ export function TaskDetailsPanel({
   const [isAssigning, setIsAssigning] = useState(false);
   // For viewing a specific assignee's form submission (admin only)
   const [viewingSubmissionUserId, setViewingSubmissionUserId] = useState<string | null>(null);
+  // Blocking tasks (prerequisites that must be completed)
+  const [blockingTasks, setBlockingTasks] = useState<Array<{ id: string; title: string; status: string }>>([]);
 
   // Check if this task type needs configuration
   const needsConfiguration = () => {
@@ -272,6 +274,28 @@ export function TaskDetailsPanel({
   useEffect(() => {
     setViewingSubmissionUserId(null);
   }, [task.id]);
+
+  // Fetch blocking tasks when task is locked
+  useEffect(() => {
+    const fetchBlockingTasks = async () => {
+      if (!task.isLocked) {
+        setBlockingTasks([]);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/tasks/${task.id}/blocking`);
+        if (response.ok) {
+          const data = await response.json();
+          setBlockingTasks(data.blockingTasks || []);
+        }
+      } catch (err) {
+        console.error("Error fetching blocking tasks:", err);
+      }
+    };
+
+    fetchBlockingTasks();
+  }, [task.id, task.isLocked]);
 
   // Fetch assignees and members
   useEffect(() => {
@@ -719,6 +743,7 @@ export function TaskDetailsPanel({
                     viewingUserName={viewingSubmissionUserId ? assignees.find(a => a.userId === viewingSubmissionUserId)?.userName : undefined}
                     onClearViewing={() => setViewingSubmissionUserId(null)}
                     instructions={task.description || undefined}
+                    blockingTasks={blockingTasks}
                     onComplete={onTaskComplete}
                     {...getConfigProps()}
                   />
