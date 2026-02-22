@@ -130,14 +130,13 @@ export function TaskCard({
   return (
     <button
       onClick={onClick}
-      disabled={isLocked}
       className={cn(
         "group relative flex w-full gap-3 rounded-lg border p-3 text-left transition-all",
         "hover:border-blue-300 hover:shadow-sm",
         isSelected && "border-blue-500 bg-blue-50/50 dark:bg-blue-950/20",
         isCompleted && "border-green-200 bg-green-50/30 dark:bg-green-950/10",
-        isLocked && "cursor-not-allowed opacity-50",
-        !isSelected && !isCompleted && "border-border bg-background",
+        isLocked && "opacity-60 border-dashed",
+        !isSelected && !isCompleted && !isLocked && "border-border bg-background",
         className
       )}
     >
@@ -230,7 +229,7 @@ export function TaskCard({
             {isLocked && (
               <Badge
                 variant="secondary"
-                className="text-[10px] px-1.5 py-0"
+                className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] px-1.5 py-0"
               >
                 Locked
               </Badge>
