@@ -554,7 +554,10 @@ export function TaskDetailsPanel({
                                 )}
                                 onClick={
                                   isAdmin && task.type === "form"
-                                    ? () => setViewingSubmissionUserId(assignee.userId)
+                                    ? (e) => {
+                                        e.stopPropagation();
+                                        setViewingSubmissionUserId(assignee.userId);
+                                      }
                                     : undefined
                                 }
                               >

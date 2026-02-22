@@ -92,7 +92,7 @@ export function FormSubmissionViewer({
     };
 
     fetchSubmission();
-  }, [formConfigId]);
+  }, [formConfigId, userId]);
 
   if (loading) {
     return (
@@ -106,14 +106,25 @@ export function FormSubmissionViewer({
     return (
       <div
         className={cn(
-          "rounded-lg border border-green-200 bg-green-50 p-6 text-center dark:border-green-900/30 dark:bg-green-950/20",
+          "rounded-lg border border-amber-200 bg-amber-50 p-6 text-center dark:border-amber-900/30 dark:bg-amber-950/20",
           className
         )}
       >
-        <CheckCircle2 className="mx-auto h-8 w-8 text-green-500" />
-        <p className="mt-2 text-sm font-medium text-green-700 dark:text-green-400">
-          This task has been completed
+        <FileText className="mx-auto h-8 w-8 text-amber-500" />
+        <p className="mt-2 text-sm font-medium text-amber-700 dark:text-amber-400">
+          {error || "No submission found"}
         </p>
+        {onBack && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={onBack}
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+        )}
       </div>
     );
   }
