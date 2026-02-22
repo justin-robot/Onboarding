@@ -299,7 +299,7 @@ export function FlowView({
   // Find which section a task belongs to
   const findTaskSection = (taskId: string): FlowSection | undefined => {
     return sections.find((section) =>
-      section.tasks.some((task) => task.id === taskId)
+      (section.tasks || []).some((task) => task.id === taskId)
     );
   };
 
@@ -313,7 +313,7 @@ export function FlowView({
 
     // Check if it's a task
     for (const section of sections) {
-      const task = section.tasks.find((t) => t.id === activeId);
+      const task = (section.tasks || []).find((t) => t.id === activeId);
       if (task) return { type: "task" as const, item: task };
     }
 
