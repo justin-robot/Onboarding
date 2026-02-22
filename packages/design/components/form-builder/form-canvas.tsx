@@ -201,7 +201,7 @@ export function FormCanvas({
           className={cn(
             "flex flex-col items-center justify-center h-64",
             "border-2 border-dashed rounded-lg",
-            "text-muted-foreground",
+            "text-muted-foreground pointer-events-none",
             isHighlighted
               ? "border-primary bg-primary/5"
               : "border-muted-foreground/25"

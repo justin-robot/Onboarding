@@ -1,4 +1,4 @@
-import { submissionService, formService, taskService } from "@/lib/services";
+import { submissionService, formService, completionService } from "@/lib/services";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
@@ -89,8 +89,19 @@ export async function POST(_request: NextRequest, { params }: Params) {
     // Get the form config to find the associated task
     const formConfig = await formService.getFormWithPagesAndElements(formConfigId);
     if (formConfig?.taskId) {
-      // Complete the associated task
-      await taskService.markComplete(formConfig.taskId);
+      // Complete the task for this user (handles assignee status and completion rules)
+      const completionResult = await completionService.completeTaskForUser(
+        formConfig.taskId,
+        user.id
+      );
+
+      // Log completion result but don't fail submission
+      if (!completionResult.success && completionResult.error !== "ALREADY_COMPLETED") {
+        console.warn(
+          `Form submission completed but task completion had issue: ${completionResult.error}`,
+          { taskId: formConfig.taskId, userId: user.id }
+        );
+      }
     }
 
     return json({

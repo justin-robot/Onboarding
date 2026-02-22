@@ -14,6 +14,8 @@ let nextConfig: NextConfig = withLogging({
     "@aws-sdk/client-s3",
     "@aws-sdk/s3-request-presigner",
   ],
+  // Empty turbopack config to use Turbopack (default in Next.js 16)
+  turbopack: {},
   // Webpack fallback for when turbopack isn't used
   webpack: (webpackConfig: { externals?: unknown[] }, { isServer }: { isServer: boolean }) => {
     if (isServer) {

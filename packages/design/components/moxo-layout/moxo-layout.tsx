@@ -447,7 +447,7 @@ export function MoxoLayout({
           <MainTabBar activeTab={currentTab} onTabChange={handleTabChange} />
 
           {/* Tab Content */}
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-x-auto overflow-y-auto">
             {currentTab === "flow" ? flowContent : filesContent}
           </div>
         </div>
@@ -458,7 +458,7 @@ export function MoxoLayout({
             <SheetHeader className="border-b border-border px-4 py-3">
               <SheetTitle>{sidebarTitle}</SheetTitle>
             </SheetHeader>
-            <div className="flex-1 overflow-auto">{sidebar}</div>
+            <div className="flex-1 overflow-x-auto overflow-y-auto">{sidebar}</div>
           </SheetContent>
         </Sheet>
 
@@ -469,7 +469,7 @@ export function MoxoLayout({
               <SheetHeader className="border-b border-border px-4 py-3">
                 <SheetTitle>{rightPanelTitle}</SheetTitle>
               </SheetHeader>
-              <div className="flex-1 overflow-auto">{rightPanel}</div>
+              <div className="flex-1 overflow-x-auto overflow-y-auto">{rightPanel}</div>
             </SheetContent>
           </Sheet>
         )}
@@ -494,7 +494,7 @@ export function MoxoLayout({
           collapsible
           collapsedSize={0}
         >
-          <div className="h-full overflow-hidden border-r border-border bg-muted/30">
+          <div className="h-full overflow-x-auto overflow-y-auto border-r border-border bg-muted/30">
             {sidebar}
           </div>
         </Panel>
@@ -515,7 +515,7 @@ export function MoxoLayout({
             <MainTabBar activeTab={currentTab} onTabChange={handleTabChange} />
 
             {/* Tab Content */}
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-x-auto overflow-y-auto">
               {currentTab === "flow" ? flowContent : filesContent}
             </div>
           </div>
@@ -534,7 +534,7 @@ export function MoxoLayout({
               collapsible
               collapsedSize={0}
             >
-              <div className="h-full overflow-hidden border-l border-border bg-muted/10">
+              <div className="h-full overflow-x-auto overflow-y-auto border-l border-border bg-muted/10">
                 {rightPanel}
               </div>
             </Panel>

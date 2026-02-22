@@ -5,13 +5,17 @@ import {
   DndContext,
   DragOverlay,
   closestCenter,
+  pointerWithin,
+  rectIntersection,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
   type DragStartEvent,
   type DragOverEvent,
+  type CollisionDetection,
 } from "@dnd-kit/core";
 import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { cn } from "../../lib/utils";
@@ -54,6 +58,24 @@ interface CanvasElementDragData {
 
 type DragData = PaletteDragData | CanvasElementDragData;
 
+// Combined collision detection for both palette drops and sorting
+const customCollisionDetection: CollisionDetection = (args) => {
+  // First try pointerWithin - good for dropping into containers
+  const pointerCollisions = pointerWithin(args);
+  if (pointerCollisions.length > 0) {
+    return pointerCollisions;
+  }
+
+  // Then try rectIntersection - good for detecting overlapping elements
+  const rectCollisions = rectIntersection(args);
+  if (rectCollisions.length > 0) {
+    return rectCollisions;
+  }
+
+  // Finally try closestCenter - most forgiving
+  return closestCenter(args);
+};
+
 export function FormBuilder({
   config,
   onConfigChange,
@@ -75,7 +97,13 @@ export function FormBuilder({
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 5, // Reduced from 8 for better drag responsiveness
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -143,7 +171,17 @@ export function FormBuilder({
   // Element management
   const handleAddElement = useCallback(
     (type: FormElementType) => {
-      if (!activePage) return;
+      console.log("[FormBuilder] handleAddElement called:", {
+        type,
+        activePage: activePage?.id,
+        activePageId,
+        currentElementCount: activeElements.length,
+      });
+
+      if (!activePage) {
+        console.error("[FormBuilder] No active page!");
+        return;
+      }
 
       const newElement = getDefaultElement(
         type,
@@ -151,10 +189,14 @@ export function FormBuilder({
         activeElements.length
       );
 
+      console.log("[FormBuilder] Creating element:", newElement);
+
       const updatedPage: FormPage = {
         ...activePage,
         elements: [...activePage.elements, newElement],
       };
+
+      console.log("[FormBuilder] Calling onConfigChange with updated page");
 
       onConfigChange({
         ...config,
@@ -210,33 +252,61 @@ export function FormBuilder({
   }, []);
 
   const handleDragOver = useCallback((event: DragOverEvent) => {
-    const isOverCanvasArea =
-      event.over?.data.current?.type === "canvas" ||
-      event.over?.data.current?.type === "canvas-element";
+    const overType = event.over?.data.current?.type;
+    const isOverCanvasArea = overType === "canvas" || overType === "canvas-element";
+
+    // Only log when state changes to avoid spam
+    if (isOverCanvasArea !== isOverCanvas) {
+      console.log("[FormBuilder] dragOver:", {
+        overId: event.over?.id,
+        overType,
+        isOverCanvasArea,
+      });
+    }
+
     setIsOverCanvas(isOverCanvasArea);
-  }, []);
+  }, [isOverCanvas]);
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
       const activeData = active.data.current as DragData | undefined;
 
+      // Capture isOverCanvas before resetting it
+      const wasOverCanvas = isOverCanvas;
+
+      // Debug logging
+      console.log("[FormBuilder] dragEnd:", {
+        activeType: activeData?.type,
+        overId: over?.id,
+        overType: over?.data.current?.type,
+        wasOverCanvas,
+      });
+
       setActiveDragData(null);
       setIsOverCanvas(false);
 
-      if (!activeData || !over) return;
+      if (!activeData) return;
 
       // Handle palette item dropped on canvas
       if (activeData.type === "palette-item") {
-        const overData = over.data.current;
-        if (overData?.type === "canvas" || overData?.type === "canvas-element") {
+        // Check if dropped over canvas using collision detection OR using tracked state
+        const overData = over?.data.current;
+        const isValidDrop =
+          overData?.type === "canvas" ||
+          overData?.type === "canvas-element" ||
+          wasOverCanvas; // Fallback: if we were over canvas during drag
+
+        console.log("[FormBuilder] palette drop:", { overData, isValidDrop });
+
+        if (isValidDrop) {
           handleAddElement(activeData.elementType);
         }
         return;
       }
 
-      // Handle canvas element reordering
-      if (activeData.type === "canvas-element") {
+      // Handle canvas element reordering (requires valid over target)
+      if (activeData.type === "canvas-element" && over) {
         if (active.id !== over.id) {
           const oldIndex = activeElements.findIndex((el) => el.id === active.id);
           const newIndex = activeElements.findIndex((el) => el.id === over.id);
@@ -250,7 +320,7 @@ export function FormBuilder({
         }
       }
     },
-    [activeElements, handleAddElement, handleElementsChange]
+    [activeElements, handleAddElement, handleElementsChange, isOverCanvas]
   );
 
   const handleDragCancel = useCallback(() => {
@@ -281,7 +351,7 @@ export function FormBuilder({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={customCollisionDetection}
       onDragStart={handleDragStart}
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}

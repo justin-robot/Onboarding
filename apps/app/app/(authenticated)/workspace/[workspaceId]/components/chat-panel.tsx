@@ -329,7 +329,7 @@ export function ChatPanel({
         </TabsContent>
 
         {/* Meetings Tab */}
-        <TabsContent value="meetings" className="flex-1 mt-0 overflow-auto">
+        <TabsContent value="meetings" className="flex-1 mt-0 overflow-x-auto overflow-y-auto">
           <div className="p-4">
             {meetings.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">

@@ -252,7 +252,7 @@ export function FilesView({
       )}
 
       {/* Content */}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-x-auto overflow-y-auto p-4">
         {filteredFiles.length === 0 ? (
           <EmptyState
             hasFiles={files.length > 0}
