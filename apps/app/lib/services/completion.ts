@@ -1,19 +1,8 @@
 import { database } from "@repo/database";
 import { dependencyService } from "./dependency";
+import { chatService } from "./chat";
 import type { TaskAssignee, NewTaskAssignee } from "@repo/database";
 import type { NotificationContext } from "./notificationContext";
-
-// Dynamically import chat service to avoid circular dependencies
-const CHAT_PATH = "./chat";
-async function getChatService() {
-  if (typeof window !== "undefined") return null; // Client-side guard
-  try {
-    const module = await import(/* webpackIgnore: true */ CHAT_PATH);
-    return module.chatService;
-  } catch {
-    return null;
-  }
-}
 
 // Result type for completion operations
 export interface CompletionResult {
@@ -104,29 +93,21 @@ export const completionService = {
       }
 
       // Send system message to chat (fire and forget)
-      (async () => {
-        try {
-          // Get workspaceId from task's section
-          const section = await database
-            .selectFrom("section")
-            .select("workspaceId")
-            .where("id", "=", task.sectionId)
-            .executeTakeFirst();
-
+      database
+        .selectFrom("section")
+        .select("workspaceId")
+        .where("id", "=", task.sectionId)
+        .executeTakeFirst()
+        .then((section) => {
           if (section) {
-            const chatService = await getChatService();
-            if (chatService) {
-              await chatService.sendSystemMessage(
-                section.workspaceId,
-                `Task completed: ${task.title}`,
-                taskId
-              );
-            }
+            chatService.sendSystemMessage(
+              section.workspaceId,
+              `Task completed: ${task.title}`,
+              taskId
+            ).catch((err: unknown) => console.error("Failed to send task completion message:", err));
           }
-        } catch (err) {
-          console.error("Failed to send task completion message:", err);
-        }
-      })();
+        })
+        .catch((err: unknown) => console.error("Failed to get section for chat message:", err));
     } else if (task.status === "not_started") {
       // Move to in_progress if this is the first completion
       await database
@@ -322,29 +303,21 @@ export const completionService = {
     }
 
     // Send system message to chat (fire and forget)
-    (async () => {
-      try {
-        // Get workspaceId from task's section
-        const section = await database
-          .selectFrom("section")
-          .select("workspaceId")
-          .where("id", "=", task.sectionId)
-          .executeTakeFirst();
-
+    database
+      .selectFrom("section")
+      .select("workspaceId")
+      .where("id", "=", task.sectionId)
+      .executeTakeFirst()
+      .then((section) => {
         if (section) {
-          const chatService = await getChatService();
-          if (chatService) {
-            await chatService.sendSystemMessage(
-              section.workspaceId,
-              `Task completed: ${task.title}`,
-              taskId
-            );
-          }
+          chatService.sendSystemMessage(
+            section.workspaceId,
+            `Task completed: ${task.title}`,
+            taskId
+          ).catch((err: unknown) => console.error("Failed to send task completion message:", err));
         }
-      } catch (err) {
-        console.error("Failed to send task completion message:", err);
-      }
-    })();
+      })
+      .catch((err: unknown) => console.error("Failed to get section for chat message:", err));
 
     return { success: true, taskCompleted: true };
   },

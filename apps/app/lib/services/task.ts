@@ -2,6 +2,7 @@ import { database } from "@repo/database";
 import { dependencyService } from "./dependency";
 import { configService } from "./config";
 import { auditLogService, type AuditContext } from "./auditLog";
+import { chatService } from "./chat";
 
 // Dynamically import ably to avoid bundling issues with Next.js
 // Uses string variable to prevent static analysis by bundler
@@ -11,18 +12,6 @@ async function getAblyService() {
   try {
     const module = await import(/* webpackIgnore: true */ ABLY_PATH);
     return { ablyService: module.ablyService, WORKSPACE_EVENTS: module.WORKSPACE_EVENTS };
-  } catch {
-    return null;
-  }
-}
-
-// Dynamically import chat service to avoid circular dependencies
-const CHAT_PATH = "./chat";
-async function getChatService() {
-  if (typeof window !== "undefined") return null; // Client-side guard
-  try {
-    const module = await import(/* webpackIgnore: true */ CHAT_PATH);
-    return module.chatService;
   } catch {
     return null;
   }
@@ -409,15 +398,11 @@ export const taskService = {
         );
 
         // Send system message to chat (fire and forget)
-        getChatService().then((chatService) => {
-          if (chatService) {
-            chatService.sendSystemMessage(
-              workspaceId,
-              `Task completed: ${result.title}`,
-              result.id
-            ).catch((err: unknown) => console.error("Failed to send task completion message:", err));
-          }
-        });
+        chatService.sendSystemMessage(
+          workspaceId,
+          `Task completed: ${result.title}`,
+          result.id
+        ).catch((err: unknown) => console.error("Failed to send task completion message:", err));
       }
     }
 
