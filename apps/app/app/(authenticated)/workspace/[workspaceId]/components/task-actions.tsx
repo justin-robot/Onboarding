@@ -31,6 +31,7 @@ import {
 import { cn } from "@repo/design/lib/utils";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { FormSubmissionViewer } from "./form-submission-viewer";
 
 type TaskType = "form" | "acknowledgement" | "file_upload" | "approval" | "booking" | "esign";
 
@@ -77,6 +78,12 @@ export function TaskAction({
   }
 
   if (isCompleted) {
+    // For form tasks, show the submitted form data
+    if (type === "form" && formConfigId) {
+      return <FormSubmissionViewer formConfigId={formConfigId} />;
+    }
+
+    // For other task types, show generic completion message
     return (
       <div className="rounded-lg border border-green-200 bg-green-50 p-6 text-center dark:border-green-900/30 dark:bg-green-950/20">
         <CheckSquare className="mx-auto h-8 w-8 text-green-500" />
