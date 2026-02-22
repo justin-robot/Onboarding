@@ -53,7 +53,10 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     // Mark the task as completed
-    const completedTask = await taskService.markComplete(id);
+    const completedTask = await taskService.markComplete(id, {
+      actorId: user.id,
+      source: "web",
+    });
     if (!completedTask) {
       return errorResponse("Failed to complete task", 500);
     }

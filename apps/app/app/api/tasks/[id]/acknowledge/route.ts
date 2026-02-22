@@ -31,7 +31,10 @@ export async function POST(_request: NextRequest, { params }: Params) {
     }
 
     // Mark the task as completed
-    const completedTask = await taskService.markComplete(id);
+    const completedTask = await taskService.markComplete(id, {
+      actorId: user.id,
+      source: "web",
+    });
     if (!completedTask) {
       return errorResponse("Failed to acknowledge task", 500);
     }
