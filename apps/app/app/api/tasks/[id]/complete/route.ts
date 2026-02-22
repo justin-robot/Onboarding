@@ -1,4 +1,4 @@
-import { taskService, configService, sectionService } from "@/lib/services";
+import { taskService, configService, sectionService, completionService } from "@/lib/services";
 import { ablyService, WORKSPACE_EVENTS } from "@/lib/services/ably";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
@@ -10,7 +10,7 @@ type Params = { params: Promise<{ id: string }> };
  *
  * Handles type-specific completion data:
  * - APPROVAL: { approved: boolean, reason?: string }
- * - TIME_BOOKING: { date: string, time: string }
+ * - TIME_BOOKING: { date?: string, time?: string } (optional - V1 is simple confirmation)
  * - Others: no additional data required
  */
 export async function POST(request: NextRequest, { params }: Params) {
@@ -57,15 +57,12 @@ export async function POST(request: NextRequest, { params }: Params) {
       }
 
       case "TIME_BOOKING": {
-        const dateStr = body.date as string;
-        const time = body.time as string;
+        // V1: date/time are optional - user just confirms they booked externally
+        const dateStr = body.date as string | undefined;
+        const time = body.time as string | undefined;
 
-        if (!dateStr || !time) {
-          return errorResponse("date and time fields are required for booking tasks", 400);
-        }
-
-        // Parse the date and combine with time
-        const bookedAt = new Date(dateStr);
+        // Parse bookedAt if date provided, otherwise use current time as confirmation timestamp
+        const bookedAt = dateStr ? new Date(dateStr) : new Date();
 
         const result = await configService.recordBooking(id, user.id, {
           bookedAt,
@@ -82,10 +79,22 @@ export async function POST(request: NextRequest, { params }: Params) {
       // no additional data is needed - just mark complete
     }
 
-    // Mark the task as completed
-    const task = await taskService.markComplete(id);
+    // Complete the task for this user (handles assignee status and completion rules)
+    const completionResult = await completionService.completeTaskForUser(id, user.id);
+
+    if (!completionResult.success) {
+      // ALREADY_COMPLETED is not an error - user may have already completed
+      if (completionResult.error === "ALREADY_COMPLETED") {
+        const task = await taskService.getById(id);
+        return json(task);
+      }
+      return errorResponse(completionResult.error || "Failed to complete task", 500);
+    }
+
+    // Get the updated task to return
+    const task = await taskService.getById(id);
     if (!task) {
-      return errorResponse("Failed to complete task", 500);
+      return errorResponse("Task not found after completion", 500);
     }
 
     // Broadcast task completion via Ably (non-blocking)

@@ -122,9 +122,9 @@ export const submissionService = {
       // Skip null/undefined values
       if (value === null || value === undefined) continue;
 
-      // Serialize value for storage
-      const serializedValue =
-        typeof value === "object" ? JSON.stringify(value) : value;
+      // Serialize value for storage - always use JSON.stringify for JSONB column
+      // Plain strings like "hello" are not valid JSON; they need to be "\"hello\""
+      const serializedValue = JSON.stringify(value);
 
       // Try to update existing response
       const existing = await database

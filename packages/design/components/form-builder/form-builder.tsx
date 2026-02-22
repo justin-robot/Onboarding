@@ -94,7 +94,6 @@ export function FormBuilder({
   useEffect(() => {
     const pageExists = config.pages.some((p) => p.id === activePageId);
     if (!pageExists && config.pages.length > 0) {
-      console.log("[FormBuilder] Syncing activePageId to first page:", config.pages[0].id);
       setActivePageId(config.pages[0].id);
     }
   }, [config.pages, activePageId]);
@@ -180,15 +179,7 @@ export function FormBuilder({
   // Element management
   const handleAddElement = useCallback(
     (type: FormElementType) => {
-      console.log("[FormBuilder] handleAddElement called:", {
-        type,
-        activePage: activePage?.id,
-        activePageId,
-        currentElementCount: activeElements.length,
-      });
-
       if (!activePage) {
-        console.error("[FormBuilder] No active page!");
         return;
       }
 
@@ -198,14 +189,10 @@ export function FormBuilder({
         activeElements.length
       );
 
-      console.log("[FormBuilder] Creating element:", newElement);
-
       const updatedPage: FormPage = {
         ...activePage,
         elements: [...activePage.elements, newElement],
       };
-
-      console.log("[FormBuilder] Calling onConfigChange with updated page");
 
       onConfigChange({
         ...config,
@@ -263,18 +250,8 @@ export function FormBuilder({
   const handleDragOver = useCallback((event: DragOverEvent) => {
     const overType = event.over?.data.current?.type;
     const isOverCanvasArea = overType === "canvas" || overType === "canvas-element";
-
-    // Only log when state changes to avoid spam
-    if (isOverCanvasArea !== isOverCanvas) {
-      console.log("[FormBuilder] dragOver:", {
-        overId: event.over?.id,
-        overType,
-        isOverCanvasArea,
-      });
-    }
-
     setIsOverCanvas(isOverCanvasArea);
-  }, [isOverCanvas]);
+  }, []);
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
@@ -283,14 +260,6 @@ export function FormBuilder({
 
       // Capture isOverCanvas before resetting it
       const wasOverCanvas = isOverCanvas;
-
-      // Debug logging
-      console.log("[FormBuilder] dragEnd:", {
-        activeType: activeData?.type,
-        overId: over?.id,
-        overType: over?.data.current?.type,
-        wasOverCanvas,
-      });
 
       setActiveDragData(null);
       setIsOverCanvas(false);
@@ -305,8 +274,6 @@ export function FormBuilder({
           overData?.type === "canvas" ||
           overData?.type === "canvas-element" ||
           wasOverCanvas; // Fallback: if we were over canvas during drag
-
-        console.log("[FormBuilder] palette drop:", { overData, isValidDrop });
 
         if (isValidDrop) {
           handleAddElement(activeData.elementType);
