@@ -8,7 +8,7 @@
  * - Add the specified user as an admin member
  */
 
-import { createDb } from "../packages/database/index";
+import { createDb } from "@repo/database";
 import { randomUUID } from "crypto";
 
 // Load env vars
@@ -350,16 +350,21 @@ async function seed(userEmail: string) {
   console.log(`✓ Created task dependencies`);
 
   // Create some chat messages (some edited to demonstrate "(edited)" indicator)
+  // Include task completion system messages with varied timestamps
   const messages = [
-    { content: "Welcome to your onboarding workspace!", type: "system", edited: false },
-    { content: "Hi! I'm your account manager. Let me know if you have any questions.", type: "text", edited: true },
-    { content: "Thanks! Looking forward to getting started.", type: "text", edited: false },
-    { content: "I've updated the first task - please take a look when you get a chance.", type: "text", edited: true },
+    { content: "Welcome to your onboarding workspace!", type: "system", edited: false, hoursAgo: 48 },
+    { content: "Hi! I'm your account manager. Let me know if you have any questions.", type: "text", edited: true, hoursAgo: 47 },
+    { content: "Thanks! Looking forward to getting started.", type: "text", edited: false, hoursAgo: 46 },
+    { content: `✓ Task completed: Welcome Acknowledgement`, type: "system", edited: false, hoursAgo: 24, taskId: taskIds[0] },
+    { content: "Great job completing the first task!", type: "text", edited: false, hoursAgo: 23 },
+    { content: `✓ Task completed: Complete Company Information Form`, type: "system", edited: false, hoursAgo: 12, taskId: taskIds[2] },
+    { content: "I've updated the first task - please take a look when you get a chance.", type: "text", edited: true, hoursAgo: 2 },
+    { content: "Form submission received. Moving on to document upload.", type: "system", edited: false, hoursAgo: 1 },
   ];
 
-  for (let i = 0; i < messages.length; i++) {
-    const createdAt = new Date(Date.now() - (messages.length - i) * 60000); // Spread over time
-    const updatedAt = messages[i].edited
+  for (const msg of messages) {
+    const createdAt = new Date(Date.now() - msg.hoursAgo * 60 * 60 * 1000);
+    const updatedAt = msg.edited
       ? new Date(createdAt.getTime() + 5 * 60000) // Edited 5 minutes later
       : createdAt;
 
@@ -369,15 +374,16 @@ async function seed(userEmail: string) {
         id: randomUUID(),
         workspaceId,
         senderId: user.id,
-        content: messages[i].content,
-        type: messages[i].type as "text" | "system",
+        content: msg.content,
+        type: msg.type as "text" | "system",
+        referencedTaskId: (msg as { taskId?: string }).taskId || null,
         createdAt,
         updatedAt,
       })
       .execute();
   }
 
-  console.log(`✓ Created ${messages.length} chat messages (${messages.filter(m => m.edited).length} edited)`);
+  console.log(`✓ Created ${messages.length} chat messages (${messages.filter(m => m.type === "system").length} system, ${messages.filter(m => m.edited).length} edited)`);
 
   // Create some comments on the first task (some edited to demonstrate "(edited)" indicator)
   const comments = [

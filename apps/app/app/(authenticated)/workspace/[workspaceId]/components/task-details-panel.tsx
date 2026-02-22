@@ -149,6 +149,8 @@ export function TaskDetailsPanel({
   const [assignees, setAssignees] = useState<Assignee[]>([]);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [isAssigning, setIsAssigning] = useState(false);
+  // For viewing a specific assignee's form submission (admin only)
+  const [viewingSubmissionUserId, setViewingSubmissionUserId] = useState<string | null>(null);
 
   // Check if this task type needs configuration
   const needsConfiguration = () => {
@@ -264,6 +266,11 @@ export function TaskDetailsPanel({
 
     fetchTaskDetails();
   }, [task.id, task.type]);
+
+  // Reset viewing submission state when task changes
+  useEffect(() => {
+    setViewingSubmissionUserId(null);
+  }, [task.id]);
 
   // Fetch assignees and members
   useEffect(() => {
@@ -539,8 +546,19 @@ export function TaskDetailsPanel({
                               {assignee.userName || assignee.userEmail || "Unknown"}
                             </p>
                             {assignee.status === "completed" && (
-                              <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
-                                Completed
+                              <Badge
+                                variant="secondary"
+                                className={cn(
+                                  "text-xs bg-green-100 text-green-700",
+                                  isAdmin && task.type === "form" && "cursor-pointer hover:bg-green-200"
+                                )}
+                                onClick={
+                                  isAdmin && task.type === "form"
+                                    ? () => setViewingSubmissionUserId(assignee.userId)
+                                    : undefined
+                                }
+                              >
+                                {isAdmin && task.type === "form" ? "View Submission" : "Completed"}
                               </Badge>
                             )}
                           </div>
@@ -682,6 +700,10 @@ export function TaskDetailsPanel({
                     isCompleted={task.isCompleted}
                     isLocked={task.isLocked}
                     isAdmin={isAdmin}
+                    currentUserCompleted={assignees.find(a => a.userId === currentUserId)?.status === "completed"}
+                    viewingUserId={viewingSubmissionUserId || undefined}
+                    viewingUserName={viewingSubmissionUserId ? assignees.find(a => a.userId === viewingSubmissionUserId)?.userName : undefined}
+                    onClearViewing={() => setViewingSubmissionUserId(null)}
                     instructions={task.description || undefined}
                     onComplete={onTaskComplete}
                     {...getConfigProps()}

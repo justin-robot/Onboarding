@@ -376,9 +376,12 @@ function MessageBubble({
 }) {
   if (message.type === "system") {
     return (
-      <div className="text-center">
+      <div className="flex flex-col items-center gap-0.5">
         <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
           {message.content}
+        </span>
+        <span className="text-[10px] text-muted-foreground/70">
+          {format(message.createdAt, "h:mm a")}
         </span>
       </div>
     );

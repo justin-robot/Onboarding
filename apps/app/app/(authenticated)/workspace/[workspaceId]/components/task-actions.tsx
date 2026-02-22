@@ -42,6 +42,10 @@ interface TaskActionProps {
   isCompleted: boolean;
   isLocked: boolean;
   isAdmin?: boolean;
+  currentUserCompleted?: boolean;
+  viewingUserId?: string; // Admin viewing a specific user's submission
+  viewingUserName?: string;
+  onClearViewing?: () => void; // Callback to clear viewing state
   formConfigId?: string;
   documentUrl?: string;
   documentName?: string;
@@ -58,6 +62,10 @@ export function TaskAction({
   isCompleted,
   isLocked,
   isAdmin,
+  currentUserCompleted,
+  viewingUserId,
+  viewingUserName,
+  onClearViewing,
   formConfigId,
   documentUrl,
   documentName,
@@ -77,12 +85,22 @@ export function TaskAction({
     );
   }
 
-  if (isCompleted) {
-    // For form tasks, show the submitted form data
-    if (type === "form" && formConfigId) {
-      return <FormSubmissionViewer formConfigId={formConfigId} />;
-    }
+  // For form tasks, show the submission viewer if:
+  // - Admin is viewing a specific user's submission
+  // - Current user has submitted (even if task not fully complete)
+  // - Task is fully completed
+  if (type === "form" && formConfigId && (viewingUserId || isCompleted || currentUserCompleted)) {
+    return (
+      <FormSubmissionViewer
+        formConfigId={formConfigId}
+        userId={viewingUserId}
+        userName={viewingUserName}
+        onBack={viewingUserId && onClearViewing ? onClearViewing : undefined}
+      />
+    );
+  }
 
+  if (isCompleted) {
     // For other task types, show generic completion message
     return (
       <div className="rounded-lg border border-green-200 bg-green-50 p-6 text-center dark:border-green-900/30 dark:bg-green-950/20">

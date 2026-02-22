@@ -10,7 +10,8 @@ import {
 } from "@repo/design/components/ui/card";
 import { Badge } from "@repo/design/components/ui/badge";
 import { Separator } from "@repo/design/components/ui/separator";
-import { Loader2, FileText, CheckCircle2 } from "lucide-react";
+import { Loader2, FileText, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Button } from "@repo/design/components/ui/button";
 import { cn } from "@repo/design/lib/utils";
 import { formatFullTimestamp } from "@repo/design/lib/date-utils";
 
@@ -46,11 +47,17 @@ interface SubmissionData {
 
 interface FormSubmissionViewerProps {
   formConfigId: string;
+  userId?: string; // Optional: view a specific user's submission (for admins)
+  userName?: string; // Optional: display name for the user
+  onBack?: () => void; // Optional: callback to go back (when viewing another user's submission)
   className?: string;
 }
 
 export function FormSubmissionViewer({
   formConfigId,
+  userId,
+  userName,
+  onBack,
   className,
 }: FormSubmissionViewerProps) {
   const [data, setData] = useState<SubmissionData | null>(null);
@@ -60,9 +67,10 @@ export function FormSubmissionViewer({
   useEffect(() => {
     const fetchSubmission = async () => {
       try {
-        const response = await fetch(
-          `/api/submissions/${formConfigId}/submitted`
-        );
+        const url = userId
+          ? `/api/submissions/${formConfigId}/submitted?userId=${userId}`
+          : `/api/submissions/${formConfigId}/submitted`;
+        const response = await fetch(url);
 
         if (!response.ok) {
           if (response.status === 404) {
@@ -116,6 +124,17 @@ export function FormSubmissionViewer({
   return (
     <Card className={className}>
       <CardHeader className="pb-3">
+        {onBack && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-fit -ml-2 mb-2 text-muted-foreground"
+            onClick={onBack}
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+        )}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-teal-600" />
@@ -129,7 +148,7 @@ export function FormSubmissionViewer({
           </Badge>
         </div>
         <CardDescription>
-          Submitted {formatFullTimestamp(data.submission.submittedAt)}
+          {userName ? `${userName} submitted` : "Submitted"} {formatFullTimestamp(data.submission.submittedAt)}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
