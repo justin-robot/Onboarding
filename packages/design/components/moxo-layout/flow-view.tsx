@@ -259,6 +259,12 @@ export function FlowView({
   const [activeId, setActiveId] = React.useState<UniqueIdentifier | null>(null);
   const [activeDragType, setActiveDragType] = React.useState<"task" | "section" | null>(null);
 
+  // Track mounted state to avoid hydration mismatch with dnd-kit
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const toggleSection = (sectionId: string) => {
     setCollapsedSections((prev) => {
       const next = new Set(prev);
@@ -381,8 +387,8 @@ export function FlowView({
   // Hide timeline on mobile
   const shouldShowTimeline = showTimeline && isDesktop;
 
-  // Determine if drag is enabled
-  const isDragEnabled = enableDragAndDrop && (onTaskReorder || onSectionReorder);
+  // Determine if drag is enabled (requires mounted to avoid hydration mismatch)
+  const isDragEnabled = mounted && enableDragAndDrop && (onTaskReorder || onSectionReorder);
 
   // Get active item for overlay
   const activeItem = getActiveItem();
