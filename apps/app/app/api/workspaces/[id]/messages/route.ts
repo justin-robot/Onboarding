@@ -38,9 +38,12 @@ export async function GET(request: NextRequest, { params }: Params) {
       senderName: msg.userName || "Unknown",
       senderAvatarUrl: msg.userImage || undefined,
       createdAt: msg.createdAt,
+      updatedAt: msg.updatedAt,
       attachmentIds: msg.attachmentIds,
       referencedTaskId: msg.referencedTaskId,
       referencedFileId: msg.referencedFileId,
+      replyToMessageId: msg.replyToMessageId,
+      replyToMessage: msg.replyToMessage,
     }));
 
     return json({
@@ -67,7 +70,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     const body = await request.json();
-    const { content, type = "text" } = body;
+    const { content, type = "text", replyToMessageId } = body;
 
     // Validate content
     if (!content || typeof content !== "string" || !content.trim()) {
@@ -86,7 +89,11 @@ export async function POST(request: NextRequest, { params }: Params) {
       userId: user.id,
       content: content.trim(),
       type,
+      replyToMessageId: replyToMessageId || undefined,
     });
+
+    // If replying to a message, we'll include the reply info from what we have
+    let replyToMessage = null;
 
     // Prepare response payload
     const messagePayload = {
@@ -97,6 +104,8 @@ export async function POST(request: NextRequest, { params }: Params) {
       senderName: user.name || user.email,
       senderAvatarUrl: user.image || undefined,
       createdAt: message.createdAt.toISOString(),
+      replyToMessageId: message.replyToMessageId,
+      replyToMessage,
     };
 
     // Broadcast to real-time channel (non-blocking)

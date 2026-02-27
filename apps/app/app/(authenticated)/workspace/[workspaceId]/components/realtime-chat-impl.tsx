@@ -68,7 +68,15 @@ function RealtimeChatInner({
   const [messages, setMessages] = useState<Message[]>(initialMessages);
 
   // Handle incoming real-time messages
-  const handleNewMessage = useCallback((payload: ChatMessagePayload) => {
+  const handleNewMessage = useCallback((payload: ChatMessagePayload & {
+    replyToMessageId?: string;
+    replyToMessage?: {
+      id: string;
+      content: string;
+      senderName: string;
+      senderAvatarUrl?: string;
+    };
+  }) => {
     const newMessage: Message = {
       id: payload.id,
       type: payload.type as Message["type"],
@@ -77,6 +85,8 @@ function RealtimeChatInner({
       senderName: payload.senderName,
       senderAvatarUrl: payload.senderAvatarUrl,
       createdAt: new Date(payload.createdAt),
+      replyToMessageId: payload.replyToMessageId,
+      replyToMessage: payload.replyToMessage,
     };
 
     setMessages((prev) => {
@@ -147,7 +157,7 @@ function RealtimeChatInner({
   };
 
   // Send message handler
-  const handleSendMessage = async (content: string, attachment?: File) => {
+  const handleSendMessage = async (content: string, attachment?: File, replyToMessageId?: string) => {
     let fileId: string | undefined;
 
     // Upload attachment if present
@@ -162,6 +172,7 @@ function RealtimeChatInner({
       body: JSON.stringify({
         content,
         fileId,
+        replyToMessageId,
       }),
     });
 
@@ -180,6 +191,8 @@ function RealtimeChatInner({
       senderName: data.senderName,
       createdAt: new Date(data.createdAt),
       attachment: data.attachment,
+      replyToMessageId: data.replyToMessageId,
+      replyToMessage: data.replyToMessage,
     };
 
     setMessages((prev) => {

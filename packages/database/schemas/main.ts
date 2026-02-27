@@ -218,6 +218,7 @@ export interface MessageTable {
   attachmentIds: string[] | null;
   referencedTaskId: string | null;
   referencedFileId: string | null;
+  replyToMessageId: string | null;
   deletedAt: Date | null;
   createdAt: Generated<Date>;
   updatedAt: Generated<Date>;

@@ -66,6 +66,14 @@ export function ChatPanelWithPolling({
             senderName: string;
             senderAvatarUrl?: string;
             createdAt: string;
+            updatedAt?: string;
+            replyToMessageId?: string;
+            replyToMessage?: {
+              id: string;
+              content: string;
+              senderName: string;
+              senderAvatarUrl?: string;
+            };
           }) => ({
             id: msg.id,
             type: msg.type as Message["type"],
@@ -74,6 +82,9 @@ export function ChatPanelWithPolling({
             senderName: msg.senderName,
             senderAvatarUrl: msg.senderAvatarUrl,
             createdAt: new Date(msg.createdAt),
+            updatedAt: msg.updatedAt ? new Date(msg.updatedAt) : undefined,
+            replyToMessageId: msg.replyToMessageId,
+            replyToMessage: msg.replyToMessage,
           }));
           setMessages(formattedMessages);
         }
@@ -135,7 +146,7 @@ export function ChatPanelWithPolling({
   };
 
   // Send message handler
-  const handleSendMessage = async (content: string, attachment?: File) => {
+  const handleSendMessage = async (content: string, attachment?: File, replyToMessageId?: string) => {
     let fileId: string | undefined;
 
     // Upload attachment if present
@@ -150,6 +161,7 @@ export function ChatPanelWithPolling({
       body: JSON.stringify({
         content,
         fileId,
+        replyToMessageId,
       }),
     });
 
@@ -166,6 +178,8 @@ export function ChatPanelWithPolling({
       senderName: data.senderName,
       createdAt: new Date(data.createdAt),
       attachment: data.attachment,
+      replyToMessageId: data.replyToMessageId,
+      replyToMessage: data.replyToMessage,
     };
 
     setMessages((prev) => [...prev, newMessage]);

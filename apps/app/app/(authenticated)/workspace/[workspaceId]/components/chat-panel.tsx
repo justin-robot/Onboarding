@@ -12,9 +12,13 @@ import {
   PopoverTrigger,
 } from "@repo/design/components/ui/popover";
 import {
-  MessageSquare,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@repo/design/components/ui/dropdown-menu";
+import {
   Video,
-  Send,
   Paperclip,
   Smile,
   ArrowDown,
@@ -22,6 +26,10 @@ import {
   FileText,
   X,
   Loader2,
+  MoreHorizontal,
+  Reply,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { cn } from "@repo/design/lib/utils";
 import { isEdited } from "@repo/design/lib/date-utils";
@@ -36,7 +44,7 @@ const EMOJI_CATEGORIES = [
   { name: "Objects", emojis: ["⭐", "🔥", "✨", "💯", "✅", "❌", "⚡", "💡", "🎉", "🎊", "🎁", "📌", "📍", "🔔", "💬", "📝"] },
 ];
 
-type MessageType = "text" | "annotation" | "system" | "file";
+type MessageType = "text" | "annotation" | "system" | "file" | "meeting_started";
 
 interface Message {
   id: string;
@@ -47,12 +55,22 @@ interface Message {
   senderAvatarUrl?: string;
   createdAt: Date;
   updatedAt?: Date;
+  replyToMessageId?: string;
+  replyToMessage?: {
+    id: string;
+    content: string;
+    senderName: string;
+    senderAvatarUrl?: string;
+  };
   attachment?: {
     name: string;
     type: string;
     url?: string;
     thumbnailUrl?: string;
+    uploadedBy?: string;
   };
+  meetingId?: string;
+  meetingUrl?: string;
 }
 
 interface Meeting {
@@ -70,8 +88,10 @@ interface ChatPanelProps {
   meetings: Meeting[];
   currentUserId: string;
   workspaceId: string;
-  onSendMessage?: (content: string, attachment?: File) => Promise<void>;
+  onSendMessage?: (content: string, attachment?: File, replyToMessageId?: string) => Promise<void>;
   onJoinMeeting?: (meetingId: string) => void;
+  onEditMessage?: (messageId: string, content: string) => Promise<void>;
+  onDeleteMessage?: (messageId: string) => Promise<void>;
 }
 
 export function ChatPanel({
@@ -81,6 +101,8 @@ export function ChatPanel({
   workspaceId,
   onSendMessage,
   onJoinMeeting,
+  onEditMessage,
+  onDeleteMessage,
 }: ChatPanelProps) {
   const [activeTab, setActiveTab] = useState<"chat" | "meetings">("chat");
   const [newMessage, setNewMessage] = useState("");
@@ -89,9 +111,14 @@ export function ChatPanel({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Count active meetings for badge
+  const activeMeetingsCount = meetings.filter((m) => m.isActive).length;
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -114,14 +141,24 @@ export function ChatPanel({
 
     setIsSending(true);
     try {
-      await onSendMessage?.(newMessage.trim(), selectedFile || undefined);
+      await onSendMessage?.(newMessage.trim(), selectedFile || undefined, replyingTo?.id);
       setNewMessage("");
       setSelectedFile(null);
+      setReplyingTo(null);
     } catch (error) {
       toast.error("Failed to send message");
     } finally {
       setIsSending(false);
     }
+  };
+
+  const handleReply = (message: Message) => {
+    setReplyingTo(message);
+    inputRef.current?.focus();
+  };
+
+  const cancelReply = () => {
+    setReplyingTo(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -160,19 +197,22 @@ export function ChatPanel({
   return (
     <div className="flex h-full flex-col">
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "chat" | "meetings")} className="flex h-full flex-col">
-        <TabsList className="w-full justify-start rounded-none border-b bg-transparent px-4">
-          <TabsTrigger value="chat" className="text-xs">
-            <MessageSquare className="mr-1.5 h-3.5 w-3.5" />
+        <TabsList className="w-full grid grid-cols-2 gap-0 rounded-none bg-transparent p-2 h-auto">
+          <TabsTrigger
+            value="chat"
+            className="text-sm font-medium py-2.5 rounded-lg border border-transparent data-[state=active]:bg-muted data-[state=active]:border-border data-[state=inactive]:bg-transparent text-muted-foreground data-[state=active]:text-foreground shadow-none"
+          >
             Chat
-            {messages.length > 0 && (
-              <span className="ml-1 text-muted-foreground">({messages.length})</span>
-            )}
           </TabsTrigger>
-          <TabsTrigger value="meetings" className="text-xs">
-            <Video className="mr-1.5 h-3.5 w-3.5" />
+          <TabsTrigger
+            value="meetings"
+            className="relative text-sm font-medium py-2.5 rounded-lg border border-transparent data-[state=active]:bg-muted data-[state=active]:border-border data-[state=inactive]:bg-transparent text-muted-foreground data-[state=active]:text-foreground shadow-none"
+          >
             Meetings
-            {meetings.length > 0 && (
-              <span className="ml-1 text-muted-foreground">({meetings.length})</span>
+            {activeMeetingsCount > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center h-5 min-w-5 px-1.5 text-xs font-medium rounded-full bg-muted text-muted-foreground">
+                {activeMeetingsCount}
+              </span>
             )}
           </TabsTrigger>
         </TabsList>
@@ -189,7 +229,7 @@ export function ChatPanel({
             <div className="p-4">
               {messages.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center text-center">
-                  <MessageSquare className="h-10 w-10 text-muted-foreground/50 mb-3" />
+                  <FileText className="h-10 w-10 text-muted-foreground/50 mb-3" />
                   <p className="text-sm font-medium">No messages yet</p>
                   <p className="text-xs text-muted-foreground">
                     Start the conversation by sending a message
@@ -206,6 +246,11 @@ export function ChatPanel({
                             key={message.id}
                             message={message}
                             isOwn={message.senderId === currentUserId}
+                            currentUserId={currentUserId}
+                            onReply={handleReply}
+                            onEdit={onEditMessage}
+                            onDelete={onDeleteMessage}
+                            onJoinMeeting={onJoinMeeting}
                           />
                         ))}
                       </div>
@@ -234,6 +279,26 @@ export function ChatPanel({
 
           {/* Message input */}
           <div className="border-t border-border p-3">
+            {/* Reply preview */}
+            {replyingTo && (
+              <div className="mb-2 flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2">
+                <Reply className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <span className="text-xs text-muted-foreground">Replying to </span>
+                  <span className="text-xs font-medium">{replyingTo.senderName}</span>
+                  <p className="text-sm text-muted-foreground truncate">{replyingTo.content}</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 shrink-0"
+                  onClick={cancelReply}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
+
             {/* Selected file preview */}
             {selectedFile && (
               <div className="mb-2 flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2">
@@ -253,40 +318,41 @@ export function ChatPanel({
               </div>
             )}
 
-            <div className="flex items-center gap-2">
-              {/* Hidden file input */}
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                onChange={handleFileSelect}
-                accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx"
-              />
+            {/* Hidden file input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              onChange={handleFileSelect}
+              accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx"
+            />
 
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isSending}
-              >
-                <Paperclip className="h-4 w-4" />
-              </Button>
-              <Input
-                placeholder="Type a message..."
+            {/* Input container with embedded icons */}
+            <div className="flex items-center rounded-lg border border-border bg-background px-3 py-1.5 focus-within:ring-1 focus-within:ring-ring">
+              <input
+                ref={inputRef}
+                placeholder="Send message... (Shift + Enter to insert a new line)"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyDown={handleKeyDown}
                 disabled={isSending}
-                className="flex-1"
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
               />
+
+              {isSending && (
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mr-2" />
+              )}
 
               {/* Emoji picker */}
               <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                  <button
+                    type="button"
+                    className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                    disabled={isSending}
+                  >
                     <Smile className="h-4 w-4" />
-                  </Button>
+                  </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-72 p-2" align="end">
                   <div className="space-y-2">
@@ -312,18 +378,15 @@ export function ChatPanel({
                 </PopoverContent>
               </Popover>
 
-              <Button
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                onClick={handleSendMessage}
-                disabled={(!newMessage.trim() && !selectedFile) || isSending}
+              {/* Attachment button */}
+              <button
+                type="button"
+                className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSending}
               >
-                {isSending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-              </Button>
+                <Paperclip className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </TabsContent>
@@ -359,33 +422,94 @@ export function ChatPanel({
 
 function DateSeparator({ date }: { date: string }) {
   return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 h-px bg-border" />
-      <span className="text-xs text-muted-foreground px-2">{date}</span>
-      <div className="flex-1 h-px bg-border" />
+    <div className="flex justify-center py-2">
+      <span className="text-xs text-muted-foreground bg-muted rounded-full px-3 py-1">
+        {date}
+      </span>
     </div>
   );
+}
+
+interface MessageBubbleProps {
+  message: Message;
+  isOwn: boolean;
+  currentUserId: string;
+  onReply: (message: Message) => void;
+  onEdit?: (messageId: string, content: string) => Promise<void>;
+  onDelete?: (messageId: string) => Promise<void>;
+  onJoinMeeting?: (meetingId: string) => void;
 }
 
 function MessageBubble({
   message,
   isOwn,
-}: {
-  message: Message;
-  isOwn: boolean;
-}) {
+  currentUserId,
+  onReply,
+  onEdit,
+  onDelete,
+  onJoinMeeting,
+}: MessageBubbleProps) {
+  const [isHovered, setIsHovered] = useState(false);
+
+  // System messages - Moxo style with blue square icon
   if (message.type === "system") {
+    // Replace sender name with "You" for current user's actions
+    let displayContent = message.content;
+    if (message.senderId === currentUserId) {
+      // Try to replace the sender's name at the start with "You"
+      const senderNamePattern = new RegExp(`^${message.senderName}\\s`);
+      if (senderNamePattern.test(displayContent)) {
+        displayContent = displayContent.replace(senderNamePattern, "You ");
+      }
+    }
+
+    // Format date: "Today, Time" or "Yesterday, Time" or "Mon, Time"
+    const dateStr = isToday(message.createdAt)
+      ? "Today"
+      : isYesterday(message.createdAt)
+      ? "Yesterday"
+      : format(message.createdAt, "EEE");
+
     return (
-      <div className="flex justify-center py-1">
-        <span className="text-xs text-muted-foreground text-center">
-          {message.content} - {format(message.createdAt, "h:mm a")}
-        </span>
+      <div className="flex items-start gap-3 py-2">
+        <div className="w-3 h-3 mt-1 rounded-sm bg-blue-500 shrink-0" />
+        <div>
+          <p className="text-sm text-foreground">{displayContent}</p>
+          <p className="text-xs text-muted-foreground">
+            {dateStr}, {format(message.createdAt, "h:mm a")}
+          </p>
+        </div>
       </div>
     );
   }
 
+  // Meeting started notification - inline with Join button
+  if (message.type === "meeting_started") {
+    return (
+      <div className="flex justify-center items-center gap-3 py-3">
+        <span className="text-sm text-muted-foreground">
+          {message.content} - {format(message.createdAt, "h:mm a")}
+        </span>
+        {message.meetingId && onJoinMeeting && (
+          <Button
+            size="sm"
+            onClick={() => onJoinMeeting(message.meetingId!)}
+          >
+            Join
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  // Regular messages (text, annotation, file)
   return (
-    <div className={cn("flex gap-2", isOwn && "flex-row-reverse")}>
+    <div
+      className="group relative flex gap-2"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* Avatar always on left */}
       <Avatar className="h-8 w-8 shrink-0">
         <AvatarImage src={message.senderAvatarUrl} alt={message.senderName} />
         <AvatarFallback className="text-xs">
@@ -393,50 +517,153 @@ function MessageBubble({
         </AvatarFallback>
       </Avatar>
 
-      <div className={cn("max-w-[75%]", isOwn && "text-right")}>
-        <div className="flex items-baseline gap-2 mb-0.5">
-          <span className="text-xs font-medium">{message.senderName}</span>
-          <span className="text-[10px] text-muted-foreground">
-            {format(message.createdAt, "h:mm a")}
+      <div className="flex-1 max-w-[80%]">
+        {/* Name and timestamp - Moxo format: "Name Today, Time" */}
+        <div className="flex items-baseline gap-2 mb-1">
+          <span className="text-sm font-semibold">{message.senderName}</span>
+          <span className="text-xs text-muted-foreground">
+            {isToday(message.createdAt) ? "Today" : isYesterday(message.createdAt) ? "Yesterday" : format(message.createdAt, "EEE")}, {format(message.createdAt, "h:mm a")}
             {message.updatedAt && isEdited(message.createdAt, message.updatedAt) && (
               <span className="ml-1 italic">(edited)</span>
             )}
           </span>
         </div>
 
-        {message.type === "annotation" && message.attachment && (
-          <div className="mb-1.5 rounded-lg border border-border bg-muted/50 p-2">
-            <div className="flex items-center gap-2">
-              {message.attachment.thumbnailUrl ? (
-                <img
-                  src={message.attachment.thumbnailUrl}
-                  alt={message.attachment.name}
-                  className="h-12 w-12 rounded object-cover"
-                />
-              ) : (
-                <div className="flex h-12 w-12 items-center justify-center rounded bg-muted">
-                  <FileText className="h-5 w-5 text-muted-foreground" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium truncate">{message.attachment.name}</p>
-                <p className="text-[10px] text-muted-foreground">Annotated</p>
-              </div>
+        {/* Quoted message (reply-to) - Moxo style with 66 quote marks */}
+        {message.replyToMessage && (
+          <div className="mb-2">
+            <p className="text-xs text-muted-foreground mb-1">
+              Re: <span className="text-primary font-medium">{message.replyToMessage.senderName}</span>
+            </p>
+            <div className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2">
+              <Avatar className="h-6 w-6 shrink-0">
+                <AvatarImage src={message.replyToMessage.senderAvatarUrl} />
+                <AvatarFallback className="text-[10px]">
+                  {message.replyToMessage.senderName.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-lg text-muted-foreground font-serif">"</span>
+              <p className="text-sm text-muted-foreground truncate flex-1">
+                {message.replyToMessage.content}
+              </p>
             </div>
           </div>
         )}
 
-        <div
-          className={cn(
-            "rounded-lg px-3 py-2 text-sm",
-            isOwn
-              ? "bg-blue-500 text-white"
-              : "bg-muted"
-          )}
-        >
-          {message.content}
-        </div>
+        {/* Annotation message */}
+        {message.type === "annotation" && message.attachment && (
+          <div className="mb-2">
+            <p className="text-sm mb-2">
+              <span className="italic text-muted-foreground">Annotated </span>
+              <a
+                href={message.attachment.url}
+                className="text-primary hover:underline font-medium"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {message.attachment.name}
+              </a>
+              ...
+            </p>
+            <div className="rounded-lg border border-border overflow-hidden max-w-xs">
+              {message.attachment.thumbnailUrl ? (
+                <img
+                  src={message.attachment.thumbnailUrl}
+                  alt={message.attachment.name}
+                  className="w-full h-32 object-cover"
+                />
+              ) : (
+                <div className="flex h-24 w-full items-center justify-center bg-muted">
+                  <FileText className="h-8 w-8 text-muted-foreground" />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* File attachment message */}
+        {message.type === "file" && message.attachment && (
+          <div className="flex gap-3 p-3 rounded-lg border border-border bg-card max-w-sm">
+            {/* Thumbnail */}
+            <div className="shrink-0 rounded overflow-hidden">
+              {message.attachment.thumbnailUrl ? (
+                <img
+                  src={message.attachment.thumbnailUrl}
+                  alt={message.attachment.name}
+                  className="h-16 w-16 object-cover"
+                />
+              ) : (
+                <div className="flex h-16 w-16 items-center justify-center bg-muted">
+                  <FileText className="h-6 w-6 text-muted-foreground" />
+                </div>
+              )}
+            </div>
+            {/* File info */}
+            <div className="flex-1 min-w-0">
+              <a
+                href={message.attachment.url}
+                className="text-sm font-medium text-primary hover:underline truncate block"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Re: {message.attachment.name}...
+              </a>
+              {message.attachment.uploadedBy && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Uploaded by {message.attachment.uploadedBy}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Text content - plain text like Moxo */}
+        {(message.type === "text" || (message.type !== "file" && message.content)) && (
+          <p className="text-sm text-foreground">
+            {message.content}
+          </p>
+        )}
       </div>
+
+      {/* Hover actions */}
+      {isHovered && (
+        <div className="absolute -left-10 top-0 flex items-center gap-0.5">
+          {/* More menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {isOwn && onEdit && (
+                <DropdownMenuItem onClick={() => onEdit(message.id, message.content)}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit
+                </DropdownMenuItem>
+              )}
+              {isOwn && onDelete && (
+                <DropdownMenuItem
+                  onClick={() => onDelete(message.id)}
+                  className="text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Reply button */}
+          <button
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => onReply(message)}
+            title="Reply"
+          >
+            <Reply className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

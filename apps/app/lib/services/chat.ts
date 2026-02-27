@@ -23,12 +23,22 @@ export interface SendMessageOptions {
   attachmentIds?: string[];
   referencedTaskId?: string;
   referencedFileId?: string;
+  replyToMessageId?: string;
+}
+
+// Reply-to message info
+export interface ReplyToMessageInfo {
+  id: string;
+  content: string;
+  senderName: string;
+  senderAvatarUrl?: string;
 }
 
 // Message with user info
 export interface MessageWithUser extends Message {
   userName?: string;
   userImage?: string;
+  replyToMessage?: ReplyToMessageInfo;
 }
 
 // Pagination cursor (base64 encoded createdAt timestamp)
@@ -90,6 +100,7 @@ export const chatService = {
         attachmentIds: options.attachmentIds || null,
         referencedTaskId: options.referencedTaskId || null,
         referencedFileId: options.referencedFileId || null,
+        replyToMessageId: options.replyToMessageId || null,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -106,6 +117,7 @@ export const chatService = {
           attachmentIds: message.attachmentIds,
           referencedTaskId: message.referencedTaskId,
           referencedFileId: message.referencedFileId,
+          replyToMessageId: message.replyToMessageId,
           createdAt: message.createdAt,
         }).catch((err: unknown) => console.error("Failed to broadcast message:", err));
       }
@@ -164,18 +176,8 @@ export const chatService = {
     let query = database
       .selectFrom("message")
       .leftJoin("user", "user.id", "message.userId")
+      .selectAll("message")
       .select([
-        "message.id",
-        "message.workspaceId",
-        "message.userId",
-        "message.content",
-        "message.type",
-        "message.attachmentIds",
-        "message.referencedTaskId",
-        "message.referencedFileId",
-        "message.deletedAt",
-        "message.createdAt",
-        "message.updatedAt",
         "user.name as userName",
         "user.image as userImage",
       ])
@@ -208,6 +210,49 @@ export const chatService = {
     const hasMore = results.length > safeLimit;
     const messages = hasMore ? results.slice(0, safeLimit) : results;
 
+    // Fetch reply-to messages for any messages that have them
+    const replyToIds = messages
+      .map((m) => m.replyToMessageId)
+      .filter((id): id is string => id != null);
+
+    let replyToMessagesMap: Map<string, ReplyToMessageInfo> = new Map();
+
+    if (replyToIds.length > 0) {
+      try {
+        const replyToMessages = await database
+          .selectFrom("message")
+          .leftJoin("user", "user.id", "message.userId")
+          .select([
+            "message.id",
+            "message.content",
+            "user.name as senderName",
+            "user.image as senderAvatarUrl",
+          ])
+          .where("message.id", "in", replyToIds)
+          .execute();
+
+        replyToMessages.forEach((m) => {
+          replyToMessagesMap.set(m.id, {
+            id: m.id,
+            content: m.content,
+            senderName: m.senderName || "Unknown",
+            senderAvatarUrl: m.senderAvatarUrl || undefined,
+          });
+        });
+      } catch (err) {
+        console.error("Failed to fetch reply-to messages:", err);
+        // Continue without reply info
+      }
+    }
+
+    // Attach reply-to info to messages
+    const messagesWithReplies = messages.map((m) => ({
+      ...m,
+      replyToMessage: m.replyToMessageId
+        ? replyToMessagesMap.get(m.replyToMessageId)
+        : undefined,
+    }));
+
     // Generate next cursor from the last message
     const nextCursor =
       hasMore && messages.length > 0
@@ -215,7 +260,7 @@ export const chatService = {
         : null;
 
     return {
-      messages: messages as MessageWithUser[],
+      messages: messagesWithReplies as MessageWithUser[],
       nextCursor,
       hasMore,
     };

@@ -137,6 +137,14 @@ export function WorkspaceView({
             senderName: string;
             senderAvatarUrl?: string;
             createdAt: string;
+            updatedAt?: string;
+            replyToMessageId?: string;
+            replyToMessage?: {
+              id: string;
+              content: string;
+              senderName: string;
+              senderAvatarUrl?: string;
+            };
           }) => ({
             id: msg.id,
             type: msg.type as Message["type"],
@@ -145,6 +153,9 @@ export function WorkspaceView({
             senderName: msg.senderName,
             senderAvatarUrl: msg.senderAvatarUrl,
             createdAt: new Date(msg.createdAt),
+            updatedAt: msg.updatedAt ? new Date(msg.updatedAt) : undefined,
+            replyToMessageId: msg.replyToMessageId,
+            replyToMessage: msg.replyToMessage,
           }));
           setInitialMessages(formattedMessages);
         }
@@ -328,12 +339,12 @@ export function WorkspaceView({
           sections={flowSections}
           selectedTaskId={selectedTaskId || undefined}
           onTaskSelect={handleTaskSelect}
+          onTaskReview={handleTaskSelect}
           onAddTask={currentUserRole === "admin" ? handleAddTask : undefined}
           onTaskReorder={currentUserRole === "admin" ? handleTaskReorder : undefined}
           onSectionReorder={currentUserRole === "admin" ? handleSectionReorder : undefined}
           enableDragAndDrop={currentUserRole === "admin"}
           showTimeline={true}
-          timelinePosition="left"
         />
       }
       filesContent={
