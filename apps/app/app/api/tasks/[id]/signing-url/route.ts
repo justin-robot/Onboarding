@@ -40,10 +40,16 @@ export async function POST(_request: NextRequest, { params }: Params) {
       return json({ signingUrl: esignConfig.providerSigningUrl });
     }
 
-    // Check if SignNow is configured
+    // Check if SignNow is configured with detailed diagnostics
     if (!signNowService.isConfigured()) {
+      const missingVars = [];
+      if (!process.env.SIGNNOW_CLIENT_CREDENTIALS) missingVars.push("SIGNNOW_CLIENT_CREDENTIALS");
+      if (!process.env.SIGNNOW_USERNAME) missingVars.push("SIGNNOW_USERNAME");
+      if (!process.env.SIGNNOW_PASSWORD) missingVars.push("SIGNNOW_PASSWORD");
+
+      console.error("[signing-url] SignNow not configured. Missing:", missingVars.join(", "));
       return errorResponse(
-        "E-signing service is not configured. Please contact support.",
+        `E-signing service is not configured. Missing: ${missingVars.join(", ")}`,
         503
       );
     }
@@ -75,17 +81,26 @@ export async function POST(_request: NextRequest, { params }: Params) {
     };
 
     // Push document to SignNow and update config
-    const updatedConfig = await signNowService.pushAndUpdateConfig(
-      esignConfig.id,
-      esignConfig.fileId,
-      esignConfig.signerEmail,
-      {
-        workspaceId: section.workspaceId,
-        actorId: user.id,
-        taskId,
-      },
-      notificationContext
-    );
+    let updatedConfig;
+    try {
+      updatedConfig = await signNowService.pushAndUpdateConfig(
+        esignConfig.id,
+        esignConfig.fileId,
+        esignConfig.signerEmail,
+        {
+          workspaceId: section.workspaceId,
+          actorId: user.id,
+          taskId,
+        },
+        notificationContext
+      );
+    } catch (signNowError) {
+      console.error("[signing-url] SignNow error:", signNowError);
+      return errorResponse(
+        `SignNow error: ${signNowError instanceof Error ? signNowError.message : "Unknown error"}`,
+        500
+      );
+    }
 
     if (!updatedConfig?.providerSigningUrl) {
       return errorResponse("Failed to generate signing URL", 500);

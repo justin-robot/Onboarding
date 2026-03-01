@@ -36,8 +36,11 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
       return errorResponse("User is not assigned to this task", 400);
     }
 
-    // Unassign the user
-    await assigneeService.unassign(taskId, userId);
+    // Unassign the user with audit context
+    await assigneeService.unassign(taskId, userId, {
+      actorId: user.id,
+      source: "web",
+    });
 
     return json({ success: true });
   });

@@ -2240,10 +2240,11 @@ async function seed() {
       })
       .execute();
 
-    // Mark file request task as in_progress since file was uploaded
+    // Mark file request task as completed since Emily submitted files
+    // (completionRule is "any" and Emily is the only assignee who completed)
     await db
       .updateTable("task")
-      .set({ status: "in_progress" })
+      .set({ status: "completed", completedAt: fortyMinAgo })
       .where("id", "=", ids.taskFileReq)
       .execute();
 

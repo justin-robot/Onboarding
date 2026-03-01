@@ -1,4 +1,4 @@
-import { taskService, configService, sectionService } from "@/lib/services";
+import { taskService, configService, sectionService, assigneeService } from "@/lib/services";
 import { ablyService, WORKSPACE_EVENTS } from "@/lib/services/ably";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
@@ -53,6 +53,16 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     // Auto-create config for task types that support it
     await configService.createConfigForTask(task.id, task.type);
+
+    // Assign users if provided
+    const assigneeIds = body.assigneeIds;
+    if (Array.isArray(assigneeIds) && assigneeIds.length > 0) {
+      for (const userId of assigneeIds) {
+        if (typeof userId === "string") {
+          await assigneeService.assign(task.id, userId);
+        }
+      }
+    }
 
     // Broadcast task creation via Ably (non-blocking)
     (async () => {

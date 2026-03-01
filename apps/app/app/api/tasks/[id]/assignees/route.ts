@@ -69,9 +69,24 @@ export async function POST(request: NextRequest, { params }: Params) {
       return errorResponse("Only admins can assign users to tasks", 403);
     }
 
-    // Assign the user
-    const assignee = await assigneeService.assign(taskId, userId);
+    // Assign the user with audit context
+    const result = await assigneeService.assign(
+      taskId,
+      userId,
+      undefined, // notificationContext
+      {
+        actorId: user.id,
+        source: "web",
+      }
+    );
 
-    return json({ assignee }, 201);
+    if (!result.success) {
+      if (result.error === "ALREADY_ASSIGNED") {
+        return errorResponse("User is already assigned to this task", 400);
+      }
+      return errorResponse(result.error || "Failed to assign user", 400);
+    }
+
+    return json({ assignee: result.assignee }, 201);
   });
 }

@@ -11,10 +11,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@repo/design/components/ui/dropdown-menu";
-import { Loader2, Send, MoreVertical, Trash2 } from "lucide-react";
+import { Loader2, Send, MoreVertical, Trash2, Paperclip, Smile } from "lucide-react";
 import { cn } from "@repo/design/lib/utils";
 import { toast } from "sonner";
-import { formatDistanceToNow } from "date-fns";
+import { format, isToday, isYesterday, formatDistanceToNow } from "date-fns";
 import { isEdited } from "@repo/design/lib/date-utils";
 
 export interface Comment {
@@ -28,12 +28,28 @@ export interface Comment {
   updatedAt?: Date | string;
 }
 
+export interface ActivityLog {
+  id: string;
+  type: "activity";
+  eventType: string;
+  actorId: string;
+  actorName: string;
+  isCurrentUser: boolean;
+  message: string;
+  createdAt: Date | string;
+  metadata?: Record<string, unknown>;
+}
+
+// Combined feed item type
+type FeedItem = (Comment & { type: "comment" }) | ActivityLog;
+
 interface CommentSectionProps {
   taskId: string;
   currentUserId: string;
   onCommentCreated?: (comment: Comment) => void;
   onCommentDeleted?: (commentId: string) => void;
   className?: string;
+  compact?: boolean; // Inline activity-feed style like Moxo
 }
 
 export function CommentSection({
@@ -42,64 +58,61 @@ export function CommentSection({
   onCommentCreated,
   onCommentDeleted,
   className,
+  compact = false,
 }: CommentSectionProps) {
   const [comments, setComments] = useState<Comment[]>([]);
+  const [activities, setActivities] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [content, setContent] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Fetch comments on mount
+  // Fetch comments and activities on mount
   useEffect(() => {
-    const fetchComments = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch(`/api/tasks/${taskId}/comments`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch comments");
+        // Fetch comments and activities in parallel
+        const [commentsRes, activitiesRes] = await Promise.all([
+          fetch(`/api/tasks/${taskId}/comments`),
+          fetch(`/api/tasks/${taskId}/activity`),
+        ]);
+
+        if (commentsRes.ok) {
+          const data = await commentsRes.json();
+          setComments(data.comments || []);
         }
-        const data = await response.json();
-        setComments(data.comments || []);
+
+        if (activitiesRes.ok) {
+          const data = await activitiesRes.json();
+          setActivities(data.activities || []);
+        }
       } catch (err) {
-        console.error("Error fetching comments:", err);
-        toast.error("Failed to load comments");
+        console.error("Error fetching data:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchComments();
+    fetchData();
   }, [taskId]);
 
-  // Scroll to bottom when new comments arrive
+  // Merge and sort comments and activities chronologically
+  const feedItems: FeedItem[] = [
+    ...comments.map((c) => ({ ...c, type: "comment" as const })),
+    ...activities,
+  ].sort((a, b) => {
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+    return dateA - dateB; // Oldest first
+  });
+
+  // Scroll to bottom when new items arrive
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [comments.length]);
-
-  // Handle real-time comment created
-  const handleRealtimeCommentCreated = useCallback((comment: Comment) => {
-    setComments((prev) => {
-      // Avoid duplicates
-      if (prev.some((c) => c.id === comment.id)) {
-        return prev;
-      }
-      return [...prev, comment];
-    });
-  }, []);
-
-  // Handle real-time comment deleted
-  const handleRealtimeCommentDeleted = useCallback((commentId: string) => {
-    setComments((prev) => prev.filter((c) => c.id !== commentId));
-  }, []);
-
-  // Expose handlers for parent to wire up real-time
-  useEffect(() => {
-    if (onCommentCreated) {
-      // Parent can call this when real-time event arrives
-    }
-  }, [onCommentCreated]);
+  }, [feedItems.length]);
 
   // Send comment
   const handleSend = async () => {
@@ -120,7 +133,6 @@ export function CommentSection({
 
       const newComment = await response.json();
 
-      // Add optimistically (real-time will also add it, but we check for duplicates)
       setComments((prev) => {
         if (prev.some((c) => c.id === newComment.id)) {
           return prev;
@@ -188,7 +200,21 @@ export function CommentSection({
       .slice(0, 2);
   };
 
-  // Format date
+  // Format date like Moxo: "Friday, 3:34 AM" or "Today, 11:16 PM"
+  const formatMoxoDate = (date: Date | string) => {
+    const d = typeof date === "string" ? new Date(date) : date;
+    const time = format(d, "h:mm a");
+
+    if (isToday(d)) {
+      return `Today, ${time}`;
+    }
+    if (isYesterday(d)) {
+      return `Yesterday, ${time}`;
+    }
+    return `${format(d, "EEEE")}, ${time}`;
+  };
+
+  // Format date for full mode
   const formatDate = (date: Date | string) => {
     const d = typeof date === "string" ? new Date(date) : date;
     return formatDistanceToNow(d, { addSuffix: true });
@@ -202,11 +228,72 @@ export function CommentSection({
     );
   }
 
+  // Compact mode - inline activity feed style like Moxo
+  if (compact) {
+    return (
+      <div className={cn("flex flex-col", className)}>
+        {/* Activity/Comment list */}
+        <div className="space-y-4 mb-4">
+          {feedItems.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No activity yet
+            </p>
+          ) : (
+            feedItems.map((item) => (
+              item.type === "activity" ? (
+                <ActivityLogItem
+                  key={`activity-${item.id}`}
+                  activity={item}
+                  formatDate={formatMoxoDate}
+                />
+              ) : (
+                <CompactCommentItem
+                  key={`comment-${item.id}`}
+                  comment={item}
+                  currentUserId={currentUserId}
+                  isDeleting={deletingId === item.id}
+                  onDelete={() => handleDelete(item.id)}
+                  getInitials={getInitials}
+                  formatDate={formatMoxoDate}
+                />
+              )
+            ))
+          )}
+        </div>
+
+        {/* Moxo-style input with paperclip and emoji */}
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
+          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground">
+            <Paperclip className="h-4 w-4" />
+          </Button>
+          <input
+            type="text"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            placeholder="Write a comment..."
+            className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            disabled={sending}
+          />
+          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground">
+            <Smile className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Full mode - original tabbed view
   return (
     <div className={cn("flex flex-col h-full", className)}>
       {/* Comments list */}
       <ScrollArea className="flex-1 px-4" ref={scrollRef}>
-        {comments.length === 0 ? (
+        {feedItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <p className="text-sm text-muted-foreground">No comments yet</p>
             <p className="text-xs text-muted-foreground mt-1">
@@ -215,16 +302,24 @@ export function CommentSection({
           </div>
         ) : (
           <div className="space-y-4 py-4">
-            {comments.map((comment) => (
-              <CommentItem
-                key={comment.id}
-                comment={comment}
-                currentUserId={currentUserId}
-                isDeleting={deletingId === comment.id}
-                onDelete={() => handleDelete(comment.id)}
-                getInitials={getInitials}
-                formatDate={formatDate}
-              />
+            {feedItems.map((item) => (
+              item.type === "activity" ? (
+                <ActivityLogItem
+                  key={`activity-${item.id}`}
+                  activity={item}
+                  formatDate={formatDate}
+                />
+              ) : (
+                <CommentItem
+                  key={`comment-${item.id}`}
+                  comment={item}
+                  currentUserId={currentUserId}
+                  isDeleting={deletingId === item.id}
+                  onDelete={() => handleDelete(item.id)}
+                  getInitials={getInitials}
+                  formatDate={formatDate}
+                />
+              )
             ))}
           </div>
         )}
@@ -255,14 +350,33 @@ export function CommentSection({
           </Button>
         </div>
         <p className="text-xs text-muted-foreground mt-1">
-          Press {navigator?.platform?.includes("Mac") ? "Cmd" : "Ctrl"}+Enter to send
+          Press {typeof navigator !== "undefined" && navigator?.platform?.includes("Mac") ? "Cmd" : "Ctrl"}+Enter to send
         </p>
       </div>
     </div>
   );
 }
 
-// Individual comment item
+// Activity log item - blue square bullet style
+function ActivityLogItem({
+  activity,
+  formatDate,
+}: {
+  activity: ActivityLog;
+  formatDate: (date: Date | string) => string;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="w-2 h-2 rounded-sm bg-primary mt-2 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-foreground">{activity.message}</p>
+        <p className="text-xs text-muted-foreground">{formatDate(activity.createdAt)}</p>
+      </div>
+    </div>
+  );
+}
+
+// Individual comment item (full mode)
 function CommentItem({
   comment,
   currentUserId,
@@ -330,6 +444,70 @@ function CommentItem({
         <p className="text-sm text-foreground whitespace-pre-wrap break-words">
           {comment.content}
         </p>
+      </div>
+    </div>
+  );
+}
+
+// Compact comment item - for user messages in activity feed
+function CompactCommentItem({
+  comment,
+  currentUserId,
+  isDeleting,
+  onDelete,
+  getInitials,
+  formatDate,
+}: {
+  comment: Comment;
+  currentUserId: string;
+  isDeleting: boolean;
+  onDelete: () => void;
+  getInitials: (name?: string) => string;
+  formatDate: (date: Date | string) => string;
+}) {
+  const isOwn = comment.userId === currentUserId;
+
+  return (
+    <div className="flex items-start gap-3 group">
+      <Avatar className="h-8 w-8 shrink-0">
+        <AvatarImage src={comment.userImage} />
+        <AvatarFallback className="text-xs">
+          {getInitials(comment.userName)}
+        </AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">{comment.userName || "Unknown"}</span>
+          <span className="text-xs text-muted-foreground">{formatDate(comment.createdAt)}</span>
+          {isOwn && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity ml-auto"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <MoreVertical className="h-3 w-3" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={onDelete}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+        <p className="text-sm text-foreground">{comment.content}</p>
       </div>
     </div>
   );

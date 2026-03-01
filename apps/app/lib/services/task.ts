@@ -1,5 +1,6 @@
 import { database } from "@repo/database";
 import { dependencyService } from "./dependency";
+import { cascadeService } from "./cascade";
 import { configService } from "./config";
 import { auditLogService, type AuditContext } from "./auditLog";
 import { chatService } from "./chat";
@@ -238,6 +239,9 @@ export const taskService = {
     const deleted = (result.numUpdatedRows ?? 0n) > 0n;
 
     if (deleted) {
+      // Cascade due date clearing to dependent tasks
+      await cascadeService.onTaskDeleted(id);
+
       // Audit logging
       if (auditContext && workspaceId) {
         await auditLogService.logEvent({
@@ -437,6 +441,11 @@ export const taskService = {
       .where("deletedAt", "is", null)
       .returningAll()
       .executeTakeFirst();
+
+    if (result) {
+      // Cascade due date clearing to dependent tasks
+      await cascadeService.onTaskReopened(id);
+    }
 
     if (result && auditContext) {
       const workspaceId = await getWorkspaceIdForTask(id);

@@ -5,6 +5,7 @@ import {
   Panel,
   PanelGroup,
   PanelResizeHandle,
+  type ImperativePanelHandle,
 } from "react-resizable-panels";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
@@ -22,6 +23,7 @@ import {
   GitBranch,
   Menu,
   PanelRightOpen,
+  PanelRightClose,
   Building2,
 } from "lucide-react";
 import { useIsDesktop } from "./use-media-query";
@@ -372,6 +374,8 @@ export function MoxoLayout({
 }: MoxoLayoutProps) {
   const isDesktop = useIsDesktop();
   const [currentTab, setCurrentTab] = React.useState<MainTab>(activeTab);
+  const [rightPanelCollapsed, setRightPanelCollapsed] = React.useState(false);
+  const rightPanelRef = React.useRef<ImperativePanelHandle>(null);
 
   // Internal state for sheets when not controlled
   const [internalSidebarOpen, setInternalSidebarOpen] = React.useState(false);
@@ -527,18 +531,37 @@ export function MoxoLayout({
 
             {/* Right Panel */}
             <Panel
+              ref={rightPanelRef}
               id="right"
               defaultSize={DEFAULT_SIZES.right}
               minSize={MIN_SIZES.right}
               maxSize={50}
               collapsible
               collapsedSize={0}
+              onCollapse={() => setRightPanelCollapsed(true)}
+              onExpand={() => setRightPanelCollapsed(false)}
             >
               <div className="h-full overflow-x-auto overflow-y-auto border-l border-border bg-muted/10">
                 {rightPanel}
               </div>
             </Panel>
           </>
+        )}
+
+        {/* Expand button when right panel is collapsed */}
+        {showRightPanel && rightPanelCollapsed && (
+          <div className="flex items-center border-l border-border bg-muted/10">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-full w-8 rounded-none hover:bg-muted"
+              onClick={() => rightPanelRef.current?.expand()}
+              title="Expand panel"
+            >
+              <PanelRightClose className="h-4 w-4" />
+              <span className="sr-only">Expand panel</span>
+            </Button>
+          </div>
         )}
       </PanelGroup>
     </div>

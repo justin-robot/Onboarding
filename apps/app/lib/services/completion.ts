@@ -1,5 +1,6 @@
 import { database } from "@repo/database";
 import { dependencyService } from "./dependency";
+import { cascadeService } from "./cascade";
 import { chatService } from "./chat";
 import type { TaskAssignee, NewTaskAssignee } from "@repo/database";
 import type { NotificationContext } from "./notificationContext";
@@ -73,7 +74,13 @@ export const completionService = {
       .execute();
 
     // Evaluate completion rule
-    const taskCompleted = await this.evaluateCompletion(taskId, task.completionRule);
+    // Note: We pass the current assignee ID to ensure the evaluation
+    // considers this assignee as completed, avoiding read-after-write issues
+    const taskCompleted = await this.evaluateCompletionWithUpdate(
+      taskId,
+      task.completionRule,
+      assignee.id
+    );
 
     if (taskCompleted) {
       // Mark task as completed
@@ -86,6 +93,9 @@ export const completionService = {
         })
         .where("id", "=", taskId)
         .execute();
+
+      // Cascade due dates to dependent tasks
+      await cascadeService.onTaskCompleted(taskId);
 
       // Trigger notifications for newly unlocked dependent tasks
       if (notificationContext) {
@@ -211,6 +221,37 @@ export const completionService = {
   },
 
   /**
+   * Evaluate completion with a known update
+   * This ensures the just-updated assignee is considered as completed,
+   * avoiding potential read-after-write inconsistencies
+   */
+  async evaluateCompletionWithUpdate(
+    taskId: string,
+    completionRule: "any" | "all",
+    justCompletedAssigneeId: string
+  ): Promise<boolean> {
+    const assignees = await this.getAssigneesByTaskId(taskId);
+
+    if (assignees.length === 0) {
+      return false;
+    }
+
+    // Ensure the just-updated assignee is marked as completed in our evaluation
+    // This handles any potential read-after-write delays
+    const assigneesWithUpdate = assignees.map((a) =>
+      a.id === justCompletedAssigneeId ? { ...a, status: "completed" as const } : a
+    );
+
+    if (completionRule === "any") {
+      // Task completes when any assignee completes
+      return assigneesWithUpdate.some((a) => a.status === "completed");
+    } else {
+      // Task completes when all assignees complete
+      return assigneesWithUpdate.every((a) => a.status === "completed");
+    }
+  },
+
+  /**
    * Get all assignees for a task
    */
   async getAssigneesByTaskId(taskId: string): Promise<TaskAssignee[]> {
@@ -308,6 +349,9 @@ export const completionService = {
       })
       .where("id", "=", taskId)
       .execute();
+
+    // Cascade due dates to dependent tasks
+    await cascadeService.onTaskCompleted(taskId);
 
     // Trigger notifications for newly unlocked dependent tasks
     if (notificationContext) {

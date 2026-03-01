@@ -8,18 +8,11 @@ import { Textarea } from "@repo/design/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from "@repo/design/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/design/components/ui/select";
+import { ScrollArea } from "@repo/design/components/ui/scroll-area";
+import { Checkbox } from "@repo/design/components/ui/checkbox";
+import { Badge } from "@repo/design/components/ui/badge";
 import {
   FileText,
   CheckSquare,
@@ -28,95 +21,165 @@ import {
   Calendar,
   FileSignature,
   Loader2,
-  Link,
-  Mail,
-  AlertCircle,
+  ChevronRight,
+  ChevronLeft,
+  X,
+  Plus,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Alert, AlertDescription } from "@repo/design/components/ui/alert";
+import { cn } from "@repo/design/lib/utils";
 
+// Task type definitions with Moxo-style colors
 const TASK_TYPES = [
-  { value: "FORM", label: "Form", icon: FileText, description: "Collect information with a form" },
-  { value: "ACKNOWLEDGEMENT", label: "Acknowledgement", icon: CheckSquare, description: "Request confirmation or acceptance" },
-  { value: "FILE_REQUEST", label: "File Upload", icon: Upload, description: "Request file uploads" },
-  { value: "APPROVAL", label: "Approval", icon: ThumbsUp, description: "Request approval or rejection" },
-  { value: "TIME_BOOKING", label: "Booking", icon: Calendar, description: "Schedule a meeting or appointment" },
-  { value: "E_SIGN", label: "E-Signature", icon: FileSignature, description: "Request a digital signature" },
+  {
+    value: "APPROVAL",
+    label: "Approval",
+    icon: ThumbsUp,
+    color: "bg-teal-700",
+    iconColor: "text-white"
+  },
+  {
+    value: "ACKNOWLEDGEMENT",
+    label: "Acknowledgement",
+    icon: CheckSquare,
+    color: "bg-amber-700",
+    iconColor: "text-white"
+  },
+  {
+    value: "FILE_REQUEST",
+    label: "File Request",
+    icon: Upload,
+    color: "bg-green-700",
+    iconColor: "text-white"
+  },
+  {
+    value: "E_SIGN",
+    label: "E-Sign",
+    icon: FileSignature,
+    color: "bg-stone-500",
+    iconColor: "text-white"
+  },
+  {
+    value: "TIME_BOOKING",
+    label: "Time Booking",
+    icon: Calendar,
+    color: "bg-orange-500",
+    iconColor: "text-white"
+  },
+  {
+    value: "FORM",
+    label: "Form",
+    icon: FileText,
+    color: "bg-emerald-600",
+    iconColor: "text-white"
+  },
 ] as const;
 
 type TaskType = typeof TASK_TYPES[number]["value"];
 
+// Map frontend task types to display icons
+const TASK_TYPE_ICONS: Record<string, { icon: typeof FileText; color: string }> = {
+  form: { icon: FileText, color: "bg-emerald-600" },
+  acknowledgement: { icon: CheckSquare, color: "bg-amber-700" },
+  file_upload: { icon: Upload, color: "bg-green-700" },
+  approval: { icon: ThumbsUp, color: "bg-teal-700" },
+  booking: { icon: Calendar, color: "bg-orange-500" },
+  esign: { icon: FileSignature, color: "bg-stone-500" },
+};
+
+interface Task {
+  id: string;
+  title: string;
+  type: "form" | "acknowledgement" | "file_upload" | "approval" | "booking" | "esign";
+  position: number;
+  isCompleted: boolean;
+  isLocked: boolean;
+}
+
+interface Section {
+  id: string;
+  title: string;
+  tasks: Task[];
+}
+
+interface Member {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 interface AddTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  sectionId: string;
-  currentTaskCount: number;
+  sections: Section[];
+  members: Member[];
   onTaskCreated: () => void;
+  workspaceId: string;
 }
+
+type Step = "type" | "position" | "details";
 
 export function AddTaskDialog({
   open,
   onOpenChange,
-  sectionId,
-  currentTaskCount,
+  sections,
+  members,
   onTaskCreated,
+  workspaceId,
 }: AddTaskDialogProps) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [taskType, setTaskType] = useState<TaskType>("FORM");
+  const [step, setStep] = useState<Step>("type");
+  const [selectedType, setSelectedType] = useState<TaskType | null>(null);
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
+  const [selectedPosition, setSelectedPosition] = useState<number>(0);
   const [creating, setCreating] = useState(false);
 
-  // TIME_BOOKING config
-  const [bookingLink, setBookingLink] = useState("");
+  // Form fields
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
 
-  // E_SIGN config
-  const [signerEmail, setSignerEmail] = useState("");
+  const handleTypeSelect = (type: TaskType) => {
+    setSelectedType(type);
+    setStep("position");
+  };
 
-  // Whether to configure now or later
-  const [configureNow, setConfigureNow] = useState(true);
+  const handlePositionSelect = (sectionId: string, position: number) => {
+    setSelectedSectionId(sectionId);
+    setSelectedPosition(position);
+    setStep("details");
+  };
 
-  // Check if this type requires config
-  const requiresConfig = taskType === "TIME_BOOKING" || taskType === "E_SIGN";
+  const handleBack = () => {
+    if (step === "details") {
+      setStep("position");
+    } else if (step === "position") {
+      setStep("type");
+    }
+  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
+    if (!selectedType || !selectedSectionId) return;
 
     if (!title.trim()) {
       toast.error("Please enter a task title");
       return;
     }
 
-    // Validate config if configuring now
-    if (configureNow && requiresConfig) {
-      if (taskType === "TIME_BOOKING" && !bookingLink.trim()) {
-        toast.error("Please enter a booking link");
-        return;
-      }
-      if (taskType === "TIME_BOOKING" && bookingLink.trim()) {
-        try {
-          new URL(bookingLink);
-        } catch {
-          toast.error("Please enter a valid URL");
-          return;
-        }
-      }
-      if (taskType === "E_SIGN" && !signerEmail.trim()) {
-        toast.error("Please enter the signer's email");
-        return;
-      }
-    }
-
     setCreating(true);
 
     try {
-      const response = await fetch(`/api/sections/${sectionId}/tasks`, {
+      const response = await fetch(`/api/sections/${selectedSectionId}/tasks`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: title.trim(),
           description: description.trim() || null,
-          type: taskType,
-          position: currentTaskCount, // Add at end
+          type: selectedType,
+          position: selectedPosition,
+          assigneeIds: selectedAssignees,
         }),
       });
 
@@ -125,36 +188,8 @@ export function AddTaskDialog({
         throw new Error(error.error || "Failed to create task");
       }
 
-      const createdTask = await response.json();
-
-      // Create config if needed
-      if (configureNow && requiresConfig) {
-        let configBody: Record<string, unknown> = {};
-
-        if (taskType === "TIME_BOOKING") {
-          configBody = { bookingLink: bookingLink.trim() };
-        } else if (taskType === "E_SIGN") {
-          // For E_SIGN, we need a file. For now, create with just email
-          // The user will need to upload a document via the config dialog
-          configBody = { signerEmail: signerEmail.trim(), fileId: "" };
-        }
-
-        if (Object.keys(configBody).length > 0) {
-          const configResponse = await fetch(`/api/tasks/${createdTask.id}/config`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(configBody),
-          });
-
-          if (!configResponse.ok) {
-            console.error("Failed to create config, task created without config");
-          }
-        }
-      }
-
       toast.success("Task created");
-      onOpenChange(false);
-      resetForm();
+      handleClose();
       onTaskCreated();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to create task");
@@ -163,172 +198,387 @@ export function AddTaskDialog({
     }
   };
 
-  const resetForm = () => {
+  const handleClose = () => {
+    setStep("type");
+    setSelectedType(null);
+    setSelectedSectionId(null);
+    setSelectedPosition(0);
     setTitle("");
     setDescription("");
-    setTaskType("FORM");
-    setBookingLink("");
-    setSignerEmail("");
-    setConfigureNow(true);
+    setSelectedAssignees([]);
+    onOpenChange(false);
   };
 
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      resetForm();
+  const getStepTitle = () => {
+    switch (step) {
+      case "type":
+        return "Add New Action";
+      case "position":
+        return "Add New Action";
+      case "details":
+        const typeInfo = TASK_TYPES.find(t => t.value === selectedType);
+        return `New ${typeInfo?.label || "Task"}`;
     }
-    onOpenChange(newOpen);
   };
-
-  const selectedType = TASK_TYPES.find((t) => t.value === taskType);
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Add Task</DialogTitle>
-            <DialogDescription>
-              Create a new task in this section
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            {/* Task Type */}
-            <div className="space-y-2">
-              <Label htmlFor="type">Task Type</Label>
-              <Select value={taskType} onValueChange={(v) => setTaskType(v as TaskType)}>
-                <SelectTrigger id="type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TASK_TYPES.map((type) => {
-                    const Icon = type.icon;
-                    return (
-                      <SelectItem key={type.value} value={type.value}>
-                        <div className="flex items-center gap-2">
-                          <Icon className="h-4 w-4" />
-                          <span>{type.label}</span>
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-              {selectedType && (
-                <p className="text-xs text-muted-foreground">
-                  {selectedType.description}
-                </p>
-              )}
-            </div>
-
-            {/* Title */}
-            <div className="space-y-2">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                placeholder="Enter task title..."
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-[550px] p-0 gap-0 overflow-hidden" showCloseButton={false}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b">
+          <div className="flex items-center gap-3">
+            {(step === "position" || step === "details") && (
+              <button
+                onClick={handleBack}
+                className="p-1 hover:bg-muted rounded-md transition-colors"
                 disabled={creating}
-              />
-            </div>
-
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="description">
-                Description <span className="text-muted-foreground">(optional)</span>
-              </Label>
-              <Textarea
-                id="description"
-                placeholder="Add more details about this task..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                disabled={creating}
-                rows={3}
-              />
-            </div>
-
-            {/* Configuration for TIME_BOOKING */}
-            {taskType === "TIME_BOOKING" && (
-              <div className="space-y-3 rounded-lg border border-orange-200 bg-orange-50/50 p-4 dark:border-orange-900/30 dark:bg-orange-950/20">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-orange-600" />
-                  <span className="text-sm font-medium">Booking Configuration</span>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="bookingLink">Booking Link</Label>
-                  <div className="relative">
-                    <Link className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="bookingLink"
-                      placeholder="https://calendly.com/your-link"
-                      value={bookingLink}
-                      onChange={(e) => setBookingLink(e.target.value)}
-                      className="pl-10"
-                      disabled={creating}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Paste your Calendly, Cal.com, or other scheduling link. You can also configure this later.
-                  </p>
-                </div>
-              </div>
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
             )}
-
-            {/* Configuration for E_SIGN */}
-            {taskType === "E_SIGN" && (
-              <div className="space-y-3 rounded-lg border border-indigo-200 bg-indigo-50/50 p-4 dark:border-indigo-900/30 dark:bg-indigo-950/20">
-                <div className="flex items-center gap-2">
-                  <FileSignature className="h-4 w-4 text-indigo-600" />
-                  <span className="text-sm font-medium">E-Signature Configuration</span>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signerEmail">Signer Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="signerEmail"
-                      type="email"
-                      placeholder="signer@example.com"
-                      value={signerEmail}
-                      onChange={(e) => setSignerEmail(e.target.value)}
-                      className="pl-10"
-                      disabled={creating}
-                    />
-                  </div>
-                </div>
-                <Alert className="bg-transparent border-0 p-0">
-                  <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                  <AlertDescription className="text-xs text-muted-foreground">
-                    You'll need to upload the document to sign after creating the task.
-                  </AlertDescription>
-                </Alert>
-              </div>
-            )}
+            <DialogTitle className="text-lg font-semibold">{getStepTitle()}</DialogTitle>
           </div>
+          <button
+            onClick={handleClose}
+            className="p-1 hover:bg-muted rounded-md transition-colors"
+            disabled={creating}
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => handleOpenChange(false)}
-              disabled={creating}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={creating || !title.trim()}>
-              {creating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                "Create Task"
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
+        {/* Content */}
+        {step === "type" && (
+          <TypeSelectionStep onSelect={handleTypeSelect} />
+        )}
+        {step === "position" && (
+          <PositionSelectionStep
+            sections={sections}
+            selectedType={selectedType!}
+            onSelectPosition={handlePositionSelect}
+          />
+        )}
+        {step === "details" && (
+          <DetailsStep
+            title={title}
+            setTitle={setTitle}
+            description={description}
+            setDescription={setDescription}
+            selectedAssignees={selectedAssignees}
+            setSelectedAssignees={setSelectedAssignees}
+            members={members}
+            creating={creating}
+            onSubmit={handleSubmit}
+            onCancel={handleClose}
+          />
+        )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Step 1: Type Selection
+function TypeSelectionStep({ onSelect }: { onSelect: (type: TaskType) => void }) {
+  return (
+    <div className="py-2">
+      {TASK_TYPES.map((type) => {
+        const Icon = type.icon;
+        return (
+          <button
+            key={type.value}
+            onClick={() => onSelect(type.value)}
+            className="w-full flex items-center gap-4 px-6 py-3.5 hover:bg-muted/50 transition-colors text-left group"
+          >
+            <div className={cn(
+              "w-9 h-9 rounded-lg flex items-center justify-center",
+              type.color
+            )}>
+              <Icon className={cn("h-5 w-5", type.iconColor)} />
+            </div>
+            <span className="flex-1 font-medium">{type.label}</span>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Step 2: Position Selection
+function PositionSelectionStep({
+  sections,
+  selectedType,
+  onSelectPosition,
+}: {
+  sections: Section[];
+  selectedType: TaskType;
+  onSelectPosition: (sectionId: string, position: number) => void;
+}) {
+  return (
+    <div className="flex flex-col">
+      <div className="px-6 py-4">
+        <h3 className="text-xl font-semibold">Select a position</h3>
+        <p className="text-muted-foreground text-sm mt-1">
+          Please select where you want to add this new action.
+        </p>
+      </div>
+
+      <ScrollArea className="max-h-[400px]">
+        <div className="px-6 pb-6 space-y-4">
+          {sections.map((section) => (
+            <div key={section.id} className="border rounded-lg overflow-hidden">
+              {/* Section header */}
+              <div className="bg-muted/30 px-4 py-2.5 border-b">
+                <span className="font-medium text-sm">{section.title}</span>
+              </div>
+
+              {/* Tasks and add buttons */}
+              <div className="divide-y">
+                {/* Add at beginning */}
+                <AddHereButton
+                  onClick={() => onSelectPosition(section.id, 0)}
+                />
+
+                {section.tasks
+                  .sort((a, b) => a.position - b.position)
+                  .map((task, index) => (
+                    <div key={task.id}>
+                      {/* Task row */}
+                      <TaskRow task={task} stepNumber={index + 1} />
+
+                      {/* Add after this task */}
+                      <AddHereButton
+                        onClick={() => onSelectPosition(section.id, task.position + 1)}
+                      />
+                    </div>
+                  ))}
+
+                {section.tasks.length === 0 && (
+                  <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                    No tasks yet
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {sections.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              No sections available. Create a section first.
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+// Step 3: Task Details
+function DetailsStep({
+  title,
+  setTitle,
+  description,
+  setDescription,
+  selectedAssignees,
+  setSelectedAssignees,
+  members,
+  creating,
+  onSubmit,
+  onCancel,
+}: {
+  title: string;
+  setTitle: (value: string) => void;
+  description: string;
+  setDescription: (value: string) => void;
+  selectedAssignees: string[];
+  setSelectedAssignees: (value: string[]) => void;
+  members: Member[];
+  creating: boolean;
+  onSubmit: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="flex flex-col">
+      <div className="px-6 py-4 space-y-4">
+        {/* Title */}
+        <div className="space-y-2">
+          <Label htmlFor="title">Title</Label>
+          <Input
+            id="title"
+            placeholder="Enter task title..."
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            disabled={creating}
+            autoFocus
+          />
+        </div>
+
+        {/* Description */}
+        <div className="space-y-2">
+          <Label htmlFor="description">
+            Description <span className="text-muted-foreground">(optional)</span>
+          </Label>
+          <Textarea
+            id="description"
+            placeholder="Add more details about this task..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            disabled={creating}
+            rows={3}
+          />
+        </div>
+
+        {/* Assignees */}
+        <div className="space-y-2">
+          <Label>
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Assignees
+            </div>
+          </Label>
+          {selectedAssignees.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-2">
+              {selectedAssignees.map((userId) => {
+                const member = members.find((m) => m.userId === userId);
+                return (
+                  <Badge
+                    key={userId}
+                    variant="secondary"
+                    className="flex items-center gap-1"
+                  >
+                    {member?.name || member?.email || "Unknown"}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedAssignees(
+                          selectedAssignees.filter((id) => id !== userId)
+                        )
+                      }
+                      className="ml-1 hover:text-destructive"
+                      disabled={creating}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                );
+              })}
+            </div>
+          )}
+          <ScrollArea className="h-[120px] rounded-md border p-2">
+            <div className="space-y-2">
+              {members.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-2">
+                  No members available
+                </p>
+              ) : (
+                members.map((member) => (
+                  <div
+                    key={member.userId}
+                    className="flex items-center space-x-2"
+                  >
+                    <Checkbox
+                      id={`assignee-${member.userId}`}
+                      checked={selectedAssignees.includes(member.userId)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedAssignees([...selectedAssignees, member.userId]);
+                        } else {
+                          setSelectedAssignees(
+                            selectedAssignees.filter((id) => id !== member.userId)
+                          );
+                        }
+                      }}
+                      disabled={creating}
+                    />
+                    <label
+                      htmlFor={`assignee-${member.userId}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                    >
+                      <span>{member.name}</span>
+                      <span className="text-muted-foreground ml-2 text-xs">
+                        {member.email}
+                      </span>
+                    </label>
+                  </div>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="px-6 py-4 border-t flex justify-end gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={creating}
+        >
+          Cancel
+        </Button>
+        <Button onClick={onSubmit} disabled={creating || !title.trim()}>
+          {creating ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Creating...
+            </>
+          ) : (
+            "Create Task"
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// Task row component
+function TaskRow({ task, stepNumber }: { task: Task; stepNumber: number }) {
+  const typeInfo = TASK_TYPE_ICONS[task.type] || TASK_TYPE_ICONS.form;
+  const Icon = typeInfo.icon;
+
+  return (
+    <div className="flex items-center gap-3 px-4 py-3">
+      {/* Step number */}
+      <div className={cn(
+        "w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium",
+        task.isCompleted
+          ? "bg-green-500 text-white"
+          : task.isLocked
+            ? "bg-muted text-muted-foreground"
+            : "bg-blue-500 text-white"
+      )}>
+        {task.isCompleted ? "✓" : stepNumber}
+      </div>
+
+      {/* Task icon */}
+      <div className={cn(
+        "w-9 h-9 rounded-lg flex items-center justify-center",
+        typeInfo.color
+      )}>
+        <Icon className="h-5 w-5 text-white" />
+      </div>
+
+      {/* Task info */}
+      <div className="flex-1 min-w-0">
+        <div className="font-medium truncate">{task.title}</div>
+        <div className="text-xs text-muted-foreground">
+          {task.isCompleted ? "Completed" : task.isLocked ? "Locked" : "In Progress"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Add here button
+function AddHereButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center justify-center gap-1.5 py-2.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors text-sm font-medium"
+    >
+      <Plus className="h-4 w-4" />
+      Add here
+    </button>
   );
 }

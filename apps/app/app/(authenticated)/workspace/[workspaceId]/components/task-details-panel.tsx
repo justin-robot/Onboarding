@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useState } from "react";
 import { TaskAction } from "./task-actions";
 import { TaskConfigDialog } from "./task-config-dialog";
 import { Button } from "@repo/design/components/ui/button";
 import { Badge } from "@repo/design/components/ui/badge";
 import { ScrollArea } from "@repo/design/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/design/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +18,19 @@ import {
   AlertDialogTrigger,
 } from "@repo/design/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@repo/design/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@repo/design/components/ui/dropdown-menu";
+import {
   Loader2,
   X,
   FileText,
@@ -29,10 +41,11 @@ import {
   ThumbsUp,
   Trash2,
   Settings,
-  MessageSquare,
   UserPlus,
-  Users,
-  Clock,
+  MoreHorizontal,
+  Download,
+  CheckCircle2,
+  Link2,
 } from "lucide-react";
 import { formatFullTimestamp } from "@repo/design/lib/date-utils";
 import {
@@ -46,7 +59,6 @@ import { Avatar, AvatarFallback } from "@repo/design/components/ui/avatar";
 import { cn } from "@repo/design/lib/utils";
 import { toast } from "sonner";
 import { CommentSection } from "./comment-section";
-import { DueDateSelector } from "./due-date-selector";
 import { TaskDependencies } from "./task-dependencies";
 
 interface Assignee {
@@ -146,6 +158,7 @@ export function TaskDetailsPanel({
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
+  const [prerequisitesDialogOpen, setPrerequisitesDialogOpen] = useState(false);
   const [fileInfo, setFileInfo] = useState<{ name: string; url?: string } | null>(null);
   const [assignees, setAssignees] = useState<Assignee[]>([]);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
@@ -161,10 +174,8 @@ export function TaskDetailsPanel({
 
     switch (task.type) {
       case "booking":
-        // TIME_BOOKING needs a booking link
         return !config || !(config as TimeBookingConfig).bookingLink;
       case "esign":
-        // E_SIGN needs fileId and signerEmail
         if (!config) return true;
         const esignConfig = config as ESignConfig;
         return !esignConfig.fileId || !esignConfig.signerEmail;
@@ -195,13 +206,12 @@ export function TaskDetailsPanel({
   };
 
   const handleConfigSaved = () => {
-    // Refetch task details to get updated config
     setLoading(true);
     fetch(`/api/tasks/${task.id}`)
       .then((res) => res.json())
       .then((data) => {
         setConfig(data.config);
-        onTaskComplete(); // Refresh the parent view
+        onTaskComplete();
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -244,7 +254,6 @@ export function TaskDetailsPanel({
         const data = await response.json();
         setConfig(data.config);
 
-        // If this is an e-sign task with a fileId, fetch file info
         if (task.type === "esign" && data.config?.fileId) {
           try {
             const fileResponse = await fetch(`/api/files/${data.config.fileId}`);
@@ -301,19 +310,16 @@ export function TaskDetailsPanel({
   useEffect(() => {
     const fetchAssigneesAndMembers = async () => {
       try {
-        // Fetch assignees
         const assigneesRes = await fetch(`/api/tasks/${task.id}/assignees`);
         if (assigneesRes.ok) {
           const data = await assigneesRes.json();
           setAssignees(data.assignees || []);
         }
 
-        // Fetch workspace members (for admin dropdown)
         if (isAdmin) {
           const membersRes = await fetch(`/api/workspaces/${workspaceId}/members`);
           if (membersRes.ok) {
             const data = await membersRes.json();
-            // API returns array directly, not { members: [...] }
             setMembers(Array.isArray(data) ? data : (data.members || []));
           }
         }
@@ -341,8 +347,6 @@ export function TaskDetailsPanel({
       }
 
       const data = await response.json();
-
-      // Find member info to add to assignees list
       const member = members.find(m => m.userId === userId);
       setAssignees(prev => [...prev, {
         ...data.assignee,
@@ -351,7 +355,7 @@ export function TaskDetailsPanel({
       }]);
 
       toast.success("User assigned to task");
-      onTaskComplete(); // Refresh parent
+      onTaskComplete();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to assign user");
     } finally {
@@ -373,7 +377,7 @@ export function TaskDetailsPanel({
 
       setAssignees(prev => prev.filter(a => a.userId !== userId));
       toast.success("User removed from task");
-      onTaskComplete(); // Refresh parent
+      onTaskComplete();
     } catch (err) {
       console.error("Unassign error:", err);
       toast.error(err instanceof Error ? err.message : "Failed to unassign user");
@@ -435,85 +439,54 @@ export function TaskDetailsPanel({
   const Icon = typeIcons[task.type];
   const iconColor = typeColors[task.type];
 
+  // Get completed assignee info for form response display
+  const completedAssignee = assignees.find(a => a.status === "completed");
+  const currentUserCompleted = assignees.find(a => a.userId === currentUserId)?.status === "completed";
+
+  // Progress status
+  const progressStatus = task.isCompleted
+    ? "Completed"
+    : assignees.some(a => a.status === "completed")
+    ? "In Progress"
+    : "Pending";
+
   return (
-    <div className="flex h-full flex-col">
-      {/* Header */}
+    <div className="flex h-full flex-col bg-background">
+      {/* Header - "Action Details (Step X)" style */}
       <div className="flex-shrink-0 border-b border-border px-4 py-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-start gap-3 min-w-0">
-            <Icon className={cn("h-5 w-5 mt-0.5 shrink-0", iconColor)} />
-            <div className="min-w-0">
-              <h2 className="font-semibold text-foreground truncate">{task.title}</h2>
-              <p className="text-xs text-muted-foreground capitalize">{task.type.replace("_", " ")}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {task.isYourTurn && !task.isCompleted && (
-              <Badge className="bg-green-500 hover:bg-green-500 text-white text-xs">
-                Your Turn
-              </Badge>
-            )}
-            {task.isCompleted && (
-              <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
-                Complete
-              </Badge>
-            )}
-            {isAdmin && isConfigurable() && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className={cn(
-                  "h-8 w-8",
-                  needsConfiguration()
-                    ? "text-amber-500 hover:text-amber-600"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-                onClick={() => setConfigDialogOpen(true)}
-                title={needsConfiguration() ? "Configuration required" : "Configure task"}
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
-            )}
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium text-foreground">
+            Action Details (Step {task.position})
+          </h2>
+          <div className="flex items-center gap-1">
             {isAdmin && (
-              <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreHorizontal className="h-4 w-4" />
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete Task</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to delete "{task.title}"? This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleDelete();
-                      }}
-                      disabled={isDeleting}
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    >
-                      {isDeleting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Deleting...
-                        </>
-                      ) : (
-                        "Delete"
-                      )}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {isConfigurable() && (
+                    <DropdownMenuItem onClick={() => setConfigDialogOpen(true)}>
+                      <Settings className="h-4 w-4 mr-2" />
+                      Configure
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => setPrerequisitesDialogOpen(true)}>
+                    <Link2 className="h-4 w-4 mr-2" />
+                    Prerequisites
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={() => setDeleteDialogOpen(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
               <X className="h-4 w-4" />
@@ -522,245 +495,267 @@ export function TaskDetailsPanel({
         </div>
       </div>
 
-      {/* Content area with tabs */}
-      <Tabs defaultValue="details" className="flex-1 flex flex-col overflow-hidden">
-        <TabsList className="flex-shrink-0 w-full justify-start rounded-none border-b bg-transparent px-4">
-          <TabsTrigger value="details" className="text-xs">
-            Details
-          </TabsTrigger>
-          <TabsTrigger value="comments" className="text-xs">
-            <MessageSquare className="h-3 w-3 mr-1" />
-            Comments
-          </TabsTrigger>
-        </TabsList>
+      {/* Scrollable content */}
+      <ScrollArea className="flex-1">
+        <div className="p-4">
+          {/* Task title with icon */}
+          <div className="flex items-start gap-3 mb-2">
+            <div className={cn("p-2 rounded-md bg-muted/50", iconColor)}>
+              <Icon className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground">{task.title}</h3>
+              <p className="text-xs text-muted-foreground capitalize">{task.type.replace("_", " ")}</p>
+            </div>
+          </div>
 
-        <TabsContent value="details" className="flex-1 mt-0 overflow-hidden">
-          <ScrollArea className="h-full">
-            <div className="p-4 space-y-4">
-              {/* Description */}
-              {task.description && (
-                <div>
-                  <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
-                    Description
-                  </h3>
-                  <p className="text-sm text-foreground">{task.description}</p>
-                </div>
+          {/* Description */}
+          {task.description && (
+            <p className="text-sm text-muted-foreground mb-4">{task.description}</p>
+          )}
+
+          {/* Form Response Section - compact clickable row */}
+          {task.type === "form" && config && (task.isCompleted || currentUserCompleted || viewingSubmissionUserId) && (
+            <div className="mb-4">
+              <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
+                Form Response
+              </h4>
+              {viewingSubmissionUserId ? (
+                // When viewing a specific submission (admin), show inline viewer
+                <TaskAction
+                  taskId={task.id}
+                  type={task.type}
+                  isYourTurn={task.isYourTurn}
+                  isCompleted={task.isCompleted}
+                  isLocked={task.isLocked}
+                  isAdmin={isAdmin}
+                  currentUserCompleted={currentUserCompleted}
+                  viewingUserId={viewingSubmissionUserId}
+                  viewingUserName={assignees.find(a => a.userId === viewingSubmissionUserId)?.userName}
+                  onClearViewing={() => setViewingSubmissionUserId(null)}
+                  instructions={task.description || undefined}
+                  blockingTasks={blockingTasks}
+                  onComplete={onTaskComplete}
+                  {...getConfigProps()}
+                />
+              ) : (
+                // Compact row with "View Form" link
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between p-3 rounded-md border border-border hover:bg-muted/50 transition-colors text-left"
+                  onClick={() => {
+                    if (currentUserCompleted) {
+                      // View own submission inline
+                      setViewingSubmissionUserId(currentUserId);
+                    } else if (completedAssignee) {
+                      // Admin viewing another's submission
+                      setViewingSubmissionUserId(completedAssignee.userId);
+                    }
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">View Form</p>
+                      <p className="text-xs text-muted-foreground">
+                        Submitted by {completedAssignee?.userName || completedAssignee?.userEmail || "User"}
+                      </p>
+                    </div>
+                  </div>
+                  <Download className="h-4 w-4 text-muted-foreground" />
+                </button>
               )}
+            </div>
+          )}
 
-              {/* Prerequisites/Dependencies */}
-              <TaskDependencies
-                taskId={task.id}
-                isAdmin={isAdmin}
-                onDependencyChange={onTaskComplete}
-              />
+          {/* Progress Section */}
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Progress
+              </h4>
+              <span className={cn(
+                "text-sm font-medium",
+                task.isCompleted ? "text-green-600" : "text-muted-foreground"
+              )}>
+                {progressStatus}
+              </span>
+            </div>
 
-              {/* Assignees */}
-              <div>
-                <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
-                  <Users className="inline h-3 w-3 mr-1" />
-                  Assignees
-                </h3>
-
-                {assignees.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No one assigned</p>
-                ) : (
-                  <div className="space-y-2">
-                    {assignees.map((assignee, index) => (
-                      <div
-                        key={`${assignee.userId}-${index}`}
-                        className="flex items-center justify-between gap-2 rounded-md border p-2"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-6 w-6">
-                            <AvatarFallback className="text-xs">
-                              {(assignee.userName || assignee.userEmail || "?")[0].toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">
-                              {assignee.userName || assignee.userEmail || "Unknown"}
-                            </p>
-                            {assignee.status === "completed" && (
-                              <Badge
-                                variant="secondary"
-                                className={cn(
-                                  "text-xs bg-green-100 text-green-700",
-                                  isAdmin && task.type === "form" && "cursor-pointer hover:bg-green-200"
-                                )}
-                                onClick={
-                                  isAdmin && task.type === "form"
-                                    ? (e) => {
-                                        e.stopPropagation();
-                                        setViewingSubmissionUserId(assignee.userId);
-                                      }
-                                    : undefined
-                                }
-                              >
-                                {isAdmin && task.type === "form" ? "View Submission" : "Completed"}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                        {isAdmin && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                            onClick={() => handleUnassign(assignee.userId)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
+            {assignees.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No one assigned</p>
+            ) : (
+              <div className="space-y-2">
+                {assignees.map((assignee, index) => (
+                  <div
+                    key={`${assignee.userId}-${index}`}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="text-xs bg-muted">
+                            {(assignee.userName || assignee.userEmail || "?")[0].toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        {assignee.status === "completed" && (
+                          <CheckCircle2 className="absolute -bottom-0.5 -right-0.5 h-4 w-4 text-green-500 bg-background rounded-full" />
                         )}
                       </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {assignee.userName || assignee.userEmail || "Unknown"}
+                        </p>
+                        {assignee.status === "completed" && (
+                          <p className="text-xs text-muted-foreground">Completed</p>
+                        )}
+                      </div>
+                    </div>
+                    {isAdmin && task.type === "form" && assignee.status === "completed" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-primary"
+                        onClick={() => setViewingSubmissionUserId(assignee.userId)}
+                      >
+                        View
+                      </Button>
+                    )}
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                        onClick={() => handleUnassign(assignee.userId)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add assignee dropdown (admin only) */}
+            {isAdmin && availableMembers.length > 0 && (
+              <div className="mt-2">
+                <Select
+                  onValueChange={handleAssign}
+                  disabled={isAssigning}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={isAssigning ? "Assigning..." : "Add assignee..."} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableMembers.map((member) => (
+                      <SelectItem key={member.userId} value={member.userId}>
+                        <div className="flex items-center gap-2">
+                          <UserPlus className="h-3 w-3" />
+                          <span>{member.name || member.email}</span>
+                        </div>
+                      </SelectItem>
                     ))}
-                  </div>
-                )}
-
-                {/* Add assignee dropdown (admin only) */}
-                {isAdmin && availableMembers.length > 0 && (
-                  <div className="mt-2">
-                    <Select
-                      onValueChange={handleAssign}
-                      disabled={isAssigning}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder={isAssigning ? "Assigning..." : "Add assignee..."} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableMembers.map((member) => (
-                          <SelectItem key={member.userId} value={member.userId}>
-                            <div className="flex items-center gap-2">
-                              <UserPlus className="h-3 w-3" />
-                              <span>{member.name || member.email}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+                  </SelectContent>
+                </Select>
               </div>
+            )}
+          </div>
 
-              {/* Due date */}
-              <div>
-                <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
-                  Due Date
-                </h3>
-                {isAdmin ? (
-                  <DueDateSelector
-                    taskId={task.id}
-                    currentDueDate={task.dueDate}
-                    dueDateType={task.dueDateType}
-                    onDueDateChange={onTaskComplete}
-                    disabled={loading}
-                  />
-                ) : task.dueDate ? (
-                  <p className="text-sm text-foreground">
-                    {new Date(task.dueDate).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </p>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No due date set</p>
-                )}
-              </div>
-
-              {/* Timeline */}
-              {(task.createdAt || task.updatedAt || task.completedAt) && (
-                <div>
-                  <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
-                    <Clock className="inline h-3 w-3 mr-1" />
-                    Timeline
-                  </h3>
-                  <div className="space-y-1.5 text-sm">
-                    {task.createdAt && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Created</span>
-                        <span>{formatFullTimestamp(task.createdAt)}</span>
-                      </div>
-                    )}
-                    {task.updatedAt && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Updated</span>
-                        <span>{formatFullTimestamp(task.updatedAt)}</span>
-                      </div>
-                    )}
-                    {task.completedAt && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Completed</span>
-                        <span>{formatFullTimestamp(task.completedAt)}</span>
-                      </div>
-                    )}
-                  </div>
+          {/* Task action area - only show if not showing form response above */}
+          {!(task.type === "form" && config && (task.isCompleted || currentUserCompleted || viewingSubmissionUserId)) && (
+            <div className="mb-4">
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                 </div>
+              ) : error ? (
+                <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-center text-sm text-destructive">
+                  {error}
+                </div>
+              ) : needsConfiguration() ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center dark:border-amber-900/30 dark:bg-amber-950/20">
+                  <Settings className="mx-auto h-8 w-8 text-amber-500" />
+                  <p className="mt-2 text-sm font-medium text-amber-700 dark:text-amber-400">
+                    Configuration Required
+                  </p>
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-500">
+                    {task.type === "booking"
+                      ? "Set up a booking link to allow users to schedule meetings"
+                      : "Upload a document and specify the signer to enable e-signatures"}
+                  </p>
+                  <Button
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => setConfigDialogOpen(true)}
+                  >
+                    <Settings className="mr-2 h-4 w-4" />
+                    Configure Now
+                  </Button>
+                </div>
+              ) : (
+                <TaskAction
+                  taskId={task.id}
+                  type={task.type}
+                  isYourTurn={task.isYourTurn}
+                  isCompleted={task.isCompleted}
+                  isLocked={task.isLocked}
+                  isAdmin={isAdmin}
+                  currentUserCompleted={currentUserCompleted}
+                  viewingUserId={viewingSubmissionUserId || undefined}
+                  viewingUserName={viewingSubmissionUserId ? assignees.find(a => a.userId === viewingSubmissionUserId)?.userName : undefined}
+                  onClearViewing={() => setViewingSubmissionUserId(null)}
+                  instructions={task.description || undefined}
+                  blockingTasks={blockingTasks}
+                  onComplete={onTaskComplete}
+                  {...getConfigProps()}
+                />
               )}
-
-              {/* Task action area */}
-              <div className="pt-2">
-                <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-3">
-                  Action
-                </h3>
-                {loading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : error ? (
-                  <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4 text-center text-sm text-destructive">
-                    {error}
-                  </div>
-                ) : needsConfiguration() ? (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center dark:border-amber-900/30 dark:bg-amber-950/20">
-                    <Settings className="mx-auto h-8 w-8 text-amber-500" />
-                    <p className="mt-2 text-sm font-medium text-amber-700 dark:text-amber-400">
-                      Configuration Required
-                    </p>
-                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-500">
-                      {task.type === "booking"
-                        ? "Set up a booking link to allow users to schedule meetings"
-                        : "Upload a document and specify the signer to enable e-signatures"}
-                    </p>
-                    <Button
-                      size="sm"
-                      className="mt-3"
-                      onClick={() => setConfigDialogOpen(true)}
-                    >
-                      <Settings className="mr-2 h-4 w-4" />
-                      Configure Now
-                    </Button>
-                  </div>
-                ) : (
-                  <TaskAction
-                    taskId={task.id}
-                    type={task.type}
-                    isYourTurn={task.isYourTurn}
-                    isCompleted={task.isCompleted}
-                    isLocked={task.isLocked}
-                    isAdmin={isAdmin}
-                    currentUserCompleted={assignees.find(a => a.userId === currentUserId)?.status === "completed"}
-                    viewingUserId={viewingSubmissionUserId || undefined}
-                    viewingUserName={viewingSubmissionUserId ? assignees.find(a => a.userId === viewingSubmissionUserId)?.userName : undefined}
-                    onClearViewing={() => setViewingSubmissionUserId(null)}
-                    instructions={task.description || undefined}
-                    blockingTasks={blockingTasks}
-                    onComplete={onTaskComplete}
-                    {...getConfigProps()}
-                  />
-                )}
-              </div>
             </div>
-          </ScrollArea>
-        </TabsContent>
+          )}
 
-        <TabsContent value="comments" className="flex-1 mt-0 overflow-hidden">
-          <CommentSection
-            taskId={task.id}
-            currentUserId={currentUserId}
-            className="h-full"
-          />
-        </TabsContent>
-      </Tabs>
+          {/* Activity / Comments Section - inline like Moxo */}
+          <div className="border-t border-border pt-4">
+            <CommentSection
+              taskId={task.id}
+              currentUserId={currentUserId}
+              className="h-auto"
+              compact
+            />
+          </div>
+        </div>
+      </ScrollArea>
+
+      {/* Delete Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Task</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{task.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDelete();
+              }}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Task Configuration Dialog */}
       {isConfigurable() && (
@@ -774,6 +769,20 @@ export function TaskDetailsPanel({
           onConfigSaved={handleConfigSaved}
         />
       )}
+
+      {/* Prerequisites Dialog */}
+      <Dialog open={prerequisitesDialogOpen} onOpenChange={setPrerequisitesDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Prerequisites</DialogTitle>
+          </DialogHeader>
+          <TaskDependencies
+            taskId={task.id}
+            isAdmin={isAdmin}
+            onDependencyChange={onTaskComplete}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

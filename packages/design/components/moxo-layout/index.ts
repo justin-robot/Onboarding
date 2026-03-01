@@ -11,7 +11,7 @@ export type { AuditEntry, ActivityFeedProps, AuditEventType } from "./activity-f
 
 // Task Card
 export { TaskCard } from "./task-card";
-export type { TaskCardProps, TaskType } from "./task-card";
+export type { TaskCardProps, TaskType, TimelineStatus } from "./task-card";
 
 // Section Header
 export { SectionHeader, SectionContent } from "./section-header";

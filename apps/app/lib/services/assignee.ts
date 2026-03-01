@@ -1,5 +1,6 @@
 import { database } from "@repo/database";
 import { memberService } from "./member";
+import { auditLogService, type AuditContext } from "./auditLog";
 import type { TaskAssignee } from "@repo/database";
 import type { NotificationContext } from "./notificationContext";
 
@@ -18,7 +19,8 @@ export const assigneeService = {
   async assign(
     taskId: string,
     userId: string,
-    notificationContext?: NotificationContext
+    notificationContext?: NotificationContext,
+    auditContext?: AuditContext
   ): Promise<AssignResult> {
     // Get task and its workspace with names for notifications
     const taskWithWorkspace = await database
@@ -67,6 +69,31 @@ export const assigneeService = {
       .returningAll()
       .executeTakeFirstOrThrow();
 
+    // Get assignee's name for audit log
+    const assigneeUser = await database
+      .selectFrom("user")
+      .select(["name", "email"])
+      .where("id", "=", userId)
+      .executeTakeFirst();
+
+    // Log audit event
+    if (auditContext) {
+      await auditLogService.logEvent({
+        workspaceId: taskWithWorkspace.workspaceId,
+        eventType: "task.assigned",
+        actorId: auditContext.actorId,
+        taskId,
+        source: auditContext.source,
+        ipAddress: auditContext.ipAddress,
+        metadata: {
+          taskTitle: taskWithWorkspace.title,
+          taskType: "task",
+          targetName: assigneeUser?.name || assigneeUser?.email || "Unknown",
+          targetUserId: userId,
+        },
+      });
+    }
+
     // Trigger notification
     if (notificationContext) {
       await notificationContext.triggerWorkflow({
@@ -88,14 +115,52 @@ export const assigneeService = {
   /**
    * Remove a user's assignment from a task
    */
-  async unassign(taskId: string, userId: string): Promise<boolean> {
+  async unassign(
+    taskId: string,
+    userId: string,
+    auditContext?: AuditContext
+  ): Promise<boolean> {
+    // Get task info and assignee name before deleting
+    const taskInfo = await database
+      .selectFrom("task")
+      .innerJoin("section", "section.id", "task.sectionId")
+      .select(["task.title", "task.type", "section.workspaceId"])
+      .where("task.id", "=", taskId)
+      .executeTakeFirst();
+
+    const assigneeUser = await database
+      .selectFrom("user")
+      .select(["name", "email"])
+      .where("id", "=", userId)
+      .executeTakeFirst();
+
     const result = await database
       .deleteFrom("task_assignee")
       .where("taskId", "=", taskId)
       .where("userId", "=", userId)
       .executeTakeFirst();
 
-    return (result.numDeletedRows ?? 0n) > 0n;
+    const deleted = (result.numDeletedRows ?? 0n) > 0n;
+
+    // Log audit event
+    if (deleted && auditContext && taskInfo) {
+      await auditLogService.logEvent({
+        workspaceId: taskInfo.workspaceId,
+        eventType: "task.unassigned",
+        actorId: auditContext.actorId,
+        taskId,
+        source: auditContext.source,
+        ipAddress: auditContext.ipAddress,
+        metadata: {
+          taskTitle: taskInfo.title,
+          taskType: taskInfo.type,
+          targetName: assigneeUser?.name || assigneeUser?.email || "Unknown",
+          targetUserId: userId,
+        },
+      });
+    }
+
+    return deleted;
   },
 
   /**

@@ -4,8 +4,7 @@ import * as React from "react";
 import { cn } from "../../lib/utils";
 import { ScrollArea } from "../ui/scroll-area";
 import { SectionHeader, SectionStatus } from "./section-header";
-import { TaskCard, TaskType } from "./task-card";
-import { Timeline, TimelineStep, TimelineStepStatus } from "./timeline";
+import { TaskCard, TaskType, TimelineStatus } from "./task-card";
 import { useIsDesktop } from "./use-media-query";
 import { Button } from "../ui/button";
 import { Plus, GripVertical } from "lucide-react";
@@ -59,6 +58,8 @@ interface FlowViewProps {
   selectedTaskId?: string;
   /** Callback when a task is clicked */
   onTaskSelect?: (taskId: string) => void;
+  /** Callback when a task's review button is clicked */
+  onTaskReview?: (taskId: string) => void;
   /** Callback when add task is clicked */
   onAddTask?: (sectionId: string) => void;
   /** Callback when tasks are reordered within a section */
@@ -67,14 +68,25 @@ interface FlowViewProps {
   onSectionReorder?: (sectionIds: string[]) => void;
   /** Whether drag and drop is enabled */
   enableDragAndDrop?: boolean;
-  /** Whether to show timeline (auto-hides on mobile) */
+  /** Whether to show inline timeline indicators */
   showTimeline?: boolean;
-  /** Timeline position */
-  timelinePosition?: "left" | "right";
   /** Optional class name */
   className?: string;
   /** Force compact mode (auto-detected from viewport if not set) */
   compact?: boolean;
+}
+
+/**
+ * Get timeline status for a task
+ */
+function getTimelineStatus(task: FlowTask): TimelineStatus {
+  if (task.isCompleted) {
+    return "completed";
+  }
+  if (task.isYourTurn) {
+    return "current";
+  }
+  return "upcoming";
 }
 
 // Sortable Task Card Wrapper
@@ -83,13 +95,21 @@ function SortableTaskCard({
   isSelected,
   isCompact,
   onTaskSelect,
+  onTaskReview,
   isDragDisabled,
+  showTimelineIndicator,
+  timelinePosition,
+  isLastInSection,
 }: {
   task: FlowTask;
   isSelected: boolean;
   isCompact: boolean;
   onTaskSelect?: (taskId: string) => void;
+  onTaskReview?: (taskId: string) => void;
   isDragDisabled?: boolean;
+  showTimelineIndicator?: boolean;
+  timelinePosition?: number;
+  isLastInSection?: boolean;
 }) {
   const {
     attributes,
@@ -121,7 +141,6 @@ function SortableTaskCard({
         id={task.id}
         title={task.title}
         type={task.type}
-        position={task.position}
         isYourTurn={task.isYourTurn}
         isCompleted={task.isCompleted}
         isLocked={task.isLocked}
@@ -131,6 +150,11 @@ function SortableTaskCard({
         createdAt={task.createdAt}
         assignees={task.assignees}
         onClick={() => onTaskSelect?.(task.id)}
+        onReviewClick={onTaskReview ? () => onTaskReview(task.id) : undefined}
+        showTimelineIndicator={showTimelineIndicator}
+        timelinePosition={timelinePosition}
+        timelineStatus={getTimelineStatus(task)}
+        isLastInSection={isLastInSection}
       />
     </div>
   );
@@ -196,41 +220,8 @@ function SortableSection({
 }
 
 /**
- * Convert flow sections to timeline steps
- */
-function sectionsToTimelineSteps(sections: FlowSection[]): TimelineStep[] {
-  const steps: TimelineStep[] = [];
-  let stepNumber = 1;
-
-  sections.forEach((section) => {
-    const tasks = section.tasks || [];
-    tasks.forEach((task) => {
-      let status: TimelineStepStatus;
-      if (task.isCompleted) {
-        status = "completed";
-      } else if (task.isLocked) {
-        status = "locked";
-      } else if (task.isYourTurn) {
-        status = "current";
-      } else {
-        status = "upcoming";
-      }
-
-      steps.push({
-        id: task.id,
-        number: stepNumber++,
-        title: task.title,
-        status,
-      });
-    });
-  });
-
-  return steps;
-}
-
-/**
  * Flow view component matching Moxo's main content area
- * Shows sections with tasks and optional timeline
+ * Shows sections with tasks and inline timeline indicators
  * Automatically adapts to mobile/desktop layouts
  * Supports drag and drop reordering of sections and tasks
  */
@@ -238,12 +229,12 @@ export function FlowView({
   sections,
   selectedTaskId,
   onTaskSelect,
+  onTaskReview,
   onAddTask,
   onTaskReorder,
   onSectionReorder,
   enableDragAndDrop = false,
   showTimeline = true,
-  timelinePosition = "left",
   className,
   compact,
 }: FlowViewProps) {
@@ -287,12 +278,6 @@ export function FlowView({
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
-  );
-
-  // Generate timeline steps
-  const timelineSteps = React.useMemo(
-    () => sectionsToTimelineSteps(sections),
-    [sections]
   );
 
   // Calculate progress for each section
@@ -384,9 +369,6 @@ export function FlowView({
     setActiveDragType(null);
   };
 
-  // Hide timeline on mobile
-  const shouldShowTimeline = showTimeline && isDesktop;
-
   // Determine if drag is enabled (requires mounted to avoid hydration mismatch)
   const isDragEnabled = mounted && enableDragAndDrop && (onTaskReorder || onSectionReorder);
 
@@ -408,6 +390,7 @@ export function FlowView({
           {sections.map((section) => {
             const progress = getSectionProgress(section);
             const isCollapsed = collapsedSections.has(section.id);
+            const tasks = section.tasks || [];
 
             return (
               <SortableSection
@@ -419,19 +402,23 @@ export function FlowView({
                 onAddTask={onAddTask}
                 isDragDisabled={!onSectionReorder}
               >
-                <div className={cn("space-y-2 pl-2", isCompact && "space-y-1.5")}>
+                <div className="space-y-1">
                   <SortableContext
-                    items={(section.tasks || []).map((t) => t.id)}
+                    items={tasks.map((t) => t.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    {(section.tasks || []).map((task) => (
+                    {tasks.map((task, index) => (
                       <SortableTaskCard
                         key={task.id}
                         task={task}
                         isSelected={task.id === selectedTaskId}
                         isCompact={isCompact}
                         onTaskSelect={onTaskSelect}
+                        onTaskReview={onTaskReview}
                         isDragDisabled={!onTaskReorder}
+                        showTimelineIndicator={showTimeline}
+                        timelinePosition={index + 1}
+                        isLastInSection={index === tasks.length - 1}
                       />
                     ))}
                   </SortableContext>
@@ -439,7 +426,7 @@ export function FlowView({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="w-full justify-start text-muted-foreground hover:text-foreground"
+                      className="w-full justify-start text-muted-foreground hover:text-foreground ml-11"
                       onClick={() => onAddTask(section.id)}
                     >
                       <Plus className="mr-2 h-4 w-4" />
@@ -455,6 +442,7 @@ export function FlowView({
         sections.map((section) => {
           const progress = getSectionProgress(section);
           const isCollapsed = collapsedSections.has(section.id);
+          const tasks = section.tasks || [];
 
           return (
             <SectionHeader
@@ -467,14 +455,13 @@ export function FlowView({
               isCollapsed={isCollapsed}
               onToggleCollapse={() => toggleSection(section.id)}
             >
-              <div className={cn("space-y-2", isCompact && "space-y-1.5")}>
-                {(section.tasks || []).map((task) => (
+              <div className="space-y-1">
+                {tasks.map((task, index) => (
                   <TaskCard
                     key={task.id}
                     id={task.id}
                     title={task.title}
                     type={task.type}
-                    position={task.position}
                     isYourTurn={task.isYourTurn}
                     isCompleted={task.isCompleted}
                     isLocked={task.isLocked}
@@ -484,13 +471,18 @@ export function FlowView({
                     createdAt={task.createdAt}
                     assignees={task.assignees}
                     onClick={() => onTaskSelect?.(task.id)}
+                    onReviewClick={onTaskReview ? () => onTaskReview(task.id) : undefined}
+                    showTimelineIndicator={showTimeline}
+                    timelinePosition={index + 1}
+                    timelineStatus={getTimelineStatus(task)}
+                    isLastInSection={index === tasks.length - 1}
                   />
                 ))}
                 {onAddTask && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="w-full justify-start text-muted-foreground hover:text-foreground"
+                    className="w-full justify-start text-muted-foreground hover:text-foreground ml-11"
                     onClick={() => onAddTask(section.id)}
                   >
                     <Plus className="mr-2 h-4 w-4" />
@@ -512,76 +504,44 @@ export function FlowView({
   );
 
   return (
-    <div className={cn("flex h-full", className)}>
-      {/* Timeline (optional, left) - hidden on mobile */}
-      {shouldShowTimeline && timelinePosition === "left" && (
-        <div className="hidden w-48 shrink-0 border-r border-border bg-muted/20 p-4 lg:block">
-          <h3 className="mb-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Steps
-          </h3>
-          <Timeline
-            steps={timelineSteps}
-            selectedStepId={selectedTaskId}
-            onStepClick={onTaskSelect}
-          />
-        </div>
+    <ScrollArea className={cn("flex-1", className)}>
+      {isDragEnabled ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          {renderContent()}
+          <DragOverlay>
+            {activeItem?.type === "task" && (
+              <div className="shadow-lg rounded-lg bg-background">
+                <TaskCard
+                  id={activeItem.item.id}
+                  title={activeItem.item.title}
+                  type={activeItem.item.type}
+                  isYourTurn={activeItem.item.isYourTurn}
+                  isCompleted={activeItem.item.isCompleted}
+                  isLocked={activeItem.item.isLocked}
+                  isSelected={false}
+                  description={isCompact ? undefined : activeItem.item.description}
+                  dueDate={activeItem.item.dueDate}
+                  createdAt={activeItem.item.createdAt}
+                />
+              </div>
+            )}
+            {activeItem?.type === "section" && (
+              <div className="shadow-lg rounded-lg bg-background border p-4">
+                <span className="font-medium">{activeItem.item.title}</span>
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
+      ) : (
+        renderContent()
       )}
-
-      {/* Main content */}
-      <ScrollArea className="flex-1">
-        {isDragEnabled ? (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDragCancel={handleDragCancel}
-          >
-            {renderContent()}
-            <DragOverlay>
-              {activeItem?.type === "task" && (
-                <div className="shadow-lg rounded-lg">
-                  <TaskCard
-                    id={activeItem.item.id}
-                    title={activeItem.item.title}
-                    type={activeItem.item.type}
-                    position={activeItem.item.position}
-                    isYourTurn={activeItem.item.isYourTurn}
-                    isCompleted={activeItem.item.isCompleted}
-                    isLocked={activeItem.item.isLocked}
-                    isSelected={false}
-                    description={isCompact ? undefined : activeItem.item.description}
-                    dueDate={activeItem.item.dueDate}
-                    createdAt={activeItem.item.createdAt}
-                  />
-                </div>
-              )}
-              {activeItem?.type === "section" && (
-                <div className="shadow-lg rounded-lg bg-background border p-4">
-                  <span className="font-medium">{activeItem.item.title}</span>
-                </div>
-              )}
-            </DragOverlay>
-          </DndContext>
-        ) : (
-          renderContent()
-        )}
-      </ScrollArea>
-
-      {/* Timeline (optional, right) - hidden on mobile */}
-      {shouldShowTimeline && timelinePosition === "right" && (
-        <div className="hidden w-48 shrink-0 border-l border-border bg-muted/20 p-4 lg:block">
-          <h3 className="mb-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            Steps
-          </h3>
-          <Timeline
-            steps={timelineSteps}
-            selectedStepId={selectedTaskId}
-            onStepClick={onTaskSelect}
-          />
-        </div>
-      )}
-    </div>
+    </ScrollArea>
   );
 }
 

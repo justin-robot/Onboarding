@@ -72,7 +72,9 @@ interface WorkspaceData {
 
 interface Member {
   id: string;
+  userId: string;
   name: string;
+  email: string;
   role: string;
 }
 
@@ -111,7 +113,6 @@ export function WorkspaceView({
   const [showActivityPanel, setShowActivityPanel] = useState(false);
   const [showMeetingsPanel, setShowMeetingsPanel] = useState(false);
   const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
-  const [addTaskSectionId, setAddTaskSectionId] = useState<string | null>(null);
   const [addSectionDialogOpen, setAddSectionDialogOpen] = useState(false);
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -229,16 +230,10 @@ export function WorkspaceView({
     setRightPanelOpen(true);
   };
 
-  // Handle add task
-  const handleAddTask = (sectionId: string) => {
-    setAddTaskSectionId(sectionId);
+  // Handle add task - opens the dialog (position selected in step 2)
+  // sectionId is ignored - user picks position in the dialog
+  const handleAddTask = (_sectionId?: string) => {
     setAddTaskDialogOpen(true);
-  };
-
-  // Get task count for the selected section
-  const getTaskCount = (sectionId: string) => {
-    const section = (workspace.sections || []).find((s) => s.id === sectionId);
-    return section?.tasks?.length ?? 0;
   };
 
   // Handle workspace navigation
@@ -246,7 +241,7 @@ export function WorkspaceView({
     router.push(`/workspace/${workspaceId}`);
   };
 
-  // Handle add task from menu (need to select a section first)
+  // Handle add task from menu
   const handleAddTaskFromMenu = () => {
     const sections = workspace.sections || [];
     if (sections.length === 0) {
@@ -254,8 +249,6 @@ export function WorkspaceView({
       setAddSectionDialogOpen(true);
       return;
     }
-    // Use the first section by default, or show section picker
-    setAddTaskSectionId(sections[0].id);
     setAddTaskDialogOpen(true);
   };
 
@@ -427,15 +420,25 @@ export function WorkspaceView({
     />
 
     {/* Add Task Dialog */}
-    {addTaskSectionId && (
-      <AddTaskDialog
-        open={addTaskDialogOpen}
-        onOpenChange={setAddTaskDialogOpen}
-        sectionId={addTaskSectionId}
-        currentTaskCount={getTaskCount(addTaskSectionId)}
-        onTaskCreated={() => router.refresh()}
-      />
-    )}
+    <AddTaskDialog
+      open={addTaskDialogOpen}
+      onOpenChange={setAddTaskDialogOpen}
+      sections={(workspace.sections || []).map(s => ({
+        id: s.id,
+        title: s.title,
+        tasks: s.tasks.map(t => ({
+          id: t.id,
+          title: t.title,
+          type: t.type,
+          position: t.position,
+          isCompleted: t.isCompleted,
+          isLocked: t.isLocked,
+        })),
+      }))}
+      members={members}
+      onTaskCreated={() => router.refresh()}
+      workspaceId={currentWorkspaceId}
+    />
 
     {/* Add Section Dialog */}
     <AddSectionDialog

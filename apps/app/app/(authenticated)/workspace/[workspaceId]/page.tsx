@@ -40,8 +40,8 @@ export default async function WorkspacePage({ params }: PageProps) {
     notFound();
   }
 
-  // Get all members for the workspace
-  const memberships = await memberService.getByWorkspaceId(workspaceId);
+  // Get all members for the workspace with user info
+  const memberships = await memberService.getByWorkspaceIdWithUserInfo(workspaceId);
 
   // Get user's workspaces for sidebar
   const userMemberships = await memberService.getWorkspacesForUser(session.user.id);
@@ -141,8 +141,10 @@ export default async function WorkspacePage({ params }: PageProps) {
   };
 
   const members = memberships.map((m) => ({
-    id: m.userId,
-    name: m.userId, // We'll need to join with user table for actual names
+    id: m.id,
+    userId: m.userId,
+    name: m.name || m.email || "Unknown",
+    email: m.email || "",
     role: m.role,
   }));
 

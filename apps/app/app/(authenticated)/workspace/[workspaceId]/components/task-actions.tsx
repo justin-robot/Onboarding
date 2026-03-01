@@ -125,8 +125,9 @@ export function TaskAction({
   // For form tasks, show the submission viewer if:
   // - Admin is viewing a specific user's submission
   // - Current user has submitted (even if task not fully complete)
-  // - Task is fully completed
-  if (type === "form" && formConfigId && (viewingUserId || isCompleted || currentUserCompleted)) {
+  // Note: Don't show viewer just because isCompleted is true - the current user
+  // may not have submitted (e.g., another assignee completed the task)
+  if (type === "form" && formConfigId && (viewingUserId || currentUserCompleted)) {
     return (
       <FormSubmissionViewer
         formConfigId={formConfigId}
@@ -601,7 +602,9 @@ function FileUploadTaskAction({
   };
 
   const handleComplete = async () => {
-    if (uploadedFiles.length === 0) {
+    // Check if there are any files (either uploaded in this session or previously)
+    const totalFiles = existingFiles.length + uploadedFiles.length;
+    if (totalFiles === 0) {
       toast.error("Please upload at least one file");
       return;
     }
@@ -683,7 +686,7 @@ function FileUploadTaskAction({
       <Button
         className="w-full"
         onClick={handleComplete}
-        disabled={uploadedFiles.length === 0 || isUploading}
+        disabled={(existingFiles.length + uploadedFiles.length) === 0 || isUploading}
       >
         Submit Files
       </Button>
@@ -1083,9 +1086,38 @@ function ESignTaskAction({
   onComplete?: () => void;
 }) {
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   // Check if E-Sign is configured (needs both document and signer)
   const isConfigured = documentName && signerEmail;
+
+  const handleCheckStatus = async () => {
+    setIsCheckingStatus(true);
+    setStatusMessage(null);
+    try {
+      const response = await fetch(`/api/tasks/${taskId}/check-esign`, {
+        method: "POST",
+      });
+
+      const data = await response.json();
+
+      if (data.taskCompleted) {
+        toast.success("Document signed! Task completed.");
+        onComplete?.();
+      } else if (data.status === "completed") {
+        toast.success("Document signed!");
+        onComplete?.();
+      } else {
+        setStatusMessage(`Status: ${data.status || data.message}`);
+        toast.info(data.message || `Document status: ${data.status}`);
+      }
+    } catch (error) {
+      toast.error("Failed to check status");
+    } finally {
+      setIsCheckingStatus(false);
+    }
+  };
 
   if (!isConfigured) {
     // Not configured - show admin setup message or waiting state
@@ -1178,15 +1210,32 @@ function ESignTaskAction({
         </CardContent>
       </Card>
 
-      <Button
-        className="w-full"
-        onClick={handleSign}
-        disabled={isRedirecting}
-      >
-        {isRedirecting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-        <FileSignature className="mr-2 h-4 w-4" />
-        Sign Document
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          className="flex-1"
+          onClick={handleSign}
+          disabled={isRedirecting || isCheckingStatus}
+        >
+          {isRedirecting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <FileSignature className="mr-2 h-4 w-4" />
+          Sign Document
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handleCheckStatus}
+          disabled={isRedirecting || isCheckingStatus}
+          title="Check if document was signed (for local development)"
+        >
+          {isCheckingStatus ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <CheckSquare className="h-4 w-4" />
+          )}
+        </Button>
+      </div>
+      {statusMessage && (
+        <p className="text-xs text-muted-foreground text-center">{statusMessage}</p>
+      )}
     </div>
   );
 }

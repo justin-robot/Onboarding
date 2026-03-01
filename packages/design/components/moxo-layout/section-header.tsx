@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "../../lib/utils";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, MoreHorizontal, Loader2 } from "lucide-react";
 
 type SectionStatus = "not_started" | "in_progress" | "completed";
 
@@ -29,30 +29,40 @@ interface SectionHeaderProps {
   className?: string;
   /** Children (tasks) */
   children?: React.ReactNode;
+  /** Callback when menu button clicked */
+  onMenuClick?: () => void;
+  /** Menu items for dropdown */
+  menuItems?: Array<{ label: string; onClick: () => void }>;
 }
 
 // Status badge configuration
 const statusConfig: Record<
   SectionStatus,
-  { label: string; className: string }
+  { label: string; badgeClassName: string; borderClassName: string; iconColor: string }
 > = {
   not_started: {
     label: "Not Started",
-    className: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
+    badgeClassName: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
+    borderClassName: "border-slate-300 dark:border-slate-600",
+    iconColor: "text-slate-400",
   },
   in_progress: {
     label: "In Progress",
-    className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    badgeClassName: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    borderClassName: "border-blue-500",
+    iconColor: "text-blue-500",
   },
   completed: {
     label: "Completed",
-    className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+    badgeClassName: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+    borderClassName: "border-green-500",
+    iconColor: "text-green-500",
   },
 };
 
 /**
  * Section header component matching Moxo's design
- * Features blue left border, status badge, and progress counter
+ * Features full border container, status badge with spinner, and progress counter
  */
 export function SectionHeader({
   title,
@@ -65,27 +75,72 @@ export function SectionHeader({
   description,
   className,
   children,
+  onMenuClick,
 }: SectionHeaderProps) {
   const config = statusConfig[status];
   const hasProgress = totalCount > 0;
 
   return (
-    <div className={cn("space-y-2", className)}>
-      {/* Header */}
-      <div
-        className={cn(
-          "flex items-center gap-3 rounded-lg border-l-4 bg-muted/30 px-4 py-3",
-          status === "in_progress" && "border-l-blue-500",
-          status === "completed" && "border-l-green-500",
-          status === "not_started" && "border-l-slate-300 dark:border-l-slate-600"
+    <div
+      className={cn(
+        "rounded-xl border",
+        config.borderClassName,
+        className
+      )}
+    >
+      {/* Header row */}
+      <div className="flex items-center gap-3 px-4 py-3">
+        {/* Title */}
+        <div className="flex-1 min-w-0">
+          <h2 className="text-base font-semibold text-foreground truncate">
+            {title}
+          </h2>
+          {description && (
+            <p className="mt-0.5 text-xs text-muted-foreground truncate">
+              {description}
+            </p>
+          )}
+        </div>
+
+        {/* Status badge with spinner and counter */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Badge
+            variant="secondary"
+            className={cn(
+              "text-xs px-2 py-0.5 font-medium flex items-center gap-1.5",
+              config.badgeClassName
+            )}
+          >
+            {status === "in_progress" && (
+              <Loader2 className={cn("h-3 w-3 animate-spin", config.iconColor)} />
+            )}
+            {config.label}
+          </Badge>
+          {hasProgress && (
+            <span className="text-sm text-muted-foreground">
+              {completedCount} of {totalCount}
+            </span>
+          )}
+        </div>
+
+        {/* Menu button */}
+        {onMenuClick && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={onMenuClick}
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
         )}
-      >
+
         {/* Collapse toggle */}
         {collapsible && (
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 shrink-0"
+            className="h-8 w-8 shrink-0"
             onClick={onToggleCollapse}
           >
             {isCollapsed ? (
@@ -95,41 +150,11 @@ export function SectionHeader({
             )}
           </Button>
         )}
-
-        {/* Title and description */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-foreground truncate">
-              {title}
-            </h2>
-            <Badge
-              variant="secondary"
-              className={cn("text-[10px] px-1.5 py-0 font-medium", config.className)}
-            >
-              {config.label}
-            </Badge>
-          </div>
-          {description && (
-            <p className="mt-0.5 text-xs text-muted-foreground truncate">
-              {description}
-            </p>
-          )}
-        </div>
-
-        {/* Progress counter */}
-        {hasProgress && (
-          <div className="shrink-0 text-right">
-            <span className="text-sm font-medium text-foreground">
-              {completedCount}
-            </span>
-            <span className="text-sm text-muted-foreground"> of {totalCount}</span>
-          </div>
-        )}
       </div>
 
       {/* Children (tasks) - only show when not collapsed */}
       {!isCollapsed && children && (
-        <div className="space-y-2 pl-4">{children}</div>
+        <div className="px-4 pb-4">{children}</div>
       )}
     </div>
   );

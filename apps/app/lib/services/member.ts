@@ -168,4 +168,23 @@ export const memberService = {
       .where("userId", "=", userId)
       .execute();
   },
+
+  /**
+   * Get all members for a workspace with user info (name, email)
+   */
+  async getByWorkspaceIdWithUserInfo(workspaceId: string) {
+    return database
+      .selectFrom("workspace_member")
+      .innerJoin("user", "user.id", "workspace_member.userId")
+      .select([
+        "workspace_member.id",
+        "workspace_member.userId",
+        "workspace_member.role",
+        "workspace_member.createdAt",
+        "user.name",
+        "user.email",
+      ])
+      .where("workspace_member.workspaceId", "=", workspaceId)
+      .execute();
+  },
 };
