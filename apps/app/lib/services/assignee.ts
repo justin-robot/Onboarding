@@ -59,6 +59,27 @@ export const assigneeService = {
       return { success: false, error: "ALREADY_ASSIGNED" };
     }
 
+    // Check if task is completed - if so, reopen it
+    const task = await database
+      .selectFrom("task")
+      .select(["status"])
+      .where("id", "=", taskId)
+      .executeTakeFirst();
+
+    const wasCompleted = task?.status === "completed";
+
+    if (wasCompleted) {
+      await database
+        .updateTable("task")
+        .set({
+          status: "in_progress",
+          completedAt: null,
+          updatedAt: new Date(),
+        })
+        .where("id", "=", taskId)
+        .execute();
+    }
+
     // Create assignment
     const assignee = await database
       .insertInto("task_assignee")
@@ -76,8 +97,25 @@ export const assigneeService = {
       .where("id", "=", userId)
       .executeTakeFirst();
 
-    // Log audit event
+    // Log audit events
     if (auditContext) {
+      // Log task reopened if it was completed
+      if (wasCompleted) {
+        await auditLogService.logEvent({
+          workspaceId: taskWithWorkspace.workspaceId,
+          eventType: "task.reopened",
+          actorId: auditContext.actorId,
+          taskId,
+          source: auditContext.source,
+          ipAddress: auditContext.ipAddress,
+          metadata: {
+            taskTitle: taskWithWorkspace.title,
+            reason: "assignee_added",
+          },
+        });
+      }
+
+      // Log assignment
       await auditLogService.logEvent({
         workspaceId: taskWithWorkspace.workspaceId,
         eventType: "task.assigned",
