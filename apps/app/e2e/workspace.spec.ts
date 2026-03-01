@@ -1,24 +1,23 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * E2E tests for Workspace CRUD operations
- * Tests the /api/workspaces endpoints
+ * E2E tests for Workspace API
+ *
+ * These tests verify the API endpoints work correctly.
+ * - Unauthenticated tests verify 401 responses (run against real API)
+ * - Authenticated tests are skipped - they require test infrastructure:
+ *   1. A seeded test user in the database
+ *   2. Email verification disabled or pre-verified user
+ *   3. Known test credentials
+ *
+ * To enable authenticated tests:
+ * 1. Create a test user in your database with known credentials
+ * 2. Set TEST_USER_EMAIL and TEST_USER_PASSWORD environment variables
+ * 3. Remove the .skip from the "Authenticated Operations" describe block
  */
 
 test.describe("Workspace API", () => {
-  // Helper to set up authenticated context
-  async function setupAuth(context: typeof test.prototype.context) {
-    await context.addCookies([
-      {
-        name: "better-auth.session_token",
-        value: "mock-session-token-for-e2e",
-        domain: "localhost",
-        path: "/",
-      },
-    ]);
-  }
-
-  test.describe("Authentication", () => {
+  test.describe("Authentication - Unauthenticated Requests", () => {
     test("GET /api/workspaces returns 401 for unauthenticated requests", async ({
       request,
     }) => {
@@ -36,6 +35,9 @@ test.describe("Workspace API", () => {
         data: { name: "Test Workspace" },
       });
       expect(response.status()).toBe(401);
+
+      const body = await response.json();
+      expect(body.error).toBe("Unauthorized");
     });
 
     test("GET /api/workspaces/[id] returns 401 for unauthenticated requests", async ({
@@ -43,6 +45,9 @@ test.describe("Workspace API", () => {
     }) => {
       const response = await request.get("/api/workspaces/test-id");
       expect(response.status()).toBe(401);
+
+      const body = await response.json();
+      expect(body.error).toBe("Unauthorized");
     });
 
     test("PUT /api/workspaces/[id] returns 401 for unauthenticated requests", async ({
@@ -52,6 +57,9 @@ test.describe("Workspace API", () => {
         data: { name: "Updated Name" },
       });
       expect(response.status()).toBe(401);
+
+      const body = await response.json();
+      expect(body.error).toBe("Unauthorized");
     });
 
     test("DELETE /api/workspaces/[id] returns 401 for unauthenticated requests", async ({
@@ -59,775 +67,218 @@ test.describe("Workspace API", () => {
     }) => {
       const response = await request.delete("/api/workspaces/test-id");
       expect(response.status()).toBe(401);
-    });
-  });
 
-  test.describe("List Workspaces (GET /api/workspaces)", () => {
-    test("returns list of workspaces for authenticated user", async ({
-      page,
-      context,
-    }) => {
-      await setupAuth(context);
-
-      // Mock the auth session
-      await page.route("**/api/auth/session", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            user: { id: "user-1", email: "test@example.com", name: "Test User" },
-          }),
-        });
-      });
-
-      // Mock the workspaces endpoint
-      await page.route("**/api/workspaces", async (route) => {
-        if (route.request().method() === "GET") {
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify([
-              {
-                id: "ws-1",
-                name: "Project Alpha",
-                description: "First workspace",
-                createdAt: new Date().toISOString(),
-              },
-              {
-                id: "ws-2",
-                name: "Project Beta",
-                description: "Second workspace",
-                createdAt: new Date().toISOString(),
-              },
-            ]),
-          });
-        }
-      });
-
-      // Navigate to trigger the request
-      await page.goto("/");
-
-      // Make API request via page context
-      const response = await page.request.get("/api/workspaces");
-      expect(response.status()).toBe(200);
-
-      const workspaces = await response.json();
-      expect(Array.isArray(workspaces)).toBe(true);
-      expect(workspaces.length).toBe(2);
-      expect(workspaces[0].name).toBe("Project Alpha");
-    });
-
-    test("returns empty array when no workspaces exist", async ({
-      page,
-      context,
-    }) => {
-      await setupAuth(context);
-
-      await page.route("**/api/auth/session", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            user: { id: "user-1", email: "test@example.com" },
-          }),
-        });
-      });
-
-      await page.route("**/api/workspaces", async (route) => {
-        if (route.request().method() === "GET") {
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify([]),
-          });
-        }
-      });
-
-      await page.goto("/");
-      const response = await page.request.get("/api/workspaces");
-      expect(response.status()).toBe(200);
-
-      const workspaces = await response.json();
-      expect(workspaces).toEqual([]);
-    });
-  });
-
-  test.describe("Create Workspace (POST /api/workspaces)", () => {
-    test("creates workspace with valid data", async ({ page, context }) => {
-      await setupAuth(context);
-
-      await page.route("**/api/auth/session", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            user: { id: "user-1", email: "test@example.com" },
-          }),
-        });
-      });
-
-      const newWorkspace = {
-        id: "ws-new",
-        name: "New Workspace",
-        description: "A test workspace",
-        createdAt: new Date().toISOString(),
-      };
-
-      await page.route("**/api/workspaces", async (route) => {
-        if (route.request().method() === "POST") {
-          const body = route.request().postDataJSON();
-          expect(body.name).toBe("New Workspace");
-          expect(body.description).toBe("A test workspace");
-
-          await route.fulfill({
-            status: 201,
-            contentType: "application/json",
-            body: JSON.stringify(newWorkspace),
-          });
-        }
-      });
-
-      await page.goto("/");
-      const response = await page.request.post("/api/workspaces", {
-        data: {
-          name: "New Workspace",
-          description: "A test workspace",
-        },
-      });
-
-      expect(response.status()).toBe(201);
-      const workspace = await response.json();
-      expect(workspace.id).toBe("ws-new");
-      expect(workspace.name).toBe("New Workspace");
-    });
-
-    test("creates workspace with due date", async ({ page, context }) => {
-      await setupAuth(context);
-
-      await page.route("**/api/auth/session", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            user: { id: "user-1", email: "test@example.com" },
-          }),
-        });
-      });
-
-      const dueDate = "2024-12-31T23:59:59.000Z";
-
-      await page.route("**/api/workspaces", async (route) => {
-        if (route.request().method() === "POST") {
-          const body = route.request().postDataJSON();
-          expect(body.dueDate).toBe(dueDate);
-
-          await route.fulfill({
-            status: 201,
-            contentType: "application/json",
-            body: JSON.stringify({
-              id: "ws-new",
-              name: body.name,
-              dueDate: dueDate,
-            }),
-          });
-        }
-      });
-
-      await page.goto("/");
-      const response = await page.request.post("/api/workspaces", {
-        data: {
-          name: "Workspace with Due Date",
-          dueDate: dueDate,
-        },
-      });
-
-      expect(response.status()).toBe(201);
-      const workspace = await response.json();
-      expect(workspace.dueDate).toBe(dueDate);
-    });
-
-    test("returns 400 when name is missing", async ({ page, context }) => {
-      await setupAuth(context);
-
-      await page.route("**/api/auth/session", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            user: { id: "user-1", email: "test@example.com" },
-          }),
-        });
-      });
-
-      await page.route("**/api/workspaces", async (route) => {
-        if (route.request().method() === "POST") {
-          await route.fulfill({
-            status: 400,
-            contentType: "application/json",
-            body: JSON.stringify({ error: "Name is required" }),
-          });
-        }
-      });
-
-      await page.goto("/");
-      const response = await page.request.post("/api/workspaces", {
-        data: { description: "No name provided" },
-      });
-
-      expect(response.status()).toBe(400);
       const body = await response.json();
-      expect(body.error).toBe("Name is required");
-    });
-
-    test("returns 400 when name is not a string", async ({ page, context }) => {
-      await setupAuth(context);
-
-      await page.route("**/api/auth/session", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            user: { id: "user-1", email: "test@example.com" },
-          }),
-        });
-      });
-
-      await page.route("**/api/workspaces", async (route) => {
-        if (route.request().method() === "POST") {
-          await route.fulfill({
-            status: 400,
-            contentType: "application/json",
-            body: JSON.stringify({ error: "Name is required" }),
-          });
-        }
-      });
-
-      await page.goto("/");
-      const response = await page.request.post("/api/workspaces", {
-        data: { name: 12345 },
-      });
-
-      expect(response.status()).toBe(400);
+      expect(body.error).toBe("Unauthorized");
     });
   });
 
-  test.describe("Get Workspace (GET /api/workspaces/[id])", () => {
-    test("returns workspace with nested sections and tasks", async ({
-      page,
-      context,
-    }) => {
-      await setupAuth(context);
+  // These tests require a seeded test user - skip until test infrastructure is set up
+  test.describe.skip("Authenticated Operations", () => {
+    // To enable these tests:
+    // 1. Seed a test user in your database
+    // 2. Update these credentials
+    const TEST_USER = {
+      email: process.env.TEST_USER_EMAIL || "test@example.com",
+      password: process.env.TEST_USER_PASSWORD || "testpassword123",
+    };
 
-      await page.route("**/api/auth/session", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            user: { id: "user-1", email: "test@example.com" },
-          }),
-        });
+    // Helper to sign in and get authenticated page
+    async function getAuthenticatedPage(browser: typeof test.prototype.browser) {
+      const context = await browser.newContext();
+      const page = await context.newPage();
+
+      await page.goto("/sign-in");
+      await page.waitForLoadState("domcontentloaded");
+
+      await page.getByLabel("Email").fill(TEST_USER.email);
+      await page.getByLabel("Password").fill(TEST_USER.password);
+      await page.getByRole("button", { name: "Sign in" }).click();
+
+      // Wait for sign-in to complete
+      await page.waitForURL((url) => !url.pathname.includes("/sign-in"), {
+        timeout: 10000,
       });
 
-      const workspaceWithNested = {
-        id: "ws-1",
-        name: "Project Alpha",
-        description: "Workspace with sections",
-        sections: [
-          {
-            id: "section-1",
-            name: "Getting Started",
-            tasks: [
-              { id: "task-1", name: "Welcome", type: "welcome", isLocked: false },
-              { id: "task-2", name: "Upload Documents", type: "upload", isLocked: true },
-            ],
+      return { page, context };
+    }
+
+    test("can list workspaces when authenticated", async ({ browser }) => {
+      const { page, context } = await getAuthenticatedPage(browser);
+
+      try {
+        const response = await page.evaluate(async () => {
+          const res = await fetch("/api/workspaces");
+          return { status: res.status, body: await res.json() };
+        });
+
+        expect(response.status).toBe(200);
+        expect(Array.isArray(response.body)).toBe(true);
+      } finally {
+        await context.close();
+      }
+    });
+
+    test("can create a workspace", async ({ browser }) => {
+      const { page, context } = await getAuthenticatedPage(browser);
+
+      try {
+        const workspaceName = `Test Workspace ${Date.now()}`;
+
+        const response = await page.evaluate(async (name) => {
+          const res = await fetch("/api/workspaces", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, description: "Test description" }),
+          });
+          return { status: res.status, body: await res.json() };
+        }, workspaceName);
+
+        expect(response.status).toBe(201);
+        expect(response.body.name).toBe(workspaceName);
+        expect(response.body.id).toBeDefined();
+      } finally {
+        await context.close();
+      }
+    });
+
+    test("returns 400 when creating workspace without name", async ({ browser }) => {
+      const { page, context } = await getAuthenticatedPage(browser);
+
+      try {
+        const response = await page.evaluate(async () => {
+          const res = await fetch("/api/workspaces", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ description: "No name" }),
+          });
+          return { status: res.status, body: await res.json() };
+        });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBeDefined();
+      } finally {
+        await context.close();
+      }
+    });
+
+    test("can get a workspace by ID", async ({ browser }) => {
+      const { page, context } = await getAuthenticatedPage(browser);
+
+      try {
+        // Create a workspace first
+        const createResponse = await page.evaluate(async () => {
+          const res = await fetch("/api/workspaces", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: "Workspace to Get" }),
+          });
+          return { status: res.status, body: await res.json() };
+        });
+
+        expect(createResponse.status).toBe(201);
+        const workspaceId = createResponse.body.id;
+
+        // Get it by ID
+        const getResponse = await page.evaluate(async (id) => {
+          const res = await fetch(`/api/workspaces/${id}`);
+          return { status: res.status, body: await res.json() };
+        }, workspaceId);
+
+        expect(getResponse.status).toBe(200);
+        expect(getResponse.body.id).toBe(workspaceId);
+      } finally {
+        await context.close();
+      }
+    });
+
+    test("returns 404 for non-existent workspace", async ({ browser }) => {
+      const { page, context } = await getAuthenticatedPage(browser);
+
+      try {
+        const response = await page.evaluate(async () => {
+          const res = await fetch("/api/workspaces/non-existent-id");
+          return { status: res.status, body: await res.json() };
+        });
+
+        expect(response.status).toBe(404);
+        expect(response.body.error).toBe("Workspace not found");
+      } finally {
+        await context.close();
+      }
+    });
+
+    test("can update a workspace", async ({ browser }) => {
+      const { page, context } = await getAuthenticatedPage(browser);
+
+      try {
+        // Create a workspace first
+        const createResponse = await page.evaluate(async () => {
+          const res = await fetch("/api/workspaces", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: "Original Name" }),
+          });
+          return { status: res.status, body: await res.json() };
+        });
+
+        const workspaceId = createResponse.body.id;
+
+        // Update it
+        const updateResponse = await page.evaluate(
+          async ({ id, newName }) => {
+            const res = await fetch(`/api/workspaces/${id}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: newName }),
+            });
+            return { status: res.status, body: await res.json() };
           },
-          {
-            id: "section-2",
-            name: "Onboarding",
-            tasks: [
-              { id: "task-3", name: "Fill Form", type: "form", isLocked: false },
-            ],
-          },
-        ],
-      };
+          { id: workspaceId, newName: "Updated Name" }
+        );
 
-      await page.route("**/api/workspaces/ws-1", async (route) => {
-        if (route.request().method() === "GET") {
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify(workspaceWithNested),
-          });
-        }
-      });
-
-      await page.goto("/");
-      const response = await page.request.get("/api/workspaces/ws-1");
-
-      expect(response.status()).toBe(200);
-      const workspace = await response.json();
-      expect(workspace.id).toBe("ws-1");
-      expect(workspace.sections).toHaveLength(2);
-      expect(workspace.sections[0].tasks).toHaveLength(2);
-      expect(workspace.sections[0].tasks[0].isLocked).toBe(false);
-      expect(workspace.sections[0].tasks[1].isLocked).toBe(true);
+        expect(updateResponse.status).toBe(200);
+        expect(updateResponse.body.name).toBe("Updated Name");
+      } finally {
+        await context.close();
+      }
     });
 
-    test("returns 404 for non-existent workspace", async ({ page, context }) => {
-      await setupAuth(context);
+    test("can delete a workspace", async ({ browser }) => {
+      const { page, context } = await getAuthenticatedPage(browser);
 
-      await page.route("**/api/auth/session", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            user: { id: "user-1", email: "test@example.com" },
-          }),
+      try {
+        // Create a workspace first
+        const createResponse = await page.evaluate(async () => {
+          const res = await fetch("/api/workspaces", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: "Workspace to Delete" }),
+          });
+          return { status: res.status, body: await res.json() };
         });
-      });
 
-      await page.route("**/api/workspaces/non-existent", async (route) => {
-        if (route.request().method() === "GET") {
-          await route.fulfill({
-            status: 404,
-            contentType: "application/json",
-            body: JSON.stringify({ error: "Workspace not found" }),
-          });
-        }
-      });
+        const workspaceId = createResponse.body.id;
 
-      await page.goto("/");
-      const response = await page.request.get("/api/workspaces/non-existent");
+        // Delete it
+        const deleteResponse = await page.evaluate(async (id) => {
+          const res = await fetch(`/api/workspaces/${id}`, { method: "DELETE" });
+          return { status: res.status, body: await res.json() };
+        }, workspaceId);
 
-      expect(response.status()).toBe(404);
-      const body = await response.json();
-      expect(body.error).toBe("Workspace not found");
-    });
-  });
+        expect(deleteResponse.status).toBe(200);
+        expect(deleteResponse.body.success).toBe(true);
 
-  test.describe("Update Workspace (PUT /api/workspaces/[id])", () => {
-    test("updates workspace name", async ({ page, context }) => {
-      await setupAuth(context);
+        // Verify it's gone
+        const getResponse = await page.evaluate(async (id) => {
+          const res = await fetch(`/api/workspaces/${id}`);
+          return { status: res.status };
+        }, workspaceId);
 
-      await page.route("**/api/auth/session", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            user: { id: "user-1", email: "test@example.com" },
-          }),
-        });
-      });
-
-      await page.route("**/api/workspaces/ws-1", async (route) => {
-        if (route.request().method() === "PUT") {
-          const body = route.request().postDataJSON();
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({
-              id: "ws-1",
-              name: body.name,
-              description: "Original description",
-              updatedAt: new Date().toISOString(),
-            }),
-          });
-        }
-      });
-
-      await page.goto("/");
-      const response = await page.request.put("/api/workspaces/ws-1", {
-        data: { name: "Updated Workspace Name" },
-      });
-
-      expect(response.status()).toBe(200);
-      const workspace = await response.json();
-      expect(workspace.name).toBe("Updated Workspace Name");
-    });
-
-    test("updates workspace description", async ({ page, context }) => {
-      await setupAuth(context);
-
-      await page.route("**/api/auth/session", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            user: { id: "user-1", email: "test@example.com" },
-          }),
-        });
-      });
-
-      await page.route("**/api/workspaces/ws-1", async (route) => {
-        if (route.request().method() === "PUT") {
-          const body = route.request().postDataJSON();
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({
-              id: "ws-1",
-              name: "Original Name",
-              description: body.description,
-            }),
-          });
-        }
-      });
-
-      await page.goto("/");
-      const response = await page.request.put("/api/workspaces/ws-1", {
-        data: { description: "Updated description text" },
-      });
-
-      expect(response.status()).toBe(200);
-      const workspace = await response.json();
-      expect(workspace.description).toBe("Updated description text");
-    });
-
-    test("updates workspace due date", async ({ page, context }) => {
-      await setupAuth(context);
-
-      await page.route("**/api/auth/session", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            user: { id: "user-1", email: "test@example.com" },
-          }),
-        });
-      });
-
-      const newDueDate = "2025-06-30T23:59:59.000Z";
-
-      await page.route("**/api/workspaces/ws-1", async (route) => {
-        if (route.request().method() === "PUT") {
-          const body = route.request().postDataJSON();
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({
-              id: "ws-1",
-              name: "Original Name",
-              dueDate: body.dueDate,
-            }),
-          });
-        }
-      });
-
-      await page.goto("/");
-      const response = await page.request.put("/api/workspaces/ws-1", {
-        data: { dueDate: newDueDate },
-      });
-
-      expect(response.status()).toBe(200);
-      const workspace = await response.json();
-      expect(workspace.dueDate).toBe(newDueDate);
-    });
-
-    test("updates multiple fields at once", async ({ page, context }) => {
-      await setupAuth(context);
-
-      await page.route("**/api/auth/session", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            user: { id: "user-1", email: "test@example.com" },
-          }),
-        });
-      });
-
-      await page.route("**/api/workspaces/ws-1", async (route) => {
-        if (route.request().method() === "PUT") {
-          const body = route.request().postDataJSON();
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({
-              id: "ws-1",
-              name: body.name,
-              description: body.description,
-              dueDate: body.dueDate,
-            }),
-          });
-        }
-      });
-
-      await page.goto("/");
-      const response = await page.request.put("/api/workspaces/ws-1", {
-        data: {
-          name: "New Name",
-          description: "New Description",
-          dueDate: "2025-12-31T00:00:00.000Z",
-        },
-      });
-
-      expect(response.status()).toBe(200);
-      const workspace = await response.json();
-      expect(workspace.name).toBe("New Name");
-      expect(workspace.description).toBe("New Description");
-    });
-
-    test("returns 404 for non-existent workspace", async ({ page, context }) => {
-      await setupAuth(context);
-
-      await page.route("**/api/auth/session", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            user: { id: "user-1", email: "test@example.com" },
-          }),
-        });
-      });
-
-      await page.route("**/api/workspaces/non-existent", async (route) => {
-        if (route.request().method() === "PUT") {
-          await route.fulfill({
-            status: 404,
-            contentType: "application/json",
-            body: JSON.stringify({ error: "Workspace not found" }),
-          });
-        }
-      });
-
-      await page.goto("/");
-      const response = await page.request.put("/api/workspaces/non-existent", {
-        data: { name: "Updated Name" },
-      });
-
-      expect(response.status()).toBe(404);
-    });
-  });
-
-  test.describe("Delete Workspace (DELETE /api/workspaces/[id])", () => {
-    test("soft deletes workspace successfully", async ({ page, context }) => {
-      await setupAuth(context);
-
-      await page.route("**/api/auth/session", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            user: { id: "user-1", email: "test@example.com" },
-          }),
-        });
-      });
-
-      await page.route("**/api/workspaces/ws-1", async (route) => {
-        if (route.request().method() === "DELETE") {
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({ success: true }),
-          });
-        }
-      });
-
-      await page.goto("/");
-      const response = await page.request.delete("/api/workspaces/ws-1");
-
-      expect(response.status()).toBe(200);
-      const body = await response.json();
-      expect(body.success).toBe(true);
-    });
-
-    test("returns 404 for non-existent workspace", async ({ page, context }) => {
-      await setupAuth(context);
-
-      await page.route("**/api/auth/session", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            user: { id: "user-1", email: "test@example.com" },
-          }),
-        });
-      });
-
-      await page.route("**/api/workspaces/non-existent", async (route) => {
-        if (route.request().method() === "DELETE") {
-          await route.fulfill({
-            status: 404,
-            contentType: "application/json",
-            body: JSON.stringify({ error: "Workspace not found" }),
-          });
-        }
-      });
-
-      await page.goto("/");
-      const response = await page.request.delete("/api/workspaces/non-existent");
-
-      expect(response.status()).toBe(404);
-    });
-
-    test("deleted workspace no longer appears in list", async ({
-      page,
-      context,
-    }) => {
-      await setupAuth(context);
-
-      await page.route("**/api/auth/session", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            user: { id: "user-1", email: "test@example.com" },
-          }),
-        });
-      });
-
-      let workspaces = [
-        { id: "ws-1", name: "Workspace 1" },
-        { id: "ws-2", name: "Workspace 2" },
-      ];
-
-      await page.route("**/api/workspaces", async (route) => {
-        if (route.request().method() === "GET") {
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify(workspaces),
-          });
-        }
-      });
-
-      await page.route("**/api/workspaces/ws-1", async (route) => {
-        if (route.request().method() === "DELETE") {
-          workspaces = workspaces.filter((w) => w.id !== "ws-1");
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({ success: true }),
-          });
-        }
-      });
-
-      await page.goto("/");
-
-      // Get initial list
-      let response = await page.request.get("/api/workspaces");
-      let list = await response.json();
-      expect(list).toHaveLength(2);
-
-      // Delete workspace
-      await page.request.delete("/api/workspaces/ws-1");
-
-      // Get updated list
-      response = await page.request.get("/api/workspaces");
-      list = await response.json();
-      expect(list).toHaveLength(1);
-      expect(list[0].id).toBe("ws-2");
-    });
-  });
-
-  test.describe("Workspace CRUD Flow", () => {
-    test("complete workspace lifecycle: create, read, update, delete", async ({
-      page,
-      context,
-    }) => {
-      await setupAuth(context);
-
-      await page.route("**/api/auth/session", async (route) => {
-        await route.fulfill({
-          status: 200,
-          contentType: "application/json",
-          body: JSON.stringify({
-            user: { id: "user-1", email: "test@example.com" },
-          }),
-        });
-      });
-
-      let createdWorkspace: { id: string; name: string; description?: string } | null = null;
-
-      await page.route("**/api/workspaces", async (route) => {
-        if (route.request().method() === "POST") {
-          const body = route.request().postDataJSON();
-          createdWorkspace = {
-            id: "ws-lifecycle-test",
-            name: body.name,
-            description: body.description,
-          };
-          await route.fulfill({
-            status: 201,
-            contentType: "application/json",
-            body: JSON.stringify(createdWorkspace),
-          });
-        }
-      });
-
-      await page.route("**/api/workspaces/ws-lifecycle-test", async (route) => {
-        const method = route.request().method();
-
-        if (method === "GET") {
-          if (createdWorkspace) {
-            await route.fulfill({
-              status: 200,
-              contentType: "application/json",
-              body: JSON.stringify(createdWorkspace),
-            });
-          } else {
-            await route.fulfill({
-              status: 404,
-              contentType: "application/json",
-              body: JSON.stringify({ error: "Workspace not found" }),
-            });
-          }
-        } else if (method === "PUT") {
-          const body = route.request().postDataJSON();
-          if (createdWorkspace) {
-            createdWorkspace = { ...createdWorkspace, ...body };
-            await route.fulfill({
-              status: 200,
-              contentType: "application/json",
-              body: JSON.stringify(createdWorkspace),
-            });
-          }
-        } else if (method === "DELETE") {
-          createdWorkspace = null;
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({ success: true }),
-          });
-        }
-      });
-
-      await page.goto("/");
-
-      // 1. Create
-      let response = await page.request.post("/api/workspaces", {
-        data: { name: "Lifecycle Test", description: "Testing full lifecycle" },
-      });
-      expect(response.status()).toBe(201);
-      const created = await response.json();
-      expect(created.name).toBe("Lifecycle Test");
-
-      // 2. Read
-      response = await page.request.get("/api/workspaces/ws-lifecycle-test");
-      expect(response.status()).toBe(200);
-      const read = await response.json();
-      expect(read.name).toBe("Lifecycle Test");
-
-      // 3. Update
-      response = await page.request.put("/api/workspaces/ws-lifecycle-test", {
-        data: { name: "Updated Lifecycle Test" },
-      });
-      expect(response.status()).toBe(200);
-      const updated = await response.json();
-      expect(updated.name).toBe("Updated Lifecycle Test");
-
-      // 4. Verify update
-      response = await page.request.get("/api/workspaces/ws-lifecycle-test");
-      const verified = await response.json();
-      expect(verified.name).toBe("Updated Lifecycle Test");
-
-      // 5. Delete
-      response = await page.request.delete("/api/workspaces/ws-lifecycle-test");
-      expect(response.status()).toBe(200);
-
-      // 6. Verify deletion
-      response = await page.request.get("/api/workspaces/ws-lifecycle-test");
-      expect(response.status()).toBe(404);
+        expect(getResponse.status).toBe(404);
+      } finally {
+        await context.close();
+      }
     });
   });
 });

@@ -27,7 +27,21 @@ export default defineConfig({
     trace: "on-first-retry",
     /* Take screenshot on failure */
     screenshot: "only-on-failure",
+    /* Extended timeouts for Next.js dev mode compilation */
+    navigationTimeout: 60000,
+    actionTimeout: 30000,
   },
+  /* Snapshot configuration for visual regression tests */
+  expect: {
+    toHaveScreenshot: {
+      /* Threshold for pixel-by-pixel comparison */
+      maxDiffPixelRatio: 0.05,
+      /* Animation handling */
+      animations: "disabled",
+    },
+  },
+  /* Snapshot output directory */
+  snapshotDir: "./e2e/snapshots",
   /* Configure projects for major browsers */
   projects: [
     {
@@ -57,6 +71,6 @@ export default defineConfig({
     command: "pnpm dev",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
+    timeout: 180 * 1000,
   },
 });

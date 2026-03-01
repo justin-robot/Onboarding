@@ -4,6 +4,7 @@ test.describe("Authentication Flow", () => {
   test.describe("Sign In Page", () => {
     test.beforeEach(async ({ page }) => {
       await page.goto("/sign-in");
+      await page.waitForLoadState("domcontentloaded");
     });
 
     test("displays sign in form", async ({ page }) => {
@@ -100,6 +101,7 @@ test.describe("Authentication Flow", () => {
   test.describe("Sign Up Page", () => {
     test.beforeEach(async ({ page }) => {
       await page.goto("/sign-up");
+      await page.waitForLoadState("domcontentloaded");
     });
 
     test("displays sign up form", async ({ page }) => {
@@ -341,6 +343,7 @@ test.describe("Password Reset Flow", () => {
   test.describe("Forgot Password Page", () => {
     test.beforeEach(async ({ page }) => {
       await page.goto("/forgot-password");
+      await page.waitForLoadState("domcontentloaded");
     });
 
     test("displays forgot password form", async ({ page }) => {

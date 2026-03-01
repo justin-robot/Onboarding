@@ -39,6 +39,10 @@ interface DocumentResponse {
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
 function getApiBase(): string {
+  // Allow override via env var, otherwise use sandbox for dev and production for prod
+  if (process.env.SIGNNOW_API_BASE) {
+    return process.env.SIGNNOW_API_BASE;
+  }
   return process.env.NODE_ENV === "production"
     ? API_BASE.production
     : API_BASE.sandbox;
@@ -85,7 +89,8 @@ async function getAccessToken(): Promise<string> {
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`SignNow auth failed: ${error}`);
+    console.error("[SignNow] Auth failed:", response.status, error);
+    throw new Error(`SignNow auth failed (${response.status}): ${error}`);
   }
 
   const data = (await response.json()) as TokenResponse;
@@ -134,6 +139,7 @@ export const signNowService = {
       .executeTakeFirst();
 
     if (!file) {
+      console.error("[SignNow] File not found in database:", fileId);
       throw new Error(`File not found: ${fileId}`);
     }
 
@@ -144,7 +150,8 @@ export const signNowService = {
     // Download file content
     const fileResponse = await fetch(downloadUrl);
     if (!fileResponse.ok || !fileResponse.body) {
-      throw new Error(`Failed to download file: ${fileResponse.status}`);
+      console.error("[SignNow] Failed to download file from storage:", fileResponse.status);
+      throw new Error(`Failed to download file from storage: ${fileResponse.status}`);
     }
 
     const fileBuffer = await fileResponse.arrayBuffer();
@@ -168,15 +175,51 @@ export const signNowService = {
 
     if (!uploadResponse.ok) {
       const error = await uploadResponse.text();
-      throw new Error(`SignNow upload failed: ${error}`);
+      console.error("[SignNow] Upload failed:", uploadResponse.status, error);
+      throw new Error(`SignNow upload failed (${uploadResponse.status}): ${error}`);
     }
 
     const uploadData = (await uploadResponse.json()) as DocumentUploadResponse;
     const documentId = uploadData.id;
 
-    // Send freeform invite to signer
+    // Add a signature field to the document
+    // This is required before creating a signing link
+    const fieldsResponse = await fetch(
+      `${getApiBase()}/document/${documentId}`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fields: [
+            {
+              type: "signature",
+              x: 50,
+              y: 700,
+              width: 200,
+              height: 50,
+              page_number: 0,
+              role: "Signer",
+              required: true,
+              label: "Signature",
+            },
+          ],
+        }),
+      }
+    );
+
+    if (!fieldsResponse.ok) {
+      const error = await fieldsResponse.text();
+      console.error("[SignNow] Add fields failed:", fieldsResponse.status, error);
+      throw new Error(`SignNow add fields failed (${fieldsResponse.status}): ${error}`);
+    }
+
+    // Send field invite to signer (required for documents with fields)
+    // The sender email MUST match the SignNow account email (document owner)
     const senderEmail =
-      process.env.SIGNNOW_SENDER_EMAIL || "noreply@example.com";
+      process.env.SIGNNOW_SENDER_EMAIL || process.env.SIGNNOW_USERNAME || "noreply@example.com";
 
     const inviteResponse = await fetch(
       `${getApiBase()}/document/${documentId}/invite`,
@@ -188,14 +231,27 @@ export const signNowService = {
         },
         body: JSON.stringify({
           from: senderEmail,
-          to: signerEmail,
+          to: [
+            {
+              email: signerEmail,
+              role: "Signer",
+              order: 1,
+              reassign: "0",
+              decline_by_signature: "0",
+              reminder: 0,
+              expiration_days: 30,
+              subject: "Please sign this document",
+              message: "You have been invited to sign a document.",
+            },
+          ],
         }),
       }
     );
 
     if (!inviteResponse.ok) {
       const error = await inviteResponse.text();
-      throw new Error(`SignNow invite failed: ${error}`);
+      console.error("[SignNow] Invite failed:", inviteResponse.status, error);
+      throw new Error(`SignNow invite failed (${inviteResponse.status}): ${error}`);
     }
 
     // Create signing link
@@ -212,7 +268,8 @@ export const signNowService = {
 
     if (!linkResponse.ok) {
       const error = await linkResponse.text();
-      throw new Error(`SignNow link creation failed: ${error}`);
+      console.error("[SignNow] Link creation failed:", linkResponse.status, error);
+      throw new Error(`SignNow link creation failed (${linkResponse.status}): ${error}`);
     }
 
     const linkData = (await linkResponse.json()) as SigningLinkResponse;
@@ -350,13 +407,30 @@ export const signNowService = {
       throw new Error(`SignNow get document failed: ${error}`);
     }
 
-    const doc = (await response.json()) as DocumentResponse;
+    const doc = await response.json();
 
-    // SignNow statuses include: pending, fulfilled, etc.
-    const isComplete = doc.status === "fulfilled" || doc.status === "completed";
+    // Log full response to debug
+    console.log("[SignNow] Document response:", JSON.stringify(doc, null, 2));
+
+    // SignNow returns document_status or status field
+    // Also check field_invites for signing status
+    const status = doc.document_status || doc.status || "unknown";
+
+    // Check if all field invites are fulfilled/signed
+    const fieldInvites = doc.field_invites || [];
+    const allSigned = fieldInvites.length > 0 &&
+      fieldInvites.every((invite: { status: string }) =>
+        invite.status === "fulfilled" || invite.status === "signed"
+      );
+
+    // Document is complete if status is fulfilled/completed OR all invites are signed
+    const isComplete =
+      status === "fulfilled" ||
+      status === "completed" ||
+      allSigned;
 
     return {
-      status: doc.status,
+      status,
       isComplete,
     };
   },

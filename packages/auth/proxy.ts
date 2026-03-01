@@ -29,8 +29,8 @@ export function authMiddleware(
       pathname.startsWith(route)
     );
 
-    // Always allow API auth routes
-    if (pathname.startsWith("/api/auth")) {
+    // Always allow API routes - they handle their own authentication and return 401
+    if (pathname.startsWith("/api/")) {
       return NextResponse.next();
     }
 
