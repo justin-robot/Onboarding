@@ -1,5 +1,6 @@
 import { taskService, configService, sectionService, completionService } from "@/lib/services";
 import { ablyService, WORKSPACE_EVENTS } from "@/lib/services/ably";
+import { auditLogService } from "@/lib/services/auditLog";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
@@ -79,6 +80,12 @@ export async function POST(request: NextRequest, { params }: Params) {
       // no additional data is needed - just mark complete
     }
 
+    // Get section for workspaceId (needed for audit log and broadcast)
+    const section = await sectionService.getById(existingTask.sectionId);
+    if (!section) {
+      return errorResponse("Section not found", 404);
+    }
+
     // Complete the task for this user (handles assignee status and completion rules)
     const completionResult = await completionService.completeTaskForUser(id, user.id);
 
@@ -97,23 +104,33 @@ export async function POST(request: NextRequest, { params }: Params) {
       return errorResponse("Task not found after completion", 500);
     }
 
+    // Log audit event
+    await auditLogService.logEvent({
+      workspaceId: section.workspaceId,
+      eventType: "task.completed",
+      actorId: user.id,
+      taskId: id,
+      source: "web",
+      metadata: {
+        taskTitle: task.title,
+        taskType: task.type,
+      },
+    });
+
     // Broadcast task completion via Ably (non-blocking)
     (async () => {
       try {
-        const section = await sectionService.getById(existingTask.sectionId);
-        if (section) {
-          await ablyService.broadcastToWorkspace(
-            section.workspaceId,
-            WORKSPACE_EVENTS.TASK_COMPLETED,
-            {
-              id: task.id,
-              title: task.title,
-              type: task.type,
-              status: task.status,
-              sectionId: task.sectionId,
-            }
-          );
-        }
+        await ablyService.broadcastToWorkspace(
+          section.workspaceId,
+          WORKSPACE_EVENTS.TASK_COMPLETED,
+          {
+            id: task.id,
+            title: task.title,
+            type: task.type,
+            status: task.status,
+            sectionId: task.sectionId,
+          }
+        );
       } catch (err) {
         console.error("Failed to broadcast task completion:", err);
       }

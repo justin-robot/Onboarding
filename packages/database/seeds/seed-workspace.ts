@@ -1,18 +1,16 @@
 /**
  * Seed script to create test workspace data for UI testing
  *
- * Usage: npx tsx scripts/seed-workspace.ts <user-email>
+ * Usage: pnpm --filter @repo/database seed:workspace <user-email>
  *
  * This will create:
  * - 1 workspace with sections and tasks of all types
  * - Add the specified user as an admin member
  */
 
-import { createDb } from "@repo/database";
-import { randomUUID } from "crypto";
-
-// Load env vars
 import "dotenv/config";
+import { createDb } from "../index";
+import { randomUUID } from "crypto";
 
 const db = createDb(process.env.DATABASE_URL_DEV);
 
@@ -233,13 +231,13 @@ async function seed(userEmail: string) {
           })
           .execute();
 
-        // Create form field responses with sample data
+        // Create form field responses with sample data (values must be JSON since column is jsonb)
         const formResponses = [
-          { elementId: formElements[0].id, value: "Acme Corporation" },
-          { elementId: formElements[1].id, value: "contact@acmecorp.com" },
-          { elementId: formElements[2].id, value: "+1 (555) 123-4567" },
-          { elementId: formElements[3].id, value: "51-200" },
-          { elementId: formElements[4].id, value: "Acme Corporation is a leading provider of innovative solutions for businesses of all sizes. We specialize in digital transformation and enterprise software." },
+          { elementId: formElements[0].id, value: JSON.stringify("Acme Corporation") },
+          { elementId: formElements[1].id, value: JSON.stringify("contact@acmecorp.com") },
+          { elementId: formElements[2].id, value: JSON.stringify("+1 (555) 123-4567") },
+          { elementId: formElements[3].id, value: JSON.stringify("51-200") },
+          { elementId: formElements[4].id, value: JSON.stringify("Acme Corporation is a leading provider of innovative solutions for businesses of all sizes. We specialize in digital transformation and enterprise software.") },
           { elementId: formElements[5].id, value: JSON.stringify(["consulting", "implementation", "support"]) },
         ];
 
@@ -375,17 +373,36 @@ async function seed(userEmail: string) {
 
   console.log(`✓ Created task dependencies`);
 
-  // Create some chat messages (some edited to demonstrate "(edited)" indicator)
-  // Include task completion system messages with varied timestamps
+  // Create chat messages with system messages matching auto-generated format
+  // System messages now use the same format as generateSystemMessage() in auditLog.ts
   const messages = [
-    { content: "Welcome to your onboarding workspace!", type: "system", edited: false, hoursAgo: 48 },
-    { content: "Hi! I'm your account manager. Let me know if you have any questions.", type: "text", edited: true, hoursAgo: 47 },
-    { content: "Thanks! Looking forward to getting started.", type: "text", edited: false, hoursAgo: 46 },
-    { content: `✓ Task completed: Welcome Acknowledgement`, type: "system", edited: false, hoursAgo: 24, taskId: taskIds[0] },
-    { content: "Great job completing the first task!", type: "text", edited: false, hoursAgo: 23 },
-    { content: `✓ Task completed: Complete Company Information Form`, type: "system", edited: false, hoursAgo: 12, taskId: taskIds[2] },
-    { content: "I've updated the first task - please take a look when you get a chance.", type: "text", edited: true, hoursAgo: 2 },
-    { content: "Form submission received. Moving on to document upload.", type: "system", edited: false, hoursAgo: 1 },
+    // Day 1: Workspace created, welcome messages
+    { content: `${user.name} added ${user.name} to the workspace`, type: "system", edited: false, hoursAgo: 72 },
+    { content: "Welcome to your onboarding workspace! I'll be your account manager.", type: "text", edited: false, hoursAgo: 71 },
+    { content: "Thanks! Excited to get started with the onboarding process.", type: "text", edited: false, hoursAgo: 70 },
+
+    // Day 2: First task completed
+    { content: `${user.name} acknowledged "Welcome Acknowledgement"`, type: "system", edited: false, hoursAgo: 48, taskId: taskIds[0] },
+    { content: "Great job completing the acknowledgement! You're off to a good start.", type: "text", edited: false, hoursAgo: 47 },
+    { content: "The policies were clear. Moving on to the next steps.", type: "text", edited: true, hoursAgo: 46 },
+
+    // Day 2: Form submitted
+    { content: `${user.name} submitted a form "Complete Company Information Form"`, type: "system", edited: false, hoursAgo: 36, taskId: taskIds[2] },
+    { content: "I've reviewed your company information. Everything looks good!", type: "text", edited: false, hoursAgo: 35 },
+
+    // Day 3: Files uploaded
+    { content: `${user.name} uploaded business_license_2024.pdf "Upload Business License"`, type: "system", edited: false, hoursAgo: 24, taskId: taskIds[3] },
+    { content: `${user.name} uploaded company_registration.pdf "Upload Business License"`, type: "system", edited: false, hoursAgo: 24, taskId: taskIds[3] },
+    { content: `${user.name} completed "Upload Business License"`, type: "system", edited: false, hoursAgo: 23, taskId: taskIds[3] },
+    { content: "Documents received! Our team will review them shortly.", type: "text", edited: false, hoursAgo: 22 },
+
+    // Recent activity
+    { content: "Quick question - when should I expect the e-sign document?", type: "text", edited: false, hoursAgo: 4 },
+    { content: "The service agreement will be ready for signature tomorrow. I'll notify you when it's available.", type: "text", edited: true, hoursAgo: 3 },
+    { content: "Perfect, thank you!", type: "text", edited: false, hoursAgo: 2 },
+
+    // Comment notification
+    { content: `${user.name} commented "Welcome Acknowledgement"`, type: "system", edited: false, hoursAgo: 1, taskId: taskIds[0] },
   ];
 
   for (const msg of messages) {
@@ -399,7 +416,7 @@ async function seed(userEmail: string) {
       .values({
         id: randomUUID(),
         workspaceId,
-        senderId: user.id,
+        userId: user.id,
         content: msg.content,
         type: msg.type as "text" | "system",
         referencedTaskId: (msg as { taskId?: string }).taskId || null,
@@ -439,13 +456,19 @@ async function seed(userEmail: string) {
 
   console.log(`✓ Created ${comments.length} task comments (${comments.filter(c => c.edited).length} edited)`);
 
-  // Create audit log entries
+  // Create audit log entries matching the system messages in chat
   const auditEvents = [
-    { eventType: "workspace.created", metadata: { workspaceName: "Acme Corp Onboarding" } },
-    { eventType: "task.completed", metadata: { taskTitle: "Welcome Acknowledgement" } },
+    { eventType: "workspace.member_added", hoursAgo: 72, metadata: { memberName: user.name }, taskId: null },
+    { eventType: "acknowledgement.completed", hoursAgo: 48, metadata: { taskTitle: "Welcome Acknowledgement" }, taskId: taskIds[0] },
+    { eventType: "form.submitted", hoursAgo: 36, metadata: { taskTitle: "Complete Company Information Form" }, taskId: taskIds[2] },
+    { eventType: "file.uploaded", hoursAgo: 24, metadata: { taskTitle: "Upload Business License", fileName: "business_license_2024.pdf" }, taskId: taskIds[3] },
+    { eventType: "file.uploaded", hoursAgo: 24, metadata: { taskTitle: "Upload Business License", fileName: "company_registration.pdf" }, taskId: taskIds[3] },
+    { eventType: "task.completed", hoursAgo: 23, metadata: { taskTitle: "Upload Business License" }, taskId: taskIds[3] },
+    { eventType: "comment.created", hoursAgo: 1, metadata: { taskTitle: "Welcome Acknowledgement" }, taskId: taskIds[0] },
   ];
 
   for (const event of auditEvents) {
+    const createdAt = new Date(Date.now() - event.hoursAgo * 60 * 60 * 1000);
     await db
       .insertInto("moxo_audit_log_entry")
       .values({
@@ -453,13 +476,15 @@ async function seed(userEmail: string) {
         workspaceId,
         eventType: event.eventType,
         actorId: user.id,
+        taskId: event.taskId,
         metadata: event.metadata,
-        source: "system",
+        source: "web",
+        createdAt,
       })
       .execute();
   }
 
-  console.log(`✓ Created audit log entries`);
+  console.log(`✓ Created ${auditEvents.length} audit log entries`);
 
   console.log(`\n✅ Seed complete!`);
   console.log(`\n📍 Navigate to: http://localhost:3000/workspace/${workspaceId}`);

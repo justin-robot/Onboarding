@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 import { ChatPanel, type Message } from "./chat-panel";
+import { MeetingsPanel } from "./meetings-panel";
 
 interface RealtimeChatProps {
   workspaceId: string;
@@ -188,10 +189,10 @@ export function ChatPanelWithPolling({
   return (
     <ChatPanel
       messages={messages}
-      meetings={[]}
       currentUserId={currentUserId}
       workspaceId={workspaceId}
       onSendMessage={handleSendMessage}
+      meetingsContent={<MeetingsPanel workspaceId={workspaceId} hideHeader />}
     />
   );
 }

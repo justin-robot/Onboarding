@@ -1,5 +1,6 @@
 import { database } from "@repo/database";
 import type { MoxoAuditLogEntry } from "@repo/database";
+import { chatService } from "./chat";
 
 // Event type taxonomy
 export type AuditEventType =
@@ -89,6 +90,69 @@ export interface AuditContext {
   ipAddress?: string;
 }
 
+// Events that should generate system messages in chat
+const CHAT_SYSTEM_MESSAGE_EVENTS: Set<AuditEventType> = new Set([
+  "task.completed",
+  "task.reopened",
+  "form.submitted",
+  "file.uploaded",
+  "approval.approved",
+  "approval.rejected",
+  "acknowledgement.completed",
+  "booking.scheduled",
+  "esign.signed",
+  "esign.completed",
+  "workspace.member_added",
+  "workspace.member_removed",
+  "comment.created",
+]);
+
+/**
+ * Generate a human-readable message for system chat messages
+ */
+function generateSystemMessage(
+  eventType: AuditEventType,
+  actorName: string,
+  metadata?: Record<string, unknown>
+): string | null {
+  const taskTitle = metadata?.taskTitle as string | undefined;
+  const taskSuffix = taskTitle ? ` "${taskTitle}"` : "";
+
+  switch (eventType) {
+    case "task.completed":
+      return `${actorName} completed${taskSuffix}`;
+    case "task.reopened":
+      return `${actorName} reopened${taskSuffix}`;
+    case "form.submitted":
+      return `${actorName} submitted a form${taskSuffix}`;
+    case "file.uploaded":
+      const fileName = metadata?.fileName as string | undefined;
+      return `${actorName} uploaded ${fileName || "a file"}${taskSuffix}`;
+    case "approval.approved":
+      return `${actorName} approved${taskSuffix}`;
+    case "approval.rejected":
+      return `${actorName} rejected${taskSuffix}`;
+    case "acknowledgement.completed":
+      return `${actorName} acknowledged${taskSuffix}`;
+    case "booking.scheduled":
+      return `${actorName} scheduled a meeting${taskSuffix}`;
+    case "esign.signed":
+      return `${actorName} signed a document${taskSuffix}`;
+    case "esign.completed":
+      return `Document signing completed${taskSuffix}`;
+    case "workspace.member_added":
+      const addedMember = metadata?.memberName as string | undefined;
+      return `${actorName} added ${addedMember || "a member"} to the workspace`;
+    case "workspace.member_removed":
+      const removedMember = metadata?.memberName as string | undefined;
+      return `${actorName} removed ${removedMember || "a member"} from the workspace`;
+    case "comment.created":
+      return `${actorName} commented${taskSuffix}`;
+    default:
+      return null;
+  }
+}
+
 // Helper to parse JSON metadata from database
 function parseMetadata(entry: MoxoAuditLogEntry): MoxoAuditLogEntry {
   return {
@@ -104,6 +168,7 @@ function parseMetadata(entry: MoxoAuditLogEntry): MoxoAuditLogEntry {
 export const auditLogService = {
   /**
    * Log an audit event
+   * Also creates a system message in chat for relevant events
    */
   async logEvent(input: LogEventInput): Promise<MoxoAuditLogEntry> {
     const { workspaceId, eventType, actorId, taskId, source, metadata, ipAddress } = input;
@@ -121,6 +186,35 @@ export const auditLogService = {
       } as never)
       .returningAll()
       .executeTakeFirstOrThrow();
+
+    // Create system message in chat for relevant events
+    if (CHAT_SYSTEM_MESSAGE_EVENTS.has(eventType as AuditEventType)) {
+      try {
+        // Get actor name
+        const actor = await database
+          .selectFrom("user")
+          .select("name")
+          .where("id", "=", actorId)
+          .executeTakeFirst();
+
+        const actorName = actor?.name || "Someone";
+        const messageContent = generateSystemMessage(
+          eventType as AuditEventType,
+          actorName,
+          metadata
+        );
+
+        if (messageContent) {
+          // Fire and forget - don't block the audit log
+          chatService.sendSystemMessage(workspaceId, messageContent, taskId).catch((err) => {
+            console.error("Failed to create system message:", err);
+          });
+        }
+      } catch (err) {
+        console.error("Failed to create system message for audit event:", err);
+        // Don't fail the audit log if system message fails
+      }
+    }
 
     return parseMetadata(result);
   },

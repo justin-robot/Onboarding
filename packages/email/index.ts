@@ -32,12 +32,17 @@ export const sendVerificationEmail = async ({
     })
   );
 
-  await resend.emails.send({
+  const result = await resend.emails.send({
     from: process.env.RESEND_FROM || "noreply@example.com",
     to,
     subject: "Verify your email address",
     html: emailHtml,
   });
+
+  console.log("[Email] Verification email response:", JSON.stringify(result, null, 2));
+  if (result.error) {
+    throw new Error(`Failed to send verification email: ${result.error.message}`);
+  }
 };
 
 export const sendPasswordResetEmail = async ({
@@ -56,12 +61,17 @@ export const sendPasswordResetEmail = async ({
     })
   );
 
-  await resend.emails.send({
+  const result = await resend.emails.send({
     from: process.env.RESEND_FROM || "noreply@example.com",
     to,
     subject: "Reset your password",
     html: emailHtml,
   });
+
+  console.log("[Email] Password reset email response:", JSON.stringify(result, null, 2));
+  if (result.error) {
+    throw new Error(`Failed to send password reset email: ${result.error.message}`);
+  }
 };
 
 export const sendInvitationEmail = async ({

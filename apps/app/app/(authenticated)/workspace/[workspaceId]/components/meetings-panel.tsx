@@ -53,6 +53,8 @@ interface Meeting {
 interface MeetingsPanelProps {
   workspaceId: string;
   onClose?: () => void;
+  /** Hide the header when embedded in another component (e.g., ChatPanel tabs) */
+  hideHeader?: boolean;
 }
 
 // Group meetings by date category
@@ -325,7 +327,7 @@ function CreateMeetingDialog({
   );
 }
 
-export function MeetingsPanel({ workspaceId, onClose }: MeetingsPanelProps) {
+export function MeetingsPanel({ workspaceId, onClose, hideHeader = false }: MeetingsPanelProps) {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
@@ -387,9 +389,11 @@ export function MeetingsPanel({ workspaceId, onClose }: MeetingsPanelProps) {
   if (isLoading) {
     return (
       <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b px-4 py-3">
-          <h2 className="text-lg font-semibold">Meetings</h2>
-        </div>
+        {!hideHeader && (
+          <div className="flex items-center justify-between border-b px-4 py-3">
+            <h2 className="text-lg font-semibold">Meetings</h2>
+          </div>
+        )}
         <div className="flex-1 p-4 space-y-4">
           <Skeleton className="h-32 w-full" />
           <Skeleton className="h-32 w-full" />
@@ -403,9 +407,11 @@ export function MeetingsPanel({ workspaceId, onClose }: MeetingsPanelProps) {
   if (isConnected === false) {
     return (
       <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b px-4 py-3">
-          <h2 className="text-lg font-semibold">Meetings</h2>
-        </div>
+        {!hideHeader && (
+          <div className="flex items-center justify-between border-b px-4 py-3">
+            <h2 className="text-lg font-semibold">Meetings</h2>
+          </div>
+        )}
         <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
           <Calendar className="mb-4 h-12 w-12 text-muted-foreground" />
           <h3 className="mb-2 text-lg font-medium">Connect Google Calendar</h3>
@@ -426,12 +432,14 @@ export function MeetingsPanel({ workspaceId, onClose }: MeetingsPanelProps) {
   if (error) {
     return (
       <div className="flex h-full flex-col">
-        <div className="flex items-center justify-between border-b px-4 py-3">
-          <h2 className="text-lg font-semibold">Meetings</h2>
-          <Button size="sm" variant="ghost" onClick={fetchMeetings}>
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-        </div>
+        {!hideHeader && (
+          <div className="flex items-center justify-between border-b px-4 py-3">
+            <h2 className="text-lg font-semibold">Meetings</h2>
+            <Button size="sm" variant="ghost" onClick={fetchMeetings}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
         <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
           <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
           <h3 className="mb-2 text-lg font-medium">Failed to load meetings</h3>
@@ -446,18 +454,20 @@ export function MeetingsPanel({ workspaceId, onClose }: MeetingsPanelProps) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <h2 className="text-lg font-semibold">Meetings</h2>
-        <div className="flex items-center gap-2">
-          <Button size="sm" variant="ghost" onClick={fetchMeetings}>
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-          <CreateMeetingDialog
-            workspaceId={workspaceId}
-            onMeetingCreated={fetchMeetings}
-          />
+      {!hideHeader && (
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <h2 className="text-lg font-semibold">Meetings</h2>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={fetchMeetings}>
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+            <CreateMeetingDialog
+              workspaceId={workspaceId}
+              onMeetingCreated={fetchMeetings}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       <ScrollArea className="flex-1">
         <div className="p-4">
@@ -475,6 +485,18 @@ export function MeetingsPanel({ workspaceId, onClose }: MeetingsPanelProps) {
             </div>
           ) : (
             <div className="space-y-6">
+              {/* Action buttons when header is hidden */}
+              {hideHeader && (
+                <div className="flex items-center justify-end gap-2">
+                  <Button size="sm" variant="ghost" onClick={fetchMeetings}>
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                  <CreateMeetingDialog
+                    workspaceId={workspaceId}
+                    onMeetingCreated={fetchMeetings}
+                  />
+                </div>
+              )}
               {Array.from(groupedMeetings.entries()).map(([dateLabel, dateMeetings]) => (
                 <div key={dateLabel}>
                   <h3 className="mb-3 text-sm font-medium text-muted-foreground">

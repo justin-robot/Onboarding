@@ -284,13 +284,15 @@ export function TaskCard({
         {/* Review button for Your Turn tasks OR Assignee avatars */}
         <div className="flex items-center gap-2 shrink-0">
           {isYourTurn && !isCompleted && onReviewClick && (
-            <Button
-              size="sm"
-              className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-3"
+            <span
+              role="button"
+              tabIndex={0}
+              className="inline-flex items-center justify-center rounded-md bg-blue-500 hover:bg-blue-600 text-white text-xs px-3 h-8 font-medium cursor-pointer"
               onClick={handleReviewClick}
+              onKeyDown={(e) => e.key === "Enter" && handleReviewClick(e as unknown as React.MouseEvent)}
             >
               Review
-            </Button>
+            </span>
           )}
           {assignees && assignees.length > 0 && (
             <div className="flex -space-x-1">

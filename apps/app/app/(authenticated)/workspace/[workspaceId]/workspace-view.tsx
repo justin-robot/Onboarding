@@ -16,7 +16,6 @@ import { TaskDetailsPanel } from "./components/task-details-panel";
 import { FilesView, type FileItem } from "./components/files-view";
 import { MembersPanel } from "./components/members-panel";
 import { MeetingsPanel } from "./components/meetings-panel";
-import { WorkspaceActivity } from "./components/workspace-activity";
 import { RealtimeChat } from "./components/realtime-chat";
 import { RealtimeWorkspaceEvents } from "./components/realtime-workspace-events";
 import type { Message } from "./components/chat-panel";
@@ -30,13 +29,10 @@ import {
 } from "@repo/design/components/ui/sheet";
 import { Button } from "@repo/design/components/ui/button";
 import {
-  Activity,
   Calendar,
   FolderPlus,
   Plus,
-  Settings,
   Users,
-  Bookmark,
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -110,7 +106,6 @@ export function WorkspaceView({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
   const [showMembersPanel, setShowMembersPanel] = useState(false);
-  const [showActivityPanel, setShowActivityPanel] = useState(false);
   const [showMeetingsPanel, setShowMeetingsPanel] = useState(false);
   const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
   const [addSectionDialogOpen, setAddSectionDialogOpen] = useState(false);
@@ -198,7 +193,6 @@ export function WorkspaceView({
   const handleTaskSelect = (taskId: string) => {
     setSelectedTaskId(taskId);
     setShowMembersPanel(false);
-    setShowActivityPanel(false);
     setShowMeetingsPanel(false);
     setRightPanelOpen(true);
   };
@@ -207,16 +201,6 @@ export function WorkspaceView({
   const handleMembersClick = () => {
     setSelectedTaskId(null);
     setShowMembersPanel(true);
-    setShowActivityPanel(false);
-    setShowMeetingsPanel(false);
-    setRightPanelOpen(true);
-  };
-
-  // Handle activity panel
-  const handleActivityClick = () => {
-    setSelectedTaskId(null);
-    setShowMembersPanel(false);
-    setShowActivityPanel(true);
     setShowMeetingsPanel(false);
     setRightPanelOpen(true);
   };
@@ -225,7 +209,6 @@ export function WorkspaceView({
   const handleMeetingsClick = () => {
     setSelectedTaskId(null);
     setShowMembersPanel(false);
-    setShowActivityPanel(false);
     setShowMeetingsPanel(true);
     setRightPanelOpen(true);
   };
@@ -375,11 +358,6 @@ export function WorkspaceView({
             workspaceId={currentWorkspaceId}
             onClose={() => setShowMeetingsPanel(false)}
           />
-        ) : showActivityPanel ? (
-          <WorkspaceActivity
-            workspaceId={currentWorkspaceId}
-            currentUserId={currentUserId}
-          />
         ) : selectedTask ? (
           <TaskDetailsPanel
             task={selectedTask}
@@ -412,7 +390,7 @@ export function WorkspaceView({
       onTabChange={setActiveTab}
       showRightPanel={true}
       sidebarTitle="Workspaces"
-      rightPanelTitle={showMembersPanel ? "Members" : showMeetingsPanel ? "Meetings" : showActivityPanel ? "Activity" : selectedTask ? selectedTask.title : "Chat"}
+      rightPanelTitle={showMembersPanel ? "Members" : showMeetingsPanel ? "Meetings" : selectedTask ? selectedTask.title : "Chat"}
       sidebarOpen={sidebarOpen}
       onSidebarOpenChange={setSidebarOpen}
       rightPanelOpen={rightPanelOpen}
@@ -539,34 +517,15 @@ export function WorkspaceView({
             className="w-full justify-start"
             onClick={() => {
               setShowWorkspaceMenu(false);
-              handleActivityClick();
-            }}
-          >
-            <Activity className="mr-2 h-4 w-4" />
-            Activity
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => {
-              setShowWorkspaceMenu(false);
               handleMeetingsClick();
             }}
           >
             <Calendar className="mr-2 h-4 w-4" />
             Meetings
           </Button>
-          <Button variant="ghost" className="w-full justify-start">
-            <Bookmark className="mr-2 h-4 w-4" />
-            Bookmarks
-          </Button>
           {currentUserRole === "admin" && (
             <>
               <div className="my-4 border-t" />
-              <Button variant="ghost" className="w-full justify-start">
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </Button>
               <Button variant="ghost" className="w-full justify-start">
                 <Zap className="mr-2 h-4 w-4" />
                 Automations & Events

@@ -13,8 +13,6 @@ import {
   MoreHorizontal,
   Plus,
   FolderPlus,
-  Settings,
-  Bookmark,
   Users,
   Zap,
 } from "lucide-react";
@@ -23,7 +21,6 @@ interface WorkspaceMenuProps {
   isAdmin: boolean;
   onAddSection: () => void;
   onAddTask: () => void;
-  onSettings: () => void;
   onMembers: () => void;
 }
 
@@ -31,7 +28,6 @@ export function WorkspaceMenu({
   isAdmin,
   onAddSection,
   onAddTask,
-  onSettings,
   onMembers,
 }: WorkspaceMenuProps) {
   const [open, setOpen] = useState(false);
@@ -61,17 +57,9 @@ export function WorkspaceMenu({
           <Users className="mr-2 h-4 w-4" />
           Members
         </DropdownMenuItem>
-        <DropdownMenuItem>
-          <Bookmark className="mr-2 h-4 w-4" />
-          Bookmarks
-        </DropdownMenuItem>
         {isAdmin && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => { onSettings(); setOpen(false); }}>
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </DropdownMenuItem>
             <DropdownMenuItem>
               <Zap className="mr-2 h-4 w-4" />
               Automations & Events

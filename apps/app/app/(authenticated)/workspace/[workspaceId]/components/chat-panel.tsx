@@ -85,24 +85,27 @@ interface Meeting {
 
 interface ChatPanelProps {
   messages: Message[];
-  meetings: Meeting[];
+  meetings?: Meeting[];
   currentUserId: string;
   workspaceId: string;
   onSendMessage?: (content: string, attachment?: File, replyToMessageId?: string) => Promise<void>;
   onJoinMeeting?: (meetingId: string) => void;
   onEditMessage?: (messageId: string, content: string) => Promise<void>;
   onDeleteMessage?: (messageId: string) => Promise<void>;
+  /** Optional custom content for the Meetings tab (e.g., MeetingsPanel component) */
+  meetingsContent?: React.ReactNode;
 }
 
 export function ChatPanel({
   messages,
-  meetings,
+  meetings = [],
   currentUserId,
   workspaceId,
   onSendMessage,
   onJoinMeeting,
   onEditMessage,
   onDeleteMessage,
+  meetingsContent,
 }: ChatPanelProps) {
   const [activeTab, setActiveTab] = useState<"chat" | "meetings">("chat");
   const [newMessage, setNewMessage] = useState("");
@@ -392,28 +395,32 @@ export function ChatPanel({
         </TabsContent>
 
         {/* Meetings Tab */}
-        <TabsContent value="meetings" className="flex-1 mt-0 overflow-x-auto overflow-y-auto">
-          <div className="p-4">
-            {meetings.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Video className="h-10 w-10 text-muted-foreground/50 mb-3" />
-                <p className="text-sm font-medium">No meetings scheduled</p>
-                <p className="text-xs text-muted-foreground">
-                  Meetings will appear here when scheduled
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {meetings.map((meeting) => (
-                  <MeetingCard
-                    key={meeting.id}
-                    meeting={meeting}
-                    onJoin={() => onJoinMeeting?.(meeting.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+        <TabsContent value="meetings" className="flex-1 mt-0 overflow-hidden">
+          {meetingsContent ? (
+            <div className="h-full">{meetingsContent}</div>
+          ) : (
+            <div className="p-4 overflow-x-auto overflow-y-auto">
+              {meetings.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Video className="h-10 w-10 text-muted-foreground/50 mb-3" />
+                  <p className="text-sm font-medium">No meetings scheduled</p>
+                  <p className="text-xs text-muted-foreground">
+                    Meetings will appear here when scheduled
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {meetings.map((meeting) => (
+                    <MeetingCard
+                      key={meeting.id}
+                      meeting={meeting}
+                      onJoin={() => onJoinMeeting?.(meeting.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

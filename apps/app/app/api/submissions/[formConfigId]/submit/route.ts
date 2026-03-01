@@ -3,7 +3,10 @@ import {
   submissionService,
   completionService,
   validateSubmission,
+  taskService,
+  sectionService,
 } from "@/lib/services";
+import { auditLogService } from "@/lib/services/auditLog";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 import type { FormElement } from "@repo/database";
@@ -61,8 +64,27 @@ export async function POST(request: NextRequest, { params }: Params) {
     // 6. Submit the form
     const submission = await submissionService.submit(draft.id);
 
-    // 7. Trigger task completion (handles assignee status and completion rules)
+    // 7. Trigger task completion and log audit event
     if (formConfig.taskId) {
+      const task = await taskService.getById(formConfig.taskId);
+      if (task) {
+        const section = await sectionService.getById(task.sectionId);
+        if (section) {
+          // Log form submission audit event
+          await auditLogService.logEvent({
+            workspaceId: section.workspaceId,
+            eventType: "form.submitted",
+            actorId: user.id,
+            taskId: formConfig.taskId,
+            source: "web",
+            metadata: {
+              taskTitle: task.title,
+              formConfigId,
+            },
+          });
+        }
+      }
+
       const completionResult = await completionService.completeTaskForUser(
         formConfig.taskId,
         user.id

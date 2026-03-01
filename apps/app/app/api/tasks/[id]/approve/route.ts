@@ -1,5 +1,6 @@
 import { taskService, configService, sectionService, completionService } from "@/lib/services";
 import { ablyService, WORKSPACE_EVENTS } from "@/lib/services/ably";
+import { auditLogService } from "@/lib/services/auditLog";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
@@ -52,8 +53,28 @@ export async function POST(request: NextRequest, { params }: Params) {
       return errorResponse(result.error || "Failed to record approval", 500);
     }
 
+    // Get section for workspaceId (needed for audit log and broadcast)
+    const section = await sectionService.getById(task.sectionId);
+    if (!section) {
+      return errorResponse("Section not found", 404);
+    }
+
     // Use completion service to handle completion rule logic
     const completionResult = await completionService.completeTaskForUser(id, user.id);
+
+    // Log audit event
+    await auditLogService.logEvent({
+      workspaceId: section.workspaceId,
+      eventType: completionResult.taskCompleted ? "task.completed" : "approval.approved",
+      actorId: user.id,
+      taskId: id,
+      source: "web",
+      metadata: {
+        taskTitle: task.title,
+        comments,
+        taskCompleted: completionResult.taskCompleted,
+      },
+    });
 
     if (!completionResult.success) {
       // If user wasn't assigned, the approval was still recorded
@@ -81,27 +102,24 @@ export async function POST(request: NextRequest, { params }: Params) {
     // Broadcast task update via Ably (non-blocking)
     (async () => {
       try {
-        const section = await sectionService.getById(task.sectionId);
-        if (section) {
-          const eventType = completionResult.taskCompleted
-            ? WORKSPACE_EVENTS.TASK_COMPLETED
-            : WORKSPACE_EVENTS.TASK_UPDATED;
+        const eventType = completionResult.taskCompleted
+          ? WORKSPACE_EVENTS.TASK_COMPLETED
+          : WORKSPACE_EVENTS.TASK_UPDATED;
 
-          await ablyService.broadcastToWorkspace(
-            section.workspaceId,
-            eventType,
-            {
-              id: task.id,
-              title: task.title,
-              type: task.type,
-              status: updatedTask?.status || task.status,
-              sectionId: task.sectionId,
-              approved: true,
-              approvedBy: user.id,
-              taskCompleted: completionResult.taskCompleted,
-            }
-          );
-        }
+        await ablyService.broadcastToWorkspace(
+          section.workspaceId,
+          eventType,
+          {
+            id: task.id,
+            title: task.title,
+            type: task.type,
+            status: updatedTask?.status || task.status,
+            sectionId: task.sectionId,
+            approved: true,
+            approvedBy: user.id,
+            taskCompleted: completionResult.taskCompleted,
+          }
+        );
       } catch (err) {
         console.error("Failed to broadcast approval:", err);
       }

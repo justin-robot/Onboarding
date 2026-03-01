@@ -11,5 +11,5 @@ export const { signIn, signOut, signUp, useSession } = authClient;
 
 // Export additional auth methods
 export const sendVerificationEmail = authClient.sendVerificationEmail;
-export const forgetPassword = authClient.forgetPassword;
+export const forgetPassword = authClient.requestPasswordReset;
 export const resetPassword = authClient.resetPassword;

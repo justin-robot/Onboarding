@@ -17,6 +17,7 @@
     "seed:dev:add": "DOTENV_CONFIG_PATH=../../.env.local tsx seeds/seed.ts dev --no-cleanup",
     "seed:prod": "DOTENV_CONFIG_PATH=../../.env.local tsx seeds/seed.ts prod",
     "seed:prod:add": "DOTENV_CONFIG_PATH=../../.env.local tsx seeds/seed.ts prod --no-cleanup",
+    "seed:workspace": "DOTENV_CONFIG_PATH=../../.env.local tsx seeds/seed-workspace.ts",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
   "dependencies": {

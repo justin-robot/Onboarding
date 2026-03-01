@@ -2,6 +2,7 @@ import { database } from "@repo/database";
 import { dependencyService } from "./dependency";
 import { cascadeService } from "./cascade";
 import { chatService } from "./chat";
+import { auditLogService } from "./auditLog";
 import type { TaskAssignee, NewTaskAssignee } from "@repo/database";
 import type { NotificationContext } from "./notificationContext";
 
@@ -350,6 +351,29 @@ export const completionService = {
       .where("id", "=", taskId)
       .execute();
 
+    // Get section for workspaceId (needed for audit log and chat)
+    const section = await database
+      .selectFrom("section")
+      .select("workspaceId")
+      .where("id", "=", task.sectionId)
+      .executeTakeFirst();
+
+    // Log audit event
+    if (section) {
+      await auditLogService.logEvent({
+        workspaceId: section.workspaceId,
+        eventType: "task.completed",
+        actorId: "system",
+        taskId,
+        source: "system",
+        metadata: {
+          taskTitle: task.title,
+          taskType: task.type,
+          completedVia: "system",
+        },
+      });
+    }
+
     // Cascade due dates to dependent tasks
     await cascadeService.onTaskCompleted(taskId);
 
@@ -359,21 +383,13 @@ export const completionService = {
     }
 
     // Send system message to chat (fire and forget)
-    database
-      .selectFrom("section")
-      .select("workspaceId")
-      .where("id", "=", task.sectionId)
-      .executeTakeFirst()
-      .then((section) => {
-        if (section) {
-          chatService.sendSystemMessage(
-            section.workspaceId,
-            `Task completed: ${task.title}`,
-            taskId
-          ).catch((err: unknown) => console.error("Failed to send task completion message:", err));
-        }
-      })
-      .catch((err: unknown) => console.error("Failed to get section for chat message:", err));
+    if (section) {
+      chatService.sendSystemMessage(
+        section.workspaceId,
+        `Task completed: ${task.title}`,
+        taskId
+      ).catch((err: unknown) => console.error("Failed to send task completion message:", err));
+    }
 
     return { success: true, taskCompleted: true };
   },

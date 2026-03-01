@@ -9,6 +9,7 @@ import {
 } from "@repo/realtime";
 import { ChatPanel, type Message } from "./chat-panel";
 import { ChatPanelWithPolling } from "./realtime-chat";
+import { MeetingsPanel } from "./meetings-panel";
 
 interface RealtimeChatProps {
   workspaceId: string;
@@ -206,10 +207,10 @@ function RealtimeChatInner({
   return (
     <ChatPanel
       messages={messages}
-      meetings={[]}
       currentUserId={currentUserId}
       workspaceId={workspaceId}
       onSendMessage={handleSendMessage}
+      meetingsContent={<MeetingsPanel workspaceId={workspaceId} hideHeader />}
     />
   );
 }
