@@ -127,32 +127,41 @@ export const chatService = {
   },
 
   /**
-   * Send a system message (no user context)
-   * Uses a placeholder user ID that will be resolved to workspace context
+   * Send a system message
+   * @param workspaceId - The workspace to send to
+   * @param content - The message content
+   * @param referencedTaskId - Optional task reference
+   * @param actorId - The user who performed the action (used for "You" display in chat)
    */
   async sendSystemMessage(
     workspaceId: string,
     content: string,
-    referencedTaskId?: string
+    referencedTaskId?: string,
+    actorId?: string
   ): Promise<Message | null> {
     // System messages need a valid userId due to FK constraint
-    // Get the first admin of the workspace to use as the sender
-    const admin = await database
-      .selectFrom("workspace_member")
-      .innerJoin("user", "user.id", "workspace_member.userId")
-      .select("user.id")
-      .where("workspace_member.workspaceId", "=", workspaceId)
-      .where("workspace_member.role", "=", "admin")
-      .executeTakeFirst();
+    // Use the actorId if provided, otherwise fall back to first admin
+    let userId = actorId;
 
-    if (!admin) {
-      console.error("Cannot send system message: no admin found for workspace");
-      return null;
+    if (!userId) {
+      const admin = await database
+        .selectFrom("workspace_member")
+        .innerJoin("user", "user.id", "workspace_member.userId")
+        .select("user.id")
+        .where("workspace_member.workspaceId", "=", workspaceId)
+        .where("workspace_member.role", "=", "admin")
+        .executeTakeFirst();
+
+      if (!admin) {
+        console.error("Cannot send system message: no admin found for workspace");
+        return null;
+      }
+      userId = admin.id;
     }
 
     return this.sendMessage({
       workspaceId,
-      userId: admin.id,
+      userId,
       content,
       type: "system",
       referencedTaskId,
