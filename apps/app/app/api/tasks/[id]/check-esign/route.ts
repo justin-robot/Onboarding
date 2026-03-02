@@ -46,7 +46,7 @@ export async function POST(_request: NextRequest, { params }: Params) {
       return json({
         status: "completed",
         message: "Document already completed",
-        taskCompleted: task.isComplete
+        taskCompleted: task.status === "completed"
       });
     }
 
@@ -91,7 +91,7 @@ export async function POST(_request: NextRequest, { params }: Params) {
       status: docStatus.status,
       message: `Document status: ${docStatus.status}`,
       isComplete: docStatus.isComplete,
-      taskCompleted: task.isComplete
+      taskCompleted: task.status === "completed"
     });
   });
 }
