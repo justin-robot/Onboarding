@@ -69,6 +69,21 @@ export const sectionService = {
       });
     }
 
+    // Broadcast section created event (fire and forget)
+    getAblyService().then((ably) => {
+      if (ably) {
+        ably.ablyService.broadcastToWorkspace(
+          section.workspaceId,
+          ably.WORKSPACE_EVENTS.SECTION_CREATED,
+          {
+            sectionId: section.id,
+            title: section.title,
+            position: section.position,
+          }
+        ).catch((err: unknown) => console.error("Failed to broadcast section created:", err));
+      }
+    });
+
     return section;
   },
 
@@ -182,6 +197,24 @@ export const sectionService = {
       }
     }
 
+    // Broadcast section updated event (fire and forget)
+    if (result) {
+      getAblyService().then((ably) => {
+        if (ably) {
+          ably.ablyService.broadcastToWorkspace(
+            result.workspaceId,
+            ably.WORKSPACE_EVENTS.SECTION_UPDATED,
+            {
+              sectionId: result.id,
+              title: result.title,
+              position: result.position,
+              changes: input,
+            }
+          ).catch((err: unknown) => console.error("Failed to broadcast section updated:", err));
+        }
+      });
+    }
+
     return result ?? null;
   },
 
@@ -189,8 +222,8 @@ export const sectionService = {
    * Soft delete a section
    */
   async softDelete(id: string, auditContext?: AuditContext): Promise<boolean> {
-    // Get section for workspaceId before deleting
-    const section = auditContext ? await this.getById(id) : null;
+    // Get section for workspaceId before deleting (needed for audit and broadcast)
+    const section = await this.getById(id);
 
     const result = await database
       .updateTable("section")
@@ -208,6 +241,19 @@ export const sectionService = {
         actorId: auditContext.actorId,
         source: auditContext.source,
         ipAddress: auditContext.ipAddress,
+      });
+    }
+
+    // Broadcast section deleted event (fire and forget)
+    if (deleted && section) {
+      getAblyService().then((ably) => {
+        if (ably) {
+          ably.ablyService.broadcastToWorkspace(
+            section.workspaceId,
+            ably.WORKSPACE_EVENTS.SECTION_DELETED,
+            { sectionId: id }
+          ).catch((err: unknown) => console.error("Failed to broadcast section deleted:", err));
+        }
       });
     }
 

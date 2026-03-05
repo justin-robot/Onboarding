@@ -8,6 +8,18 @@ import {
 } from "@repo/storage";
 import type { File, NewFile, FileSourceType } from "@repo/database";
 
+// Dynamically import ably to avoid bundling issues with Next.js
+const ABLY_PATH = "./ably";
+async function getAblyService() {
+  if (typeof window !== "undefined") return null;
+  try {
+    const module = await import(/* webpackIgnore: true */ ABLY_PATH);
+    return { ablyService: module.ablyService, WORKSPACE_EVENTS: module.WORKSPACE_EVENTS };
+  } catch {
+    return null;
+  }
+}
+
 // Result for presigned URL generation
 export interface PresignedUploadResult {
   uploadUrl: string;
@@ -112,6 +124,25 @@ export const fileService = {
       });
     }
 
+    // Broadcast file uploaded event (fire and forget)
+    getAblyService().then((ably) => {
+      if (ably) {
+        ably.ablyService.broadcastToWorkspace(
+          options.workspaceId,
+          ably.WORKSPACE_EVENTS.FILE_UPLOADED,
+          {
+            fileId: file.id,
+            name: file.name,
+            mimeType: file.mimeType,
+            size: file.size,
+            sourceType: file.sourceType,
+            sourceTaskId: file.sourceTaskId,
+            uploadedBy: file.uploadedBy,
+          }
+        ).catch((err: unknown) => console.error("Failed to broadcast file uploaded:", err));
+      }
+    });
+
     return file;
   },
 
@@ -198,6 +229,9 @@ export const fileService = {
    * Soft delete a file
    */
   async delete(id: string): Promise<boolean> {
+    // Get file info before deleting for broadcast
+    const file = await this.getById(id);
+
     const result = await database
       .updateTable("file")
       .set({
@@ -208,7 +242,25 @@ export const fileService = {
       .where("deletedAt", "is", null)
       .executeTakeFirst();
 
-    return (result.numUpdatedRows ?? 0n) > 0n;
+    const deleted = (result.numUpdatedRows ?? 0n) > 0n;
+
+    // Broadcast file deleted event (fire and forget)
+    if (deleted && file) {
+      getAblyService().then((ably) => {
+        if (ably) {
+          ably.ablyService.broadcastToWorkspace(
+            file.workspaceId,
+            ably.WORKSPACE_EVENTS.FILE_DELETED,
+            {
+              fileId: id,
+              sourceTaskId: file.sourceTaskId,
+            }
+          ).catch((err: unknown) => console.error("Failed to broadcast file deleted:", err));
+        }
+      });
+    }
+
+    return deleted;
   },
 
   /**

@@ -7,6 +7,7 @@ import {
   sectionService,
 } from "@/lib/services";
 import { auditLogService } from "@/lib/services/auditLog";
+import { notificationService } from "@repo/notifications";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 import type { FormElement } from "@repo/database";
@@ -87,7 +88,8 @@ export async function POST(request: NextRequest, { params }: Params) {
 
       const completionResult = await completionService.completeTaskForUser(
         formConfig.taskId,
-        user.id
+        user.id,
+        notificationService
       );
 
       // Log completion result but don't fail submission

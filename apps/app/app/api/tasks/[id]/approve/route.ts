@@ -1,6 +1,7 @@
 import { taskService, configService, sectionService, completionService } from "@/lib/services";
 import { ablyService, WORKSPACE_EVENTS } from "@/lib/services/ably";
 import { auditLogService } from "@/lib/services/auditLog";
+import { notificationService } from "@repo/notifications";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     // Use completion service to handle completion rule logic
-    const completionResult = await completionService.completeTaskForUser(id, user.id);
+    const completionResult = await completionService.completeTaskForUser(id, user.id, notificationService);
 
     // Log audit event
     await auditLogService.logEvent({

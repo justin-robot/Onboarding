@@ -21,12 +21,14 @@ export const WORKSPACE_EVENTS = {
   SECTION_CREATED: "section:created",
   SECTION_UPDATED: "section:updated",
   SECTION_DELETED: "section:deleted",
+  SECTION_STATUS_CHANGED: "section:status_changed",
   FILE_UPLOADED: "file:uploaded",
   FILE_DELETED: "file:deleted",
   MEMBER_ADDED: "member:added",
   MEMBER_REMOVED: "member:removed",
   COMMENT_CREATED: "comment.created",
   COMMENT_DELETED: "comment.deleted",
+  AUDIT_CREATED: "audit:created",
 } as const;
 
 // Event types for chat channel
@@ -80,6 +82,46 @@ export interface CommentPayload {
   userImage?: string;
   content: string;
   createdAt: string;
+}
+
+// Audit log payload from workspace events
+export interface AuditPayload {
+  id: string;
+  eventType: string;
+  actorId: string;
+  taskId?: string | null;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+// File payload from workspace events
+export interface FilePayload {
+  fileId: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  sourceType: string;
+  sourceTaskId?: string | null;
+  uploadedBy: string;
+}
+
+// Member payload from workspace events
+export interface MemberPayload {
+  memberId: string;
+  userId: string;
+  role: string;
+  name?: string;
+  email?: string;
+}
+
+// Section payload from workspace events
+export interface SectionPayload {
+  sectionId: string;
+  title?: string;
+  position?: number;
+  status?: string;
+  completedCount?: number;
+  totalCount?: number;
 }
 
 /**
@@ -189,7 +231,7 @@ export function useTaskComments(
 }
 
 /**
- * Hook to subscribe to workspace events (tasks, sections, files)
+ * Hook to subscribe to workspace events (tasks, sections, files, members, audit)
  */
 export function useWorkspaceEvents(
   workspaceId: string,
@@ -198,13 +240,15 @@ export function useWorkspaceEvents(
     onTaskUpdated?: (task: TaskPayload) => void;
     onTaskDeleted?: (taskId: string) => void;
     onTaskCompleted?: (task: TaskPayload) => void;
-    onSectionCreated?: (section: unknown) => void;
-    onSectionUpdated?: (section: unknown) => void;
+    onSectionCreated?: (section: SectionPayload) => void;
+    onSectionUpdated?: (section: SectionPayload) => void;
     onSectionDeleted?: (sectionId: string) => void;
-    onFileUploaded?: (file: unknown) => void;
-    onFileDeleted?: (fileId: string) => void;
-    onMemberAdded?: (member: unknown) => void;
-    onMemberRemoved?: (memberId: string) => void;
+    onSectionStatusChanged?: (section: SectionPayload) => void;
+    onFileUploaded?: (file: FilePayload) => void;
+    onFileDeleted?: (data: { fileId: string; sourceTaskId?: string | null }) => void;
+    onMemberAdded?: (member: MemberPayload) => void;
+    onMemberRemoved?: (data: { userId: string }) => void;
+    onAuditCreated?: (audit: AuditPayload) => void;
     onAnyEvent?: () => void; // Called on any event for general refresh
   }
 ) {
@@ -232,25 +276,31 @@ export function useWorkspaceEvents(
           callbacks.onTaskCompleted?.(message.data as TaskPayload);
           break;
         case WORKSPACE_EVENTS.SECTION_CREATED:
-          callbacks.onSectionCreated?.(message.data);
+          callbacks.onSectionCreated?.(message.data as SectionPayload);
           break;
         case WORKSPACE_EVENTS.SECTION_UPDATED:
-          callbacks.onSectionUpdated?.(message.data);
+          callbacks.onSectionUpdated?.(message.data as SectionPayload);
           break;
         case WORKSPACE_EVENTS.SECTION_DELETED:
           callbacks.onSectionDeleted?.(message.data as string);
           break;
+        case WORKSPACE_EVENTS.SECTION_STATUS_CHANGED:
+          callbacks.onSectionStatusChanged?.(message.data as SectionPayload);
+          break;
         case WORKSPACE_EVENTS.FILE_UPLOADED:
-          callbacks.onFileUploaded?.(message.data);
+          callbacks.onFileUploaded?.(message.data as FilePayload);
           break;
         case WORKSPACE_EVENTS.FILE_DELETED:
-          callbacks.onFileDeleted?.(message.data as string);
+          callbacks.onFileDeleted?.(message.data as { fileId: string; sourceTaskId?: string | null });
           break;
         case WORKSPACE_EVENTS.MEMBER_ADDED:
-          callbacks.onMemberAdded?.(message.data);
+          callbacks.onMemberAdded?.(message.data as MemberPayload);
           break;
         case WORKSPACE_EVENTS.MEMBER_REMOVED:
-          callbacks.onMemberRemoved?.(message.data as string);
+          callbacks.onMemberRemoved?.(message.data as { userId: string });
+          break;
+        case WORKSPACE_EVENTS.AUDIT_CREATED:
+          callbacks.onAuditCreated?.(message.data as AuditPayload);
           break;
       }
     };
@@ -261,6 +311,33 @@ export function useWorkspaceEvents(
       channel.unsubscribe(handleMessage);
     };
   }, [ably, channelName, callbacks]);
+}
+
+/**
+ * Hook to subscribe to audit log events for real-time activity feed
+ */
+export function useAuditEvents(
+  workspaceId: string,
+  onAuditCreated: (audit: AuditPayload) => void
+) {
+  const ably = useAbly();
+  const channelName = CHANNELS.workspace(workspaceId);
+
+  useEffect(() => {
+    const channel = ably.channels.get(channelName);
+
+    const handleMessage = (message: Ably.Message) => {
+      if (message.name === WORKSPACE_EVENTS.AUDIT_CREATED) {
+        onAuditCreated(message.data as AuditPayload);
+      }
+    };
+
+    channel.subscribe(handleMessage);
+
+    return () => {
+      channel.unsubscribe(handleMessage);
+    };
+  }, [ably, channelName, onAuditCreated]);
 }
 
 /**

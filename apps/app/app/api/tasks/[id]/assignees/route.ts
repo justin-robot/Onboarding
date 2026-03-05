@@ -1,5 +1,6 @@
 import { assigneeService, memberService, taskService, sectionService } from "@/lib/services";
 import { database } from "@repo/database";
+import { notificationService } from "@repo/notifications";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
@@ -69,11 +70,11 @@ export async function POST(request: NextRequest, { params }: Params) {
       return errorResponse("Only admins can assign users to tasks", 403);
     }
 
-    // Assign the user with audit context
+    // Assign the user with notification and audit context
     const result = await assigneeService.assign(
       taskId,
       userId,
-      undefined, // notificationContext
+      notificationService, // notificationContext
       {
         actorId: user.id,
         source: "web",

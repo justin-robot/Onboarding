@@ -155,19 +155,39 @@ export const completionService = {
       const assignees = await this.getAssigneesByTaskId(depTask.id);
 
       // Determine workflow based on task type
-      const workflowId = depTask.type === "APPROVAL" ? "approval-requested" : "task-your-turn";
+      let workflowId: "task-your-turn" | "approval-requested" | "esign-ready" = "task-your-turn";
+      if (depTask.type === "APPROVAL") {
+        workflowId = "approval-requested";
+      } else if (depTask.type === "E_SIGN") {
+        workflowId = "esign-ready";
+      }
+
+      // Build notification data based on task type
+      let notificationData: Record<string, unknown> = {
+        workspaceId: depTask.workspaceId,
+        workspaceName: depTask.workspaceName,
+        taskId: depTask.id,
+        taskTitle: depTask.title,
+      };
+
+      // For e-sign tasks, include document name from config
+      if (workflowId === "esign-ready") {
+        const esignConfig = await database
+          .selectFrom("esign_config")
+          .select(["documentName"])
+          .where("taskId", "=", depTask.id)
+          .executeTakeFirst();
+        if (esignConfig?.documentName) {
+          notificationData.documentName = esignConfig.documentName;
+        }
+      }
 
       // Notify each assignee
       for (const assignee of assignees) {
         await notificationContext.triggerWorkflow({
           workflowId,
           recipientId: assignee.userId,
-          data: {
-            workspaceId: depTask.workspaceId,
-            workspaceName: depTask.workspaceName,
-            taskId: depTask.id,
-            taskTitle: depTask.title,
-          },
+          data: notificationData,
           tenant: depTask.workspaceId,
         });
       }

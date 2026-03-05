@@ -2,6 +2,18 @@ import { database } from "@repo/database";
 import { auditLogService, type AuditContext } from "./auditLog";
 import type { WorkspaceMember } from "@repo/database";
 
+// Dynamically import ably to avoid bundling issues with Next.js
+const ABLY_PATH = "./ably";
+async function getAblyService() {
+  if (typeof window !== "undefined") return null;
+  try {
+    const module = await import(/* webpackIgnore: true */ ABLY_PATH);
+    return { ablyService: module.ablyService, WORKSPACE_EVENTS: module.WORKSPACE_EVENTS };
+  } catch {
+    return null;
+  }
+}
+
 // Role type for workspace members
 export type MemberRole = "admin" | "account_manager" | "user";
 
@@ -47,6 +59,31 @@ export const memberService = {
       });
     }
 
+    // Broadcast member added event (fire and forget)
+    getAblyService().then((ably) => {
+      if (ably) {
+        // Get user info for the broadcast
+        database
+          .selectFrom("user")
+          .select(["id", "name", "email"])
+          .where("id", "=", input.userId)
+          .executeTakeFirst()
+          .then((user) => {
+            ably.ablyService.broadcastToWorkspace(
+              input.workspaceId,
+              ably.WORKSPACE_EVENTS.MEMBER_ADDED,
+              {
+                memberId: member.id,
+                userId: input.userId,
+                role: input.role,
+                name: user?.name,
+                email: user?.email,
+              }
+            ).catch((err: unknown) => console.error("Failed to broadcast member added:", err));
+          });
+      }
+    });
+
     return member;
   },
 
@@ -74,6 +111,19 @@ export const memberService = {
         source: auditContext.source,
         ipAddress: auditContext.ipAddress,
         metadata: { memberId: userId },
+      });
+    }
+
+    // Broadcast member removed event (fire and forget)
+    if (removed) {
+      getAblyService().then((ably) => {
+        if (ably) {
+          ably.ablyService.broadcastToWorkspace(
+            workspaceId,
+            ably.WORKSPACE_EVENTS.MEMBER_REMOVED,
+            { userId }
+          ).catch((err: unknown) => console.error("Failed to broadcast member removed:", err));
+        }
       });
     }
 

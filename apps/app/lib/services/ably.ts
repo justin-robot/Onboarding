@@ -54,6 +54,8 @@ export const WORKSPACE_EVENTS = {
   // Member events
   MEMBER_ADDED: "member:added",
   MEMBER_REMOVED: "member:removed",
+  // Audit events
+  AUDIT_CREATED: "audit:created",
 } as const;
 
 // Event types for chat channel

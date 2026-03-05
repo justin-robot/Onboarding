@@ -1,6 +1,7 @@
 import { taskService, configService, sectionService, completionService } from "@/lib/services";
 import { ablyService, WORKSPACE_EVENTS } from "@/lib/services/ably";
 import { auditLogService } from "@/lib/services/auditLog";
+import { notificationService } from "@repo/notifications";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     // Complete the task for this user (handles assignee status and completion rules)
-    const completionResult = await completionService.completeTaskForUser(id, user.id);
+    const completionResult = await completionService.completeTaskForUser(id, user.id, notificationService);
 
     if (!completionResult.success) {
       // ALREADY_COMPLETED is not an error - user may have already completed

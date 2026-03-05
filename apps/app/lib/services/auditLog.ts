@@ -2,6 +2,18 @@ import { database } from "@repo/database";
 import type { MoxoAuditLogEntry } from "@repo/database";
 import { chatService } from "./chat";
 
+// Dynamically import ably to avoid bundling issues with Next.js
+const ABLY_PATH = "./ably";
+async function getAblyService() {
+  if (typeof window !== "undefined") return null;
+  try {
+    const module = await import(/* webpackIgnore: true */ ABLY_PATH);
+    return { ablyService: module.ablyService, WORKSPACE_EVENTS: module.WORKSPACE_EVENTS };
+  } catch {
+    return null;
+  }
+}
+
 // Event type taxonomy
 export type AuditEventType =
   // Task events
@@ -216,6 +228,20 @@ export const auditLogService = {
         // Don't fail the audit log if system message fails
       }
     }
+
+    // Broadcast audit entry for real-time activity feed (fire and forget)
+    getAblyService().then((ably) => {
+      if (ably) {
+        ably.ablyService.broadcastToWorkspace(workspaceId, ably.WORKSPACE_EVENTS.AUDIT_CREATED, {
+          id: result.id,
+          eventType,
+          actorId,
+          taskId: taskId ?? null,
+          metadata,
+          createdAt: result.createdAt,
+        }).catch((err: unknown) => console.error("Failed to broadcast audit event:", err));
+      }
+    });
 
     return parseMetadata(result);
   },
