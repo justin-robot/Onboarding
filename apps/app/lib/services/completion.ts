@@ -174,8 +174,9 @@ export const completionService = {
       if (workflowId === "esign-ready") {
         const esignConfig = await database
           .selectFrom("esign_config")
-          .select(["documentName"])
-          .where("taskId", "=", depTask.id)
+          .leftJoin("file", "file.id", "esign_config.fileId")
+          .select(["file.name as documentName"])
+          .where("esign_config.taskId", "=", depTask.id)
           .executeTakeFirst();
         if (esignConfig?.documentName) {
           notificationData.documentName = esignConfig.documentName;
