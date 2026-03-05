@@ -97,7 +97,10 @@ async function getAblyClient(): Promise<InstanceType<typeof import("ably").Rest>
   }
 
   const Ably = await loadAbly();
-  if (!Ably) return null;
+  if (!Ably) {
+    console.error("[Ably] Failed to load Ably module");
+    return null;
+  }
 
   return new Ably.Rest({ key: apiKey });
 }

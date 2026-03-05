@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState } from "react";
 import {
   AblyProvider,
   useTaskComments,
-  useAblyToken,
   type CommentPayload,
 } from "@repo/realtime";
 import { CommentSection, type Comment } from "./comment-section";
@@ -26,29 +25,8 @@ export function RealtimeComments({
   currentUserId,
   className,
 }: RealtimeCommentsProps) {
-  const { token, loading, error } = useAblyToken(workspaceId);
-
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-sm text-muted-foreground">Connecting...</div>
-      </div>
-    );
-  }
-
-  if (error || !token) {
-    // Fallback to non-realtime comments
-    return (
-      <CommentSection
-        taskId={taskId}
-        currentUserId={currentUserId}
-        className={className}
-      />
-    );
-  }
-
   return (
-    <AblyProvider tokenRequest={token}>
+    <AblyProvider workspaceId={workspaceId}>
       <RealtimeCommentsInner
         workspaceId={workspaceId}
         taskId={taskId}

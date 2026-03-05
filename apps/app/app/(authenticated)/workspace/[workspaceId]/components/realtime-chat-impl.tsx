@@ -4,11 +4,9 @@ import { useCallback, useState } from "react";
 import {
   AblyProvider,
   useWorkspaceChat,
-  useAblyToken,
   type ChatMessagePayload,
 } from "@repo/realtime";
 import { ChatPanel, type Message } from "./chat-panel";
-import { ChatPanelWithPolling } from "./realtime-chat";
 import { MeetingsPanel } from "./meetings-panel";
 
 interface RealtimeChatProps {
@@ -26,29 +24,8 @@ export function RealtimeChatImpl({
   currentUserId,
   initialMessages,
 }: RealtimeChatProps) {
-  const { token, loading, error } = useAblyToken(workspaceId);
-
-  if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-sm text-muted-foreground">Connecting to chat...</div>
-      </div>
-    );
-  }
-
-  if (error || !token) {
-    // Fallback to non-realtime chat (polling)
-    return (
-      <ChatPanelWithPolling
-        workspaceId={workspaceId}
-        currentUserId={currentUserId}
-        initialMessages={initialMessages}
-      />
-    );
-  }
-
   return (
-    <AblyProvider tokenRequest={token}>
+    <AblyProvider workspaceId={workspaceId}>
       <RealtimeChatInner
         workspaceId={workspaceId}
         currentUserId={currentUserId}

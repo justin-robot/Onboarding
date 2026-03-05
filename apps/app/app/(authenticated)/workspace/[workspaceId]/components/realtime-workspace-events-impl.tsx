@@ -1,10 +1,8 @@
 "use client";
 
-import { useCallback } from "react";
 import {
   AblyProvider,
   useWorkspaceEvents,
-  useAblyToken,
 } from "@repo/realtime";
 
 interface RealtimeWorkspaceEventsProps {
@@ -20,15 +18,8 @@ export function RealtimeWorkspaceEventsImpl({
   workspaceId,
   onWorkspaceUpdate,
 }: RealtimeWorkspaceEventsProps) {
-  const { token, loading, error } = useAblyToken(workspaceId);
-
-  if (loading || error || !token) {
-    // Silently fail - workspace will still work without real-time updates
-    return null;
-  }
-
   return (
-    <AblyProvider tokenRequest={token}>
+    <AblyProvider workspaceId={workspaceId}>
       <WorkspaceEventsSubscriber
         workspaceId={workspaceId}
         onWorkspaceUpdate={onWorkspaceUpdate}
@@ -44,52 +35,9 @@ function WorkspaceEventsSubscriber({
   workspaceId,
   onWorkspaceUpdate,
 }: RealtimeWorkspaceEventsProps) {
-  // Subscribe to all workspace events
+  // Subscribe to all workspace events - triggers refresh on any change
   useWorkspaceEvents(workspaceId, {
-    onTaskCreated: () => {
-      console.log("[Realtime] Task created");
-      onWorkspaceUpdate();
-    },
-    onTaskUpdated: () => {
-      console.log("[Realtime] Task updated");
-      onWorkspaceUpdate();
-    },
-    onTaskCompleted: () => {
-      console.log("[Realtime] Task completed");
-      onWorkspaceUpdate();
-    },
-    onTaskDeleted: () => {
-      console.log("[Realtime] Task deleted");
-      onWorkspaceUpdate();
-    },
-    onSectionCreated: () => {
-      console.log("[Realtime] Section created");
-      onWorkspaceUpdate();
-    },
-    onSectionUpdated: () => {
-      console.log("[Realtime] Section updated");
-      onWorkspaceUpdate();
-    },
-    onSectionDeleted: () => {
-      console.log("[Realtime] Section deleted");
-      onWorkspaceUpdate();
-    },
-    onFileUploaded: () => {
-      console.log("[Realtime] File uploaded");
-      onWorkspaceUpdate();
-    },
-    onFileDeleted: () => {
-      console.log("[Realtime] File deleted");
-      onWorkspaceUpdate();
-    },
-    onMemberAdded: () => {
-      console.log("[Realtime] Member added");
-      onWorkspaceUpdate();
-    },
-    onMemberRemoved: () => {
-      console.log("[Realtime] Member removed");
-      onWorkspaceUpdate();
-    },
+    onAnyEvent: onWorkspaceUpdate,
   });
 
   // This component renders nothing

@@ -106,19 +106,28 @@ export const chatService = {
       .executeTakeFirstOrThrow();
 
     // Broadcast to chat channel (fire and forget)
-    getAblyService().then((ably) => {
+    // Need to fetch user info for the payload
+    getAblyService().then(async (ably) => {
       if (ably) {
+        // Get sender info
+        const user = await database
+          .selectFrom("user")
+          .select(["name", "image"])
+          .where("id", "=", options.userId)
+          .executeTakeFirst();
+
         ably.ablyService.broadcastToChat(options.workspaceId, ably.CHAT_EVENTS.MESSAGE_SENT, {
           id: message.id,
-          workspaceId: message.workspaceId,
-          userId: message.userId,
-          content: message.content,
           type: message.type,
+          content: message.content,
+          senderId: message.userId,
+          senderName: user?.name || "Unknown",
+          senderAvatarUrl: user?.image || undefined,
+          createdAt: message.createdAt.toISOString(),
           attachmentIds: message.attachmentIds,
           referencedTaskId: message.referencedTaskId,
           referencedFileId: message.referencedFileId,
           replyToMessageId: message.replyToMessageId,
-          createdAt: message.createdAt,
         }).catch((err: unknown) => console.error("Failed to broadcast message:", err));
       }
     });

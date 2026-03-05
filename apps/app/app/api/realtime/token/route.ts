@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
 
       return json(tokenRequest);
     } catch (err) {
+      console.error("[Ably Token] Error:", err);
       if (err instanceof Error && err.message.includes("not a member")) {
         return errorResponse("Not authorized for these workspaces", 403);
       }

@@ -3,24 +3,9 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type Ably from "ably";
 
-// TokenRequest type from Ably - this is what the server returns
-type TokenRequestData = {
-  keyName?: string;
-  clientId?: string;
-  timestamp?: number;
-  nonce?: string;
-  mac?: string;
-  capability?: string;
-  ttl?: number;
-  // Additional fields we add
-  token?: string;
-  issued?: number;
-  expires?: number;
-};
-
 type AblyClientProviderProps = {
   children: ReactNode;
-  tokenRequest: TokenRequestData;
+  workspaceId: string;
 };
 
 /**
@@ -30,9 +15,9 @@ const AblyContext = createContext<Ably.Realtime | null>(null);
 
 /**
  * Provider component for Ably realtime functionality
- * Uses dynamic import to avoid SSR issues with ably's Node.js dependencies
+ * Uses authUrl to automatically handle token refresh
  */
-export const AblyProvider = ({ children, tokenRequest }: AblyClientProviderProps) => {
+export const AblyProvider = ({ children, workspaceId }: AblyClientProviderProps) => {
   const [ablyClient, setAblyClient] = useState<Ably.Realtime | null>(null);
 
   useEffect(() => {
@@ -41,20 +26,38 @@ export const AblyProvider = ({ children, tokenRequest }: AblyClientProviderProps
     // Dynamically import ably to avoid SSR issues
     import("ably").then((AblyModule) => {
       client = new AblyModule.default.Realtime({
-        authCallback: (tokenParams, callback) => {
-          callback(null, tokenRequest as Ably.TokenRequest);
+        authCallback: async (tokenParams, callback) => {
+          try {
+            const response = await fetch("/api/realtime/token", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ workspaceId }),
+            });
+
+            if (!response.ok) {
+              throw new Error(`Token request failed: ${response.status}`);
+            }
+
+            const tokenRequest = await response.json();
+            callback(null, tokenRequest);
+          } catch (err) {
+            console.error("[Ably] Auth error:", err);
+            callback(err instanceof Error ? err.message : "Auth failed", null);
+          }
         },
       });
+
       setAblyClient(client);
     });
 
     return () => {
       client?.close();
     };
-  }, [tokenRequest]);
+  }, [workspaceId]);
 
+  // Don't render children until client is ready - they depend on the context
   if (!ablyClient) {
-    return <>{children}</>;
+    return null;
   }
 
   return (

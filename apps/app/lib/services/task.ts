@@ -445,11 +445,11 @@ export const taskService = {
     if (result) {
       // Cascade due date clearing to dependent tasks
       await cascadeService.onTaskReopened(id);
-    }
 
-    if (result && auditContext) {
       const workspaceId = await getWorkspaceIdForTask(id);
-      if (workspaceId) {
+
+      // Audit logging
+      if (auditContext && workspaceId) {
         await auditLogService.logEvent({
           workspaceId,
           eventType: "task.reopened",
@@ -458,6 +458,26 @@ export const taskService = {
           source: auditContext.source,
           ipAddress: auditContext.ipAddress,
         });
+      }
+
+      // Broadcast task reopened/updated event (fire and forget)
+      if (workspaceId) {
+        getAblyService().then((ably) => {
+          if (ably) {
+            ably.ablyService.broadcastToWorkspace(workspaceId, ably.WORKSPACE_EVENTS.TASK_UPDATED, {
+              taskId: result.id,
+              sectionId: result.sectionId,
+              title: result.title,
+              status: result.status,
+              reopened: true,
+            }).catch((err: unknown) => console.error("Failed to broadcast task reopened:", err));
+          }
+        });
+
+        // Broadcast section status change (task reopening affects section status)
+        broadcastSectionStatusChange(result.sectionId).catch((err) =>
+          console.error("Failed to broadcast section status:", err)
+        );
       }
     }
 

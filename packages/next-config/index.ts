@@ -68,7 +68,7 @@ export const withSecurityHeaders = (
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https: blob:",
     "font-src 'self' data:",
-    "connect-src 'self' https://us.i.posthog.com https://us-assets.i.posthog.com https://www.google-analytics.com https://www.googletagmanager.com wss://realtime.ably.io https://*.r2.cloudflarestorage.com https://api.knock.app wss://api.knock.app",
+    "connect-src 'self' https://us.i.posthog.com https://us-assets.i.posthog.com https://www.google-analytics.com https://www.googletagmanager.com https://*.ably.io https://*.ably-realtime.com wss://*.ably.io wss://*.ably-realtime.com https://*.r2.cloudflarestorage.com https://api.knock.app wss://api.knock.app",
     "frame-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
