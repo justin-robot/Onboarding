@@ -154,43 +154,54 @@ export const completionService = {
       // Get assignees for the newly unlocked task
       const assignees = await this.getAssigneesByTaskId(depTask.id);
 
-      // Determine workflow based on task type
-      let workflowId: "task-your-turn" | "approval-requested" | "esign-ready" = "task-your-turn";
-      if (depTask.type === "APPROVAL") {
-        workflowId = "approval-requested";
-      } else if (depTask.type === "E_SIGN") {
-        workflowId = "esign-ready";
-      }
-
-      // Build notification data based on task type
-      let notificationData: Record<string, unknown> = {
-        workspaceId: depTask.workspaceId,
-        workspaceName: depTask.workspaceName,
-        taskId: depTask.id,
-        taskTitle: depTask.title,
-      };
-
-      // For e-sign tasks, include document name from config
-      if (workflowId === "esign-ready") {
-        const esignConfig = await database
-          .selectFrom("esign_config")
-          .leftJoin("file", "file.id", "esign_config.fileId")
-          .select(["file.name as documentName"])
-          .where("esign_config.taskId", "=", depTask.id)
-          .executeTakeFirst();
-        if (esignConfig?.documentName) {
-          notificationData.documentName = esignConfig.documentName;
-        }
-      }
-
-      // Notify each assignee
+      // Notify each assignee based on task type
       for (const assignee of assignees) {
-        await notificationContext.triggerWorkflow({
-          workflowId,
-          recipientId: assignee.userId,
-          data: notificationData,
-          tenant: depTask.workspaceId,
-        });
+        if (depTask.type === "APPROVAL") {
+          await notificationContext.triggerWorkflow({
+            workflowId: "approval-requested",
+            recipientId: assignee.userId,
+            data: {
+              workspaceId: depTask.workspaceId,
+              workspaceName: depTask.workspaceName,
+              taskId: depTask.id,
+              taskTitle: depTask.title,
+            },
+            tenant: depTask.workspaceId,
+          });
+        } else if (depTask.type === "E_SIGN") {
+          // Get document name for e-sign tasks
+          const esignConfig = await database
+            .selectFrom("esign_config")
+            .leftJoin("file", "file.id", "esign_config.fileId")
+            .select(["file.name as documentName"])
+            .where("esign_config.taskId", "=", depTask.id)
+            .executeTakeFirst();
+
+          await notificationContext.triggerWorkflow({
+            workflowId: "esign-ready",
+            recipientId: assignee.userId,
+            data: {
+              workspaceId: depTask.workspaceId,
+              workspaceName: depTask.workspaceName,
+              taskId: depTask.id,
+              taskTitle: depTask.title,
+              documentName: esignConfig?.documentName || "Document",
+            },
+            tenant: depTask.workspaceId,
+          });
+        } else {
+          await notificationContext.triggerWorkflow({
+            workflowId: "task-your-turn",
+            recipientId: assignee.userId,
+            data: {
+              workspaceId: depTask.workspaceId,
+              workspaceName: depTask.workspaceName,
+              taskId: depTask.id,
+              taskTitle: depTask.title,
+            },
+            tenant: depTask.workspaceId,
+          });
+        }
       }
     }
   },
