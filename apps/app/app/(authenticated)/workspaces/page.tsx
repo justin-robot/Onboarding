@@ -62,7 +62,11 @@ export default async function WorkspacesPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
-      <WorkspaceList workspaces={validWorkspaces} userId={session.user.id} />
+      <WorkspaceList
+        workspaces={validWorkspaces}
+        userId={session.user.id}
+        userRole={session.user.role}
+      />
     </div>
   );
 }

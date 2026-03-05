@@ -22,6 +22,7 @@ import {
   Calendar,
   LayoutGrid,
   List,
+  Settings,
 } from "lucide-react";
 import { cn } from "@repo/design/lib/utils";
 import { CreateWorkspaceDialog } from "./create-workspace-dialog";
@@ -44,9 +45,10 @@ interface WorkspaceData {
 interface WorkspaceListProps {
   workspaces: WorkspaceData[];
   userId: string;
+  userRole?: string | null;
 }
 
-export function WorkspaceList({ workspaces, userId }: WorkspaceListProps) {
+export function WorkspaceList({ workspaces, userId, userRole }: WorkspaceListProps) {
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -65,10 +67,20 @@ export function WorkspaceList({ workspaces, userId }: WorkspaceListProps) {
             Manage your client workspaces and workflows
           </p>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Workspace
-        </Button>
+        <div className="flex items-center gap-2">
+          {userRole === "admin" && (
+            <Link href="/dashboard">
+              <Button variant="outline">
+                <Settings className="mr-2 h-4 w-4" />
+                Admin Panel
+              </Button>
+            </Link>
+          )}
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Workspace
+          </Button>
+        </div>
       </div>
 
       {/* Search and View Toggle */}
