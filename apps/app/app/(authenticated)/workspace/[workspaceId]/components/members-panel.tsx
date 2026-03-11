@@ -223,7 +223,7 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole }: MembersP
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-x-auto overflow-y-auto p-4 space-y-6">
+      <div className="flex-1 overflow-x-hidden overflow-y-auto p-4 space-y-6">
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

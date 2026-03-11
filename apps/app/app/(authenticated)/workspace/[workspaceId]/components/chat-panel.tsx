@@ -399,7 +399,7 @@ export function ChatPanel({
           {meetingsContent ? (
             <div className="h-full">{meetingsContent}</div>
           ) : (
-            <div className="p-4 overflow-x-auto overflow-y-auto">
+            <div className="p-4 overflow-x-hidden overflow-y-auto">
               {meetings.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Video className="h-10 w-10 text-muted-foreground/50 mb-3" />
