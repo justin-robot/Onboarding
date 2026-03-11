@@ -37,6 +37,19 @@ export {
   getNotificationService,
 } from "./service";
 
+// Preferences service
+export {
+  getUserPreferences,
+  updateUserPreferences,
+  NOTIFICATION_CATEGORIES,
+  DEFAULT_PREFERENCES,
+} from "./preferences";
+
+export type {
+  NotificationCategory,
+  NotificationPreferences,
+} from "./preferences";
+
 // Export all notification types
 export type {
   NotificationWorkflow,
