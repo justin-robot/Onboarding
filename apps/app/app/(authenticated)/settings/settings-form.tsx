@@ -5,25 +5,15 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Button } from "@repo/design/components/ui/button";
-import { Input } from "@repo/design/components/ui/input";
 import {
   Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@repo/design/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@repo/design/components/ui/form";
-import { Loader2, ExternalLink } from "lucide-react";
+  Title,
+  Text,
+  TextInput,
+  Button,
+  Divider,
+} from "@tremor/react";
+import { ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import type { UserProfile } from "@/lib/services";
@@ -61,6 +51,7 @@ export function SettingsForm({ initialProfile }: SettingsFormProps) {
   });
 
   const isDirty = form.formState.isDirty;
+  const errors = form.formState.errors;
 
   async function onSubmit(data: ProfileFormData) {
     setIsSubmitting(true);
@@ -99,95 +90,78 @@ export function SettingsForm({ initialProfile }: SettingsFormProps) {
   return (
     <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription>
-            Your personal information displayed across the platform
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Your name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        <Title>Profile</Title>
+        <Text>Your personal information displayed across the platform</Text>
 
-              <FormField
-                control={form.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Username</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="username"
-                        {...field}
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      A unique identifier for your account
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        <form onSubmit={form.handleSubmit(onSubmit)} className="mt-6 space-y-4">
+          <div>
+            <Text className="mb-2 font-medium">Name</Text>
+            <TextInput
+              placeholder="Your name"
+              error={!!errors.name}
+              errorMessage={errors.name?.message}
+              {...form.register("name")}
+            />
+          </div>
 
-              <div className="space-y-2">
-                <FormLabel>Email</FormLabel>
-                <Input value={initialProfile.email} disabled />
-                <p className="text-sm text-muted-foreground">
-                  Contact support to change your email address
-                </p>
-              </div>
+          <div>
+            <Text className="mb-2 font-medium">Username</Text>
+            <TextInput
+              placeholder="username"
+              error={!!errors.username}
+              errorMessage={errors.username?.message}
+              {...form.register("username")}
+            />
+            <Text className="mt-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+              A unique identifier for your account
+            </Text>
+          </div>
 
-              <div className="flex gap-2 pt-4">
-                <Button type="submit" disabled={isSubmitting || !isDirty}>
-                  {isSubmitting && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Save Changes
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCancel}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
+          <div>
+            <Text className="mb-2 font-medium">Email</Text>
+            <TextInput value={initialProfile.email} disabled />
+            <Text className="mt-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+              Contact support to change your email address
+            </Text>
+          </div>
+
+          <Divider />
+
+          <div className="flex gap-2">
+            <Button
+              type="submit"
+              disabled={isSubmitting || !isDirty}
+              loading={isSubmitting}
+              loadingText="Saving..."
+            >
+              Save Changes
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleCancel}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+          </div>
+        </form>
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Password</CardTitle>
-          <CardDescription>Manage your account password</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
+        <Title>Password</Title>
+        <Text>Manage your account password</Text>
+
+        <div className="mt-4">
+          <Text className="mb-4 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
             To change your password, use the password reset flow.
-          </p>
+          </Text>
           <Link href="/forgot-password">
-            <Button variant="outline">
+            <Button variant="secondary" icon={ExternalLink}>
               Reset Password
-              <ExternalLink className="ml-2 h-4 w-4" />
             </Button>
           </Link>
-        </CardContent>
+        </div>
       </Card>
     </div>
   );

@@ -2,12 +2,7 @@
 
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@repo/design/components/ui/tabs";
+import { TabGroup, TabList, Tab, TabPanels, TabPanel } from "@tremor/react";
 import { SettingsForm } from "./settings-form";
 import { NotificationPreferences } from "./notification-preferences";
 import type { UserProfile } from "@/lib/services";
@@ -26,26 +21,26 @@ export function SettingsTabs({
     <div className="space-y-6">
       <Link
         href="/workspaces"
-        className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+        className="inline-flex items-center text-sm text-tremor-content hover:text-tremor-content-strong transition-colors"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Workspaces
       </Link>
 
-      <Tabs defaultValue="profile" className="w-full">
-        <TabsList>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="profile" className="mt-6">
-          <SettingsForm initialProfile={profile} />
-        </TabsContent>
-
-        <TabsContent value="notifications" className="mt-6">
-          <NotificationPreferences initialPreferences={notificationPreferences} />
-        </TabsContent>
-      </Tabs>
+      <TabGroup>
+        <TabList variant="solid">
+          <Tab>Profile</Tab>
+          <Tab>Notifications</Tab>
+        </TabList>
+        <TabPanels>
+          <TabPanel className="mt-6">
+            <SettingsForm initialProfile={profile} />
+          </TabPanel>
+          <TabPanel className="mt-6">
+            <NotificationPreferences initialPreferences={notificationPreferences} />
+          </TabPanel>
+        </TabPanels>
+      </TabGroup>
     </div>
   );
 }

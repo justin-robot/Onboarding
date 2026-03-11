@@ -2,17 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@repo/design/components/ui/button";
-import { Switch } from "@repo/design/components/ui/switch";
 import {
   Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@repo/design/components/ui/card";
-import { Label } from "@repo/design/components/ui/label";
-import { Loader2, CheckSquare, Calendar, FileText, Video } from "lucide-react";
+  Title,
+  Text,
+  Divider,
+  Switch,
+  Button,
+  List,
+  ListItem,
+} from "@tremor/react";
+import { CheckSquare, Calendar, FileText, Video, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   NOTIFICATION_CATEGORIES,
@@ -85,13 +85,10 @@ export function NotificationPreferences({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Notification Preferences</CardTitle>
-        <CardDescription>
-          Choose which notifications you want to receive
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
+      <Title>Notification Preferences</Title>
+      <Text>Choose which notifications you want to receive</Text>
+
+      <List className="mt-6">
         {(
           Object.entries(NOTIFICATION_CATEGORIES) as [
             keyof typeof NOTIFICATION_CATEGORIES,
@@ -100,47 +97,47 @@ export function NotificationPreferences({
         ).map(([key, category]) => {
           const Icon = CATEGORY_ICONS[key];
           return (
-            <div
-              key={key}
-              className="flex items-center justify-between space-x-4"
-            >
-              <div className="flex items-start space-x-4">
-                <div className="p-2 rounded-lg bg-muted">
-                  <Icon className="h-5 w-5 text-muted-foreground" />
+            <ListItem key={key} className="py-4">
+              <div className="flex items-center space-x-4">
+                <div className="p-2 rounded-lg bg-tremor-background-subtle dark:bg-dark-tremor-background-subtle">
+                  <Icon className="h-5 w-5 text-tremor-content dark:text-dark-tremor-content" />
                 </div>
-                <div className="space-y-0.5">
-                  <Label htmlFor={key} className="text-base font-medium">
-                    {category.label}
-                  </Label>
-                  <p className="text-sm text-muted-foreground">
+                <div>
+                  <Text className="font-medium">{category.label}</Text>
+                  <Text className="text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
                     {category.description}
-                  </p>
+                  </Text>
                 </div>
               </div>
               <Switch
                 id={key}
                 checked={preferences[key]}
-                onCheckedChange={() => handleToggle(key)}
+                onChange={() => handleToggle(key)}
               />
-            </div>
+            </ListItem>
           );
         })}
+      </List>
 
-        <div className="flex gap-2 pt-4 border-t">
-          <Button onClick={handleSave} disabled={isSubmitting || !hasChanges}>
-            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save Preferences
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleCancel}
-            disabled={isSubmitting || !hasChanges}
-          >
-            Cancel
-          </Button>
-        </div>
-      </CardContent>
+      <Divider />
+
+      <div className="flex gap-2">
+        <Button
+          onClick={handleSave}
+          disabled={isSubmitting || !hasChanges}
+          loading={isSubmitting}
+          loadingText="Saving..."
+        >
+          Save Preferences
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={handleCancel}
+          disabled={isSubmitting || !hasChanges}
+        >
+          Cancel
+        </Button>
+      </div>
     </Card>
   );
 }
