@@ -38,7 +38,12 @@ import {
 } from "@repo/design/components/ui/dialog";
 import { Checkbox } from "@repo/design/components/ui/checkbox";
 import { Label } from "@repo/design/components/ui/label";
-import { Eye, SearchIcon, CheckSquare, Loader2, MoreHorizontal, CheckCircle, Pencil } from "lucide-react";
+import { Eye, SearchIcon, CheckSquare, Loader2, MoreHorizontal, CheckCircle, Pencil, ChevronDown, ChevronRight, User, Clock } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@repo/design/components/ui/collapsible";
 import { toast } from "sonner";
 
 interface Task {
@@ -105,6 +110,11 @@ export const TaskList = () => {
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [bypassDependencies, setBypassDependencies] = useState(false);
   const [completing, setCompleting] = useState(false);
+
+  // Expandable assignee rows state
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
+  const [taskAssignees, setTaskAssignees] = useState<Record<string, Assignee[]>>({});
+  const [loadingTaskAssignees, setLoadingTaskAssignees] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -206,6 +216,43 @@ export const TaskList = () => {
     }
   };
 
+  const toggleTaskExpanded = async (taskId: string) => {
+    const newExpanded = new Set(expandedTasks);
+
+    if (newExpanded.has(taskId)) {
+      newExpanded.delete(taskId);
+      setExpandedTasks(newExpanded);
+      return;
+    }
+
+    newExpanded.add(taskId);
+    setExpandedTasks(newExpanded);
+
+    // Fetch assignees if not already loaded
+    if (!taskAssignees[taskId] && !loadingTaskAssignees.has(taskId)) {
+      setLoadingTaskAssignees((prev) => new Set(prev).add(taskId));
+
+      try {
+        const response = await fetch(`/api/admin/tasks/${taskId}/assignees`, {
+          credentials: "include",
+        });
+        if (!response.ok) throw new Error("Failed to fetch assignees");
+
+        const result = await response.json();
+        setTaskAssignees((prev) => ({ ...prev, [taskId]: result.data || [] }));
+      } catch (error) {
+        console.error("Error fetching assignees:", error);
+        toast.error("Failed to load assignees");
+      } finally {
+        setLoadingTaskAssignees((prev) => {
+          const next = new Set(prev);
+          next.delete(taskId);
+          return next;
+        });
+      }
+    }
+  };
+
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
@@ -287,77 +334,173 @@ export const TaskList = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredData.map((task) => (
-                    <TableRow key={task.id}>
-                      <TableCell>
-                        <div className="font-medium max-w-xs truncate">{task.title}</div>
-                      </TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${taskTypeColors[task.type] || "bg-gray-100"}`}>
-                          {taskTypeLabels[task.type] || task.type}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={statusColors[task.status] || "outline"}>
-                          {task.status?.replace("_", " ")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-xs truncate">{task.workspaceName}</TableCell>
-                      <TableCell className="max-w-xs truncate">{task.sectionTitle}</TableCell>
-                      <TableCell>{task.assigneeCount}</TableCell>
-                      <TableCell>
-                        {task.dueDateValue
-                          ? new Date(task.dueDateValue).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                            })
-                          : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="cursor-pointer"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              window.location.href = `/workspace/${task.workspaceId}`;
-                            }}
-                            title="View Workspace"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  window.location.href = `/dashboard/tasks/${task.id}`;
-                                }}
-                              >
-                                <Pencil className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onClick={() => openCompleteDialog(task)}
-                                disabled={task.status === "completed"}
-                              >
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                Complete Task
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  filteredData.map((task) => {
+                    const isExpanded = expandedTasks.has(task.id);
+                    const taskAssigneeList = taskAssignees[task.id] || [];
+                    const isLoadingAssignees = loadingTaskAssignees.has(task.id);
+                    const completedCount = taskAssigneeList.filter((a) => a.status === "completed").length;
+
+                    return (
+                      <Collapsible key={task.id} open={isExpanded} onOpenChange={() => toggleTaskExpanded(task.id)} asChild>
+                        <>
+                          <TableRow className={isExpanded ? "border-b-0" : ""}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <CollapsibleTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </CollapsibleTrigger>
+                                <div className="font-medium max-w-xs truncate">{task.title}</div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${taskTypeColors[task.type] || "bg-gray-100"}`}>
+                                {taskTypeLabels[task.type] || task.type}
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={statusColors[task.status] || "outline"}>
+                                {task.status?.replace("_", " ")}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="max-w-xs truncate">{task.workspaceName}</TableCell>
+                            <TableCell className="max-w-xs truncate">{task.sectionTitle}</TableCell>
+                            <TableCell>
+                              <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-auto py-1 px-2 text-sm hover:bg-muted">
+                                  {task.assigneeCount}
+                                </Button>
+                              </CollapsibleTrigger>
+                            </TableCell>
+                            <TableCell>
+                              {task.dueDateValue
+                                ? new Date(task.dueDateValue).toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                  })
+                                : "—"}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="cursor-pointer"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    window.location.href = `/workspace/${task.workspaceId}`;
+                                  }}
+                                  title="View Workspace"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                      onClick={() => {
+                                        window.location.href = `/dashboard/tasks/${task.id}`;
+                                      }}
+                                    >
+                                      <Pencil className="mr-2 h-4 w-4" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => openCompleteDialog(task)}
+                                      disabled={task.status === "completed"}
+                                    >
+                                      <CheckCircle className="mr-2 h-4 w-4" />
+                                      Complete Task
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                          <CollapsibleContent asChild>
+                            <TableRow className="bg-muted/30 hover:bg-muted/40">
+                              <TableCell colSpan={8} className="py-3">
+                                <div className="pl-8">
+                                  {isLoadingAssignees ? (
+                                    <div className="flex items-center gap-2 py-2">
+                                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                      <span className="text-sm text-muted-foreground">Loading assignees...</span>
+                                    </div>
+                                  ) : taskAssigneeList.length === 0 ? (
+                                    <div className="text-sm text-muted-foreground py-2">
+                                      No assignees for this task
+                                    </div>
+                                  ) : (
+                                    <div className="space-y-2">
+                                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                                        <span className="font-medium">Assignee Progress:</span>
+                                        <span>{completedCount} of {taskAssigneeList.length} completed</span>
+                                      </div>
+                                      <div className="grid gap-2">
+                                        {taskAssigneeList.map((assignee) => (
+                                          <div
+                                            key={assignee.userId}
+                                            className="flex items-center justify-between p-3 bg-background rounded-lg border"
+                                          >
+                                            <div className="flex items-center gap-3">
+                                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                                                <User className="h-4 w-4 text-primary" />
+                                              </div>
+                                              <div>
+                                                <div className="font-medium text-sm">{assignee.name}</div>
+                                                <div className="text-xs text-muted-foreground">{assignee.email}</div>
+                                              </div>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                              {assignee.status === "completed" ? (
+                                                <>
+                                                  <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-100">
+                                                    <CheckCircle className="mr-1 h-3 w-3" />
+                                                    Completed
+                                                  </Badge>
+                                                  {assignee.completedAt && (
+                                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                      <Clock className="h-3 w-3" />
+                                                      {new Date(assignee.completedAt).toLocaleDateString("en-US", {
+                                                        month: "short",
+                                                        day: "numeric",
+                                                        hour: "numeric",
+                                                        minute: "2-digit",
+                                                      })}
+                                                    </div>
+                                                  )}
+                                                </>
+                                              ) : (
+                                                <Badge variant="outline" className="text-amber-600 border-amber-300">
+                                                  Pending
+                                                </Badge>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          </CollapsibleContent>
+                        </>
+                      </Collapsible>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
