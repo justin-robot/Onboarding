@@ -54,6 +54,9 @@ export function WorkspaceList({ workspaces, userId, userRole }: WorkspaceListPro
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
+  // Show admin panel if user is platform admin OR admin of any workspace
+  const canAccessAdmin = userRole === "admin" || workspaces.some((w) => w.role === "admin");
+
   const filteredWorkspaces = workspaces.filter((workspace) =>
     workspace.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -69,7 +72,7 @@ export function WorkspaceList({ workspaces, userId, userRole }: WorkspaceListPro
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {userRole === "admin" && (
+          {canAccessAdmin && (
             <Link href="/dashboard">
               <Button variant="outline">
                 <Settings className="mr-2 h-4 w-4" />
