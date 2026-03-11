@@ -28,9 +28,12 @@ export default async function WorkspacePage({ params }: PageProps) {
     redirect("/sign-in");
   }
 
-  // Check membership
+  // Check if user is admin (can view any workspace)
+  const isAdmin = session.user.role === "admin";
+
+  // Check membership (admins can bypass this check)
   const membership = await memberService.getMember(workspaceId, session.user.id);
-  if (!membership) {
+  if (!membership && !isAdmin) {
     notFound();
   }
 
@@ -179,7 +182,7 @@ export default async function WorkspacePage({ params }: PageProps) {
         sidebarWorkspaces={validSidebarWorkspaces}
         currentWorkspaceId={workspaceId}
         currentUserId={session.user.id}
-        currentUserRole={membership.role}
+        currentUserRole={membership?.role || (isAdmin ? "admin" : "user")}
       />
     </div>
   );

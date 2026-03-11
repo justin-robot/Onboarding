@@ -37,6 +37,7 @@ interface FlowTask {
   isYourTurn?: boolean;
   isCompleted?: boolean;
   isLocked?: boolean;
+  lockedByTasks?: Array<{ id: string; title: string }>;
   description?: string;
   dueDate?: Date | string;
   createdAt?: Date | string;
@@ -56,6 +57,8 @@ interface FlowViewProps {
   sections: FlowSection[];
   /** Currently selected task ID */
   selectedTaskId?: string;
+  /** Task ID that was recently completed (shows green highlight) */
+  recentlyCompletedTaskId?: string;
   /** Callback when a task is clicked */
   onTaskSelect?: (taskId: string) => void;
   /** Callback when a task's review button is clicked */
@@ -94,6 +97,7 @@ function SortableTaskCard({
   task,
   isSelected,
   isCompact,
+  isRecentlyCompleted,
   onTaskSelect,
   onTaskReview,
   isDragDisabled,
@@ -104,6 +108,7 @@ function SortableTaskCard({
   task: FlowTask;
   isSelected: boolean;
   isCompact: boolean;
+  isRecentlyCompleted?: boolean;
   onTaskSelect?: (taskId: string) => void;
   onTaskReview?: (taskId: string) => void;
   isDragDisabled?: boolean;
@@ -144,7 +149,9 @@ function SortableTaskCard({
         isYourTurn={task.isYourTurn}
         isCompleted={task.isCompleted}
         isLocked={task.isLocked}
+        lockedByTasks={task.lockedByTasks}
         isSelected={isSelected}
+        isRecentlyCompleted={isRecentlyCompleted}
         description={isCompact ? undefined : task.description}
         dueDate={task.dueDate}
         createdAt={task.createdAt}
@@ -228,6 +235,7 @@ function SortableSection({
 export function FlowView({
   sections,
   selectedTaskId,
+  recentlyCompletedTaskId,
   onTaskSelect,
   onTaskReview,
   onAddTask,
@@ -413,6 +421,7 @@ export function FlowView({
                         task={task}
                         isSelected={task.id === selectedTaskId}
                         isCompact={isCompact}
+                        isRecentlyCompleted={task.id === recentlyCompletedTaskId}
                         onTaskSelect={onTaskSelect}
                         onTaskReview={onTaskReview}
                         isDragDisabled={!onTaskReorder}
@@ -465,7 +474,9 @@ export function FlowView({
                     isYourTurn={task.isYourTurn}
                     isCompleted={task.isCompleted}
                     isLocked={task.isLocked}
+                    lockedByTasks={task.lockedByTasks}
                     isSelected={task.id === selectedTaskId}
+                    isRecentlyCompleted={task.id === recentlyCompletedTaskId}
                     description={isCompact ? undefined : task.description}
                     dueDate={task.dueDate}
                     createdAt={task.createdAt}

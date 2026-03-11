@@ -49,7 +49,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-full bg-background">
       {/* Sidebar */}
       <aside className="w-64 border-r bg-muted/30 flex flex-col">
         {/* Header */}
@@ -81,14 +81,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                   "w-full justify-start gap-3",
                   active && "bg-secondary"
                 )}
-                onClick={() => {
-                  if (item.resource) {
-                    // React Admin handles routing internally
-                    router.push(item.href);
-                  } else {
-                    router.push(item.href);
-                  }
-                }}
+                onClick={() => router.push(item.href)}
               >
                 <Icon className="h-4 w-4" />
                 {item.label}

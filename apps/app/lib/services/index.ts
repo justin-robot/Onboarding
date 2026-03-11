@@ -68,3 +68,9 @@ export { accessService, AccessDeniedError, WorkspaceNotFoundError, NotWorkspaceM
 
 export { meetingReminderService } from "./meetingReminder";
 export type { UpcomingMeeting, MeetingReminderResult } from "./meetingReminder";
+
+export { userService } from "./user";
+export type { UserProfile, UpdateProfileInput } from "./user";
+
+export { templateService } from "./template";
+export type { DuplicateWorkspaceOptions, DuplicateWorkspaceResult } from "./template";

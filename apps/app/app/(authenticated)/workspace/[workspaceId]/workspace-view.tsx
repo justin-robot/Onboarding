@@ -118,6 +118,8 @@ export function WorkspaceView({
   const [createWorkspaceDialogOpen, setCreateWorkspaceDialogOpen] = useState(false);
   const [previewFile, setPreviewFile] = useState<PreviewFile | null>(null);
   const [workspaceFiles, setWorkspaceFiles] = useState<FileItem[]>(files);
+  // Track recently completed task for green border highlight
+  const [recentlyCompletedTaskId, setRecentlyCompletedTaskId] = useState<string | null>(null);
 
   // Initial messages state (fetched once, then real-time takes over)
   const [initialMessages, setInitialMessages] = useState<Message[]>([]);
@@ -323,6 +325,7 @@ export function WorkspaceView({
         <FlowView
           sections={flowSections}
           selectedTaskId={selectedTaskId || undefined}
+          recentlyCompletedTaskId={recentlyCompletedTaskId || undefined}
           onTaskSelect={handleTaskSelect}
           onTaskReview={handleTaskSelect}
           onAddTask={currentUserRole === "admin" ? handleAddTask : undefined}
@@ -373,8 +376,21 @@ export function WorkspaceView({
             workspaceId={currentWorkspaceId}
             currentUserId={currentUserId}
             onClose={() => setSelectedTaskId(null)}
-            onTaskComplete={() => {
+            onTaskComplete={(wasCompleted?: boolean) => {
               router.refresh();
+              // If the task was just completed, auto-close panel and show green highlight
+              if (wasCompleted && selectedTaskId) {
+                const completedId = selectedTaskId;
+                // Close panel after brief delay for feedback
+                setTimeout(() => {
+                  setSelectedTaskId(null);
+                  setRecentlyCompletedTaskId(completedId);
+                }, 500);
+                // Clear highlight after animation
+                setTimeout(() => {
+                  setRecentlyCompletedTaskId(null);
+                }, 3500);
+              }
             }}
             onTaskDelete={() => {
               setSelectedTaskId(null);

@@ -1,51 +1,77 @@
 "use client";
 
-import { CoreAdmin, Resource } from "ra-core";
-import { dataProvider } from "./data-provider";
+import { usePathname } from "next/navigation";
 import { AdminLayout } from "./admin-layout";
 import { DashboardOverview } from "./overview";
 import { UserList } from "./users/list";
 import { UserEdit } from "./users/edit";
 import { UserCreate } from "./users/create";
 import { WorkspaceList } from "./workspaces/list";
+import { WorkspaceEdit } from "./workspaces/edit";
 import { TaskList } from "./tasks/list";
+import { TaskEdit } from "./tasks/edit";
 import { MemberList } from "./members/list";
 import { InvitationList } from "./invitations/list";
 import { AuditLogList } from "./audit-logs/list";
 
 const AdminClient = () => {
-  return (
-    <AdminLayout>
-      <CoreAdmin dataProvider={dataProvider} dashboard={DashboardOverview}>
-        <Resource
-          name="users"
-          list={UserList}
-          edit={UserEdit}
-          create={UserCreate}
-        />
-        <Resource
-          name="workspaces"
-          list={WorkspaceList}
-        />
-        <Resource
-          name="tasks"
-          list={TaskList}
-        />
-        <Resource
-          name="members"
-          list={MemberList}
-        />
-        <Resource
-          name="invitations"
-          list={InvitationList}
-        />
-        <Resource
-          name="audit-logs"
-          list={AuditLogList}
-        />
-      </CoreAdmin>
-    </AdminLayout>
-  );
+  const pathname = usePathname();
+
+  // Determine which component to render based on the pathname
+  const renderContent = () => {
+    // User routes
+    if (pathname === "/dashboard/users/create") {
+      return <UserCreate />;
+    }
+    if (pathname.startsWith("/dashboard/users/") && pathname !== "/dashboard/users") {
+      // Extract user ID for edit page
+      const userId = pathname.split("/dashboard/users/")[1];
+      if (userId && userId !== "create") {
+        return <UserEdit userId={userId} />;
+      }
+    }
+    if (pathname === "/dashboard/users") {
+      return <UserList />;
+    }
+
+    // Workspace routes
+    if (pathname.startsWith("/dashboard/workspaces/") && pathname !== "/dashboard/workspaces") {
+      // Extract workspace ID for edit page
+      const workspaceId = pathname.split("/dashboard/workspaces/")[1];
+      if (workspaceId) {
+        return <WorkspaceEdit workspaceId={workspaceId} />;
+      }
+    }
+    if (pathname === "/dashboard/workspaces") {
+      return <WorkspaceList />;
+    }
+
+    // Task routes
+    if (pathname.startsWith("/dashboard/tasks/") && pathname !== "/dashboard/tasks") {
+      // Extract task ID for edit page
+      const taskId = pathname.split("/dashboard/tasks/")[1];
+      if (taskId) {
+        return <TaskEdit taskId={taskId} />;
+      }
+    }
+    if (pathname === "/dashboard/tasks") {
+      return <TaskList />;
+    }
+    if (pathname === "/dashboard/members") {
+      return <MemberList />;
+    }
+    if (pathname === "/dashboard/invitations") {
+      return <InvitationList />;
+    }
+    if (pathname === "/dashboard/audit-logs") {
+      return <AuditLogList />;
+    }
+
+    // Default: Overview
+    return <DashboardOverview />;
+  };
+
+  return <AdminLayout>{renderContent()}</AdminLayout>;
 };
 
 export default AdminClient;

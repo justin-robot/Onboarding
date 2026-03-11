@@ -174,12 +174,20 @@ export function createNotificationService(
       }
 
       try {
+        console.log(
+          `[notifications] Triggering workflow: ${options.workflowId} for user: ${options.recipientId}`
+        );
+
         const result = await knockClient.workflows.trigger(options.workflowId, {
           recipients: [options.recipientId],
           data: options.data as unknown as Record<string, unknown>,
           actor: options.actorId,
           tenant: options.tenant,
         });
+
+        console.log(
+          `[notifications] Successfully triggered: ${options.workflowId}, runId: ${result.workflow_run_id}`
+        );
 
         return {
           success: true,
@@ -204,6 +212,7 @@ let serviceInstance: NotificationService | null = null;
 export function getNotificationService(): NotificationService {
   if (!serviceInstance) {
     const knockSecretKey = process.env.KNOCK_SECRET_API_KEY;
+    console.log(`[notifications] Initializing service. Secret key present: ${!!knockSecretKey}`);
     const knockClient = knockSecretKey
       ? new Knock({ apiKey: knockSecretKey })
       : null;

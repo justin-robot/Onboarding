@@ -18,7 +18,7 @@ const AppLayout = async ({ children }: AppLayoutProperties) => {
   }
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="h-screen overflow-hidden bg-background">
       <PendingInviteHandler />
       <NotificationsWrapper userId={session.user.id}>
         {children}

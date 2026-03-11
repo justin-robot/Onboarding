@@ -1,8 +1,10 @@
 import { Knock } from "@knocklabs/node";
 
+// Only log warning on server side, not in browser
+const isServer = typeof window === "undefined";
 const knockSecretKey = process.env.KNOCK_SECRET_API_KEY;
 
-if (!knockSecretKey) {
+if (isServer && !knockSecretKey) {
   console.warn("KNOCK_SECRET_API_KEY not configured. Notification features will be disabled.");
 }
 

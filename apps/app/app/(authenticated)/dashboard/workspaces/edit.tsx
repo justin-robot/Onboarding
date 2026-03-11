@@ -14,13 +14,7 @@ import {
 } from "@repo/design/components/ui/card";
 import { Button } from "@repo/design/components/ui/button";
 import { Input } from "@repo/design/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/design/components/ui/select";
+import { Textarea } from "@repo/design/components/ui/textarea";
 import {
   Form,
   FormControl,
@@ -32,100 +26,95 @@ import {
 import { ArrowLeftIcon, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-const userSchema = z.object({
+const workspaceSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  email: z.string().email("Invalid email address"),
-  password: z.string().optional(),
-  role: z.enum(["admin", "account_manager", "user"]).optional().nullable(),
+  description: z.string().optional(),
+  dueDate: z.string().optional(),
 });
 
-type UserFormValues = z.infer<typeof userSchema>;
+type WorkspaceFormValues = z.infer<typeof workspaceSchema>;
 
-interface User {
+interface Workspace {
   id: string;
   name: string;
-  email: string;
-  role: "admin" | "account_manager" | "user" | null;
+  description: string | null;
+  dueDate: string | null;
 }
 
-interface UserEditProps {
-  userId: string;
+interface WorkspaceEditProps {
+  workspaceId: string;
 }
 
-export const UserEdit = ({ userId }: UserEditProps) => {
+export const WorkspaceEdit = ({ workspaceId }: WorkspaceEditProps) => {
   const router = useRouter();
-  const [user, setUser] = useState<User | null>(null);
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const form = useForm<UserFormValues>({
-    resolver: zodResolver(userSchema),
+  const form = useForm<WorkspaceFormValues>({
+    resolver: zodResolver(workspaceSchema),
     defaultValues: {
       name: "",
-      email: "",
-      password: "",
-      role: null,
+      description: "",
+      dueDate: "",
     },
   });
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchWorkspace = async () => {
       try {
-        const response = await fetch("/api/auth/admin/list-users", {
+        const response = await fetch(`/api/admin/workspaces/${workspaceId}`, {
           credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to fetch users");
+        if (!response.ok) throw new Error("Failed to fetch workspace");
 
-        const data = await response.json();
-        const foundUser = data.users?.find((u: User) => u.id === userId);
+        const result = await response.json();
+        const data = result.data;
 
-        if (foundUser) {
-          setUser(foundUser);
+        if (data) {
+          setWorkspace(data);
           form.reset({
-            name: foundUser.name || "",
-            email: foundUser.email || "",
-            password: "",
-            role: foundUser.role || null,
+            name: data.name || "",
+            description: data.description || "",
+            dueDate: data.dueDate ? data.dueDate.split("T")[0] : "",
           });
         }
       } catch (error) {
-        console.error("Error fetching user:", error);
-        toast.error("Failed to load user");
+        console.error("Error fetching workspace:", error);
+        toast.error("Failed to load workspace");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUser();
-  }, [userId, form]);
+    fetchWorkspace();
+  }, [workspaceId, form]);
 
-  const onSubmit = async (data: UserFormValues) => {
-    if (!user?.id) return;
+  const onSubmit = async (data: WorkspaceFormValues) => {
+    if (!workspace?.id) return;
 
     setSaving(true);
     try {
-      const response = await fetch("/api/auth/admin/update-user", {
-        method: "POST",
+      const response = await fetch(`/api/admin/workspaces/${workspace.id}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          userId: user.id,
           name: data.name,
-          email: data.email,
-          role: data.role,
-          ...(data.password ? { password: data.password } : {}),
+          description: data.description || null,
+          dueDate: data.dueDate || null,
         }),
       });
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
-        throw new Error(error.message || "Failed to update user");
+        throw new Error(error.message || "Failed to update workspace");
       }
 
-      toast.success("User updated successfully");
-      router.push("/dashboard/users");
+      toast.success("Workspace updated successfully");
+      router.push("/dashboard/workspaces");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update user");
+      toast.error(error instanceof Error ? error.message : "Failed to update workspace");
     } finally {
       setSaving(false);
     }
@@ -136,24 +125,24 @@ export const UserEdit = ({ userId }: UserEditProps) => {
       <div className="container mx-auto py-8 px-4">
         <div className="flex items-center justify-center p-8">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          <span className="ml-2 text-muted-foreground">Loading user...</span>
+          <span className="ml-2 text-muted-foreground">Loading workspace...</span>
         </div>
       </div>
     );
   }
 
-  if (!user) {
+  if (!workspace) {
     return (
       <div className="container mx-auto py-8 px-4">
         <Card>
           <CardContent className="py-8 text-center">
-            <p className="text-muted-foreground">User not found</p>
+            <p className="text-muted-foreground">Workspace not found</p>
             <Button
               variant="outline"
               className="mt-4"
-              onClick={() => router.push("/dashboard/users")}
+              onClick={() => router.push("/dashboard/workspaces")}
             >
-              Back to Users
+              Back to Workspaces
             </Button>
           </CardContent>
         </Card>
@@ -165,7 +154,7 @@ export const UserEdit = ({ userId }: UserEditProps) => {
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <p className="text-muted-foreground mt-2">Edit user</p>
+        <p className="text-muted-foreground mt-2">Edit workspace</p>
       </div>
       <Card>
         <CardHeader>
@@ -173,13 +162,13 @@ export const UserEdit = ({ userId }: UserEditProps) => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => router.push("/dashboard/users")}
+              onClick={() => router.push("/dashboard/workspaces")}
             >
               <ArrowLeftIcon className="size-4" />
             </Button>
             <div>
-              <CardTitle>Edit User</CardTitle>
-              <CardDescription>Update user information</CardDescription>
+              <CardTitle>Edit Workspace</CardTitle>
+              <CardDescription>Update workspace details</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -201,12 +190,12 @@ export const UserEdit = ({ userId }: UserEditProps) => {
               />
               <FormField
                 control={form.control}
-                name="email"
+                name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Input type="email" {...field} />
+                      <Textarea {...field} rows={3} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -214,38 +203,13 @@ export const UserEdit = ({ userId }: UserEditProps) => {
               />
               <FormField
                 control={form.control}
-                name="password"
+                name="dueDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password (leave blank to keep current)</FormLabel>
+                    <FormLabel>Due Date</FormLabel>
                     <FormControl>
-                      <Input type="password" {...field} />
+                      <Input type="date" {...field} />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Role</FormLabel>
-                    <Select
-                      value={field.value || ""}
-                      onValueChange={(value) => field.onChange(value || null)}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a role" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="user">User</SelectItem>
-                        <SelectItem value="account_manager">Account Manager</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -258,7 +222,7 @@ export const UserEdit = ({ userId }: UserEditProps) => {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => router.push("/dashboard/users")}
+                  onClick={() => router.push("/dashboard/workspaces")}
                   disabled={saving}
                 >
                   Cancel

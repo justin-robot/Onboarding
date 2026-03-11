@@ -27,7 +27,14 @@ export const NotificationsProvider = ({
 
   return (
     <KnockProvider apiKey={knockApiKey} userId={userId}>
-      <KnockFeedProvider colorMode={theme} feedId={knockFeedChannelId}>
+      <KnockFeedProvider
+        colorMode={theme}
+        feedId={knockFeedChannelId}
+        defaultFeedOptions={{
+          archived: "exclude",
+          page_size: 50,
+        }}
+      >
         {children}
       </KnockFeedProvider>
     </KnockProvider>

@@ -120,7 +120,7 @@ export default function FormEditorPage() {
   // Loading state
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex h-full items-center justify-center">
         <div className="text-center">
           <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
           <p className="mt-2 text-sm text-muted-foreground">Loading form builder...</p>
@@ -132,7 +132,7 @@ export default function FormEditorPage() {
   // Error state
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="flex h-full items-center justify-center p-4">
         <div className="max-w-md w-full space-y-4">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />

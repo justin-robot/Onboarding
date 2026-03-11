@@ -221,7 +221,7 @@ export function ChatPanel({
         </TabsList>
 
         {/* Chat Tab */}
-        <TabsContent value="chat" className="flex-1 flex flex-col mt-0 overflow-hidden">
+        <TabsContent value="chat" className="relative flex-1 flex flex-col mt-0 overflow-hidden">
           {/* Messages */}
           <ScrollArea
             viewportRef={scrollAreaRef}

@@ -74,6 +74,7 @@ export type AuditSource =
   | "web"        // User action via web UI
   | "api"        // Direct API call
   | "system"     // System-generated event
+  | "admin"      // Admin panel action
   | "signnow"    // SignNow webhook
   | "calendly"   // Calendly webhook
   | "resend";    // Resend webhook (email events)

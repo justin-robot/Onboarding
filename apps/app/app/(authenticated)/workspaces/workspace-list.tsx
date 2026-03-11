@@ -27,6 +27,7 @@ import {
 import { cn } from "@repo/design/lib/utils";
 import { CreateWorkspaceDialog } from "./create-workspace-dialog";
 import { formatDistanceToNow } from "date-fns";
+import { UserMenu } from "../components/user-menu";
 
 interface WorkspaceData {
   id: string;
@@ -80,6 +81,7 @@ export function WorkspaceList({ workspaces, userId, userRole }: WorkspaceListPro
             <Plus className="mr-2 h-4 w-4" />
             Create Workspace
           </Button>
+          <UserMenu />
         </div>
       </div>
 
@@ -123,13 +125,13 @@ export function WorkspaceList({ workspaces, userId, userRole }: WorkspaceListPro
           onCreateClick={() => setCreateDialogOpen(true)}
         />
       ) : viewMode === "grid" ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filteredWorkspaces.map((workspace) => (
             <WorkspaceCard key={workspace.id} workspace={workspace} />
           ))}
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {filteredWorkspaces.map((workspace) => (
             <WorkspaceListItem key={workspace.id} workspace={workspace} />
           ))}
@@ -154,58 +156,58 @@ function WorkspaceCard({ workspace }: { workspace: WorkspaceData }) {
 
   return (
     <Link href={`/workspace/${workspace.id}`}>
-      <Card className="group cursor-pointer transition-all hover:shadow-md hover:border-primary/30">
+      <Card className="group cursor-pointer transition-all hover:shadow-md hover:border-primary/30 py-0 overflow-hidden">
         {/* Banner */}
-        <div className="h-20 rounded-t-lg bg-gradient-to-r from-blue-500 to-blue-600" />
+        <div className="h-24 bg-gradient-to-r from-blue-500 to-blue-600" />
 
-        <CardHeader className="pb-2">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2">
-              {/* Icon */}
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-500 text-white shadow-sm -mt-8 border-2 border-background">
-                <span className="text-sm font-semibold">
+        <CardHeader className="pt-0 pb-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              {/* Icon - overlaps banner */}
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white shadow-md -mt-6 border-2 border-background">
+                <span className="text-base font-semibold">
                   {workspace.name.charAt(0).toUpperCase()}
                 </span>
               </div>
-              <div>
+              <div className="pt-1">
                 <CardTitle className="line-clamp-1 text-base group-hover:text-primary transition-colors">
                   {workspace.name}
                 </CardTitle>
                 {workspace.role === "admin" && (
-                  <Badge variant="secondary" className="text-xs mt-0.5">
+                  <Badge variant="secondary" className="text-xs mt-1">
                     Admin
                   </Badge>
                 )}
               </div>
             </div>
             {workspace.isCompleted && (
-              <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+              <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0 mt-1" />
             )}
           </div>
           {workspace.description && (
-            <CardDescription className="line-clamp-2 mt-2">
+            <CardDescription className="line-clamp-2 mt-3">
               {workspace.description}
             </CardDescription>
           )}
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="pb-5">
           {/* Progress */}
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Progress</span>
               <span className="font-medium">
                 {workspace.completedTasks}/{workspace.totalTasks} tasks
               </span>
             </div>
-            <Progress value={workspace.progress} className="h-1.5" />
+            <Progress value={workspace.progress} className="h-2" />
           </div>
 
           {/* Due date */}
           {workspace.dueDate && (
             <div
               className={cn(
-                "mt-3 flex items-center gap-1.5 text-sm",
+                "mt-4 flex items-center gap-2 text-sm",
                 isOverdue
                   ? "text-red-500"
                   : isDueSoon
@@ -213,7 +215,7 @@ function WorkspaceCard({ workspace }: { workspace: WorkspaceData }) {
                   : "text-muted-foreground"
               )}
             >
-              <Calendar className="h-3.5 w-3.5" />
+              <Calendar className="h-4 w-4" />
               <span>
                 {isOverdue
                   ? "Overdue"
@@ -225,8 +227,8 @@ function WorkspaceCard({ workspace }: { workspace: WorkspaceData }) {
           )}
 
           {/* Last activity */}
-          <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
+          <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+            <Clock className="h-3.5 w-3.5" />
             <span>
               Updated{" "}
               {formatDistanceToNow(new Date(workspace.updatedAt), {
@@ -243,10 +245,10 @@ function WorkspaceCard({ workspace }: { workspace: WorkspaceData }) {
 function WorkspaceListItem({ workspace }: { workspace: WorkspaceData }) {
   return (
     <Link href={`/workspace/${workspace.id}`}>
-      <Card className="group cursor-pointer transition-all hover:shadow-md hover:border-primary/30">
-        <div className="flex items-center gap-4 p-4">
+      <Card className="group cursor-pointer transition-all hover:shadow-md hover:border-primary/30 py-0">
+        <div className="flex items-center gap-5 px-5 py-4">
           {/* Icon */}
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-blue-500 text-white">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-500 text-white shadow-sm">
             <Building2 className="h-6 w-6" />
           </div>
 
@@ -266,26 +268,26 @@ function WorkspaceListItem({ workspace }: { workspace: WorkspaceData }) {
               )}
             </div>
             {workspace.description && (
-              <p className="text-sm text-muted-foreground truncate mt-0.5">
+              <p className="text-sm text-muted-foreground truncate mt-1">
                 {workspace.description}
               </p>
             )}
           </div>
 
           {/* Progress */}
-          <div className="hidden sm:block w-32">
-            <div className="flex items-center justify-between text-xs mb-1">
+          <div className="hidden sm:block w-36">
+            <div className="flex items-center justify-between text-xs mb-1.5">
               <span className="text-muted-foreground">
                 {workspace.completedTasks}/{workspace.totalTasks}
               </span>
               <span className="font-medium">{workspace.progress}%</span>
             </div>
-            <Progress value={workspace.progress} className="h-1.5" />
+            <Progress value={workspace.progress} className="h-2" />
           </div>
 
           {/* Updated */}
-          <div className="hidden md:flex items-center gap-1.5 text-sm text-muted-foreground">
-            <Clock className="h-3.5 w-3.5" />
+          <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground min-w-[120px]">
+            <Clock className="h-4 w-4" />
             <span>
               {formatDistanceToNow(new Date(workspace.updatedAt), {
                 addSuffix: true,

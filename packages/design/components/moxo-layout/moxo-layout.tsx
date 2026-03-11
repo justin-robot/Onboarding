@@ -11,6 +11,11 @@ import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "../ui/hover-card";
+import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -22,8 +27,8 @@ import {
   FolderOpen,
   GitBranch,
   Menu,
+  PanelLeftOpen,
   PanelRightOpen,
-  PanelRightClose,
   Building2,
 } from "lucide-react";
 import { useIsDesktop } from "./use-media-query";
@@ -142,21 +147,45 @@ function WorkspaceHeader({
         {/* Actions */}
         <div className="flex items-center gap-1">
           {/* Member avatars (fewer on mobile) */}
-          <div className="flex -space-x-1.5 mr-1">
-            {displayMembers.map((member) => (
-              <Avatar key={member.id} className="h-6 w-6 border-2 border-background">
-                <AvatarImage src={member.avatarUrl} alt={member.name} />
-                <AvatarFallback className="text-[10px]">
-                  {member.name.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            ))}
-            {remainingCount > 0 && (
-              <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-muted text-[10px] font-medium">
-                +{remainingCount}
+          <HoverCard openDelay={200} closeDelay={100}>
+            <HoverCardTrigger asChild>
+              <div className="flex -space-x-1.5 mr-1 cursor-pointer">
+                {displayMembers.map((member) => (
+                  <Avatar key={member.id} className="h-6 w-6 border-2 border-background">
+                    <AvatarImage src={member.avatarUrl} alt={member.name} />
+                    <AvatarFallback className="text-[10px]">
+                      {member.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                ))}
+                {remainingCount > 0 && (
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-muted text-[10px] font-medium">
+                    +{remainingCount}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-56 p-3" align="end">
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  {totalMembers || members.length} members
+                </p>
+                <div className="space-y-1.5">
+                  {members.map((member) => (
+                    <div key={member.id} className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={member.avatarUrl} alt={member.name} />
+                        <AvatarFallback className="text-[10px]">
+                          {member.name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm truncate">{member.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
 
           {/* Custom actions (e.g., notification bell) */}
           {actions}
@@ -214,21 +243,45 @@ function WorkspaceHeader({
 
           <div className="flex items-center gap-2">
             {/* Member avatars */}
-            <div className="flex -space-x-2">
-              {displayMembers.map((member) => (
-                <Avatar key={member.id} className="h-7 w-7 border-2 border-background">
-                  <AvatarImage src={member.avatarUrl} alt={member.name} />
-                  <AvatarFallback className="text-xs">
-                    {member.name.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              ))}
-              {remainingCount > 0 && (
-                <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-muted text-xs font-medium">
-                  +{remainingCount}
+            <HoverCard openDelay={200} closeDelay={100}>
+              <HoverCardTrigger asChild>
+                <div className="flex -space-x-2 cursor-pointer">
+                  {displayMembers.map((member) => (
+                    <Avatar key={member.id} className="h-7 w-7 border-2 border-background">
+                      <AvatarImage src={member.avatarUrl} alt={member.name} />
+                      <AvatarFallback className="text-xs">
+                        {member.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  ))}
+                  {remainingCount > 0 && (
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-muted text-xs font-medium">
+                      +{remainingCount}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </HoverCardTrigger>
+              <HoverCardContent className="w-56 p-3" align="end">
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {totalMembers || members.length} members
+                  </p>
+                  <div className="space-y-1.5">
+                    {members.map((member) => (
+                      <div key={member.id} className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={member.avatarUrl} alt={member.name} />
+                          <AvatarFallback className="text-[10px]">
+                            {member.name.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm truncate">{member.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </HoverCardContent>
+            </HoverCard>
 
             {/* Custom actions (e.g., notification bell) */}
             {actions}
@@ -374,7 +427,9 @@ export function MoxoLayout({
 }: MoxoLayoutProps) {
   const isDesktop = useIsDesktop();
   const [currentTab, setCurrentTab] = React.useState<MainTab>(activeTab);
+  const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
   const [rightPanelCollapsed, setRightPanelCollapsed] = React.useState(false);
+  const sidebarRef = React.useRef<ImperativePanelHandle>(null);
   const rightPanelRef = React.useRef<ImperativePanelHandle>(null);
 
   // Internal state for sheets when not controlled
@@ -489,14 +544,33 @@ export function MoxoLayout({
         onLayout={handleLayout}
         autoSaveId={LAYOUT_STORAGE_KEY}
       >
+        {/* Expand button when sidebar is collapsed */}
+        {sidebarCollapsed && (
+          <div className="flex items-center border-r border-border bg-muted/30">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-full w-8 rounded-none hover:bg-muted"
+              onClick={() => sidebarRef.current?.expand()}
+              title="Expand sidebar"
+            >
+              <PanelLeftOpen className="h-4 w-4" />
+              <span className="sr-only">Expand sidebar</span>
+            </Button>
+          </div>
+        )}
+
         {/* Left Sidebar */}
         <Panel
+          ref={sidebarRef}
           id="sidebar"
           defaultSize={DEFAULT_SIZES.sidebar}
           minSize={MIN_SIZES.sidebar}
           maxSize={25}
           collapsible
           collapsedSize={0}
+          onCollapse={() => setSidebarCollapsed(true)}
+          onExpand={() => setSidebarCollapsed(false)}
         >
           <div className="h-full overflow-x-hidden overflow-y-auto border-r border-border bg-muted/30">
             {sidebar}
@@ -562,7 +636,7 @@ export function MoxoLayout({
               onClick={() => rightPanelRef.current?.expand()}
               title="Expand panel"
             >
-              <PanelRightClose className="h-4 w-4" />
+              <PanelRightOpen className="h-4 w-4" />
               <span className="sr-only">Expand panel</span>
             </Button>
           </div>

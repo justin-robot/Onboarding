@@ -168,7 +168,7 @@ export default function FormSubmissionPage() {
   // Loading state
   if (loadingConfig || draftLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex h-full overflow-y-auto items-center justify-center">
         <div className="text-center">
           <Loader2 className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
           <p className="mt-2 text-sm text-muted-foreground">Loading form...</p>
@@ -180,7 +180,7 @@ export default function FormSubmissionPage() {
   // Error state
   if (configError) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="flex h-full overflow-y-auto items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6">
             <Alert variant="destructive">
@@ -204,7 +204,7 @@ export default function FormSubmissionPage() {
   // No form config
   if (!formConfig || formConfig.pages.length === 0) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="flex h-full overflow-y-auto items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <FileText className="mx-auto h-12 w-12 text-muted-foreground/50" />
@@ -228,7 +228,7 @@ export default function FormSubmissionPage() {
   // Already submitted
   if (status === "submitted") {
     return (
-      <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="flex h-full overflow-y-auto items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <CheckCircle className="mx-auto h-12 w-12 text-green-500" />
@@ -256,7 +256,7 @@ export default function FormSubmissionPage() {
   const hasMultiplePages = formConfig.pages.length > 1;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="h-full overflow-y-auto bg-background">
       {/* Header */}
       <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center justify-between">
@@ -280,7 +280,7 @@ export default function FormSubmissionPage() {
       </header>
 
       {/* Form content */}
-      <main className="container max-w-2xl py-8">
+      <main className="container max-w-2xl px-4 py-12 min-h-[calc(100vh-3.5rem)] flex flex-col justify-center">
         <Card>
           <CardHeader>
             <CardTitle>{currentPage?.title || "Form"}</CardTitle>

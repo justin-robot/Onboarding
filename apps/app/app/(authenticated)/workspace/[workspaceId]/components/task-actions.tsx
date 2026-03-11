@@ -60,7 +60,7 @@ interface TaskActionProps {
   bookingLink?: string;
   signerEmail?: string;
   blockingTasks?: BlockingTask[]; // Tasks that must be completed to unlock this one
-  onComplete?: () => void;
+  onComplete?: (wasCompleted?: boolean) => void;
 }
 
 export function TaskAction({
@@ -240,7 +240,7 @@ function FormTaskAction({
   formConfigId?: string;
   isYourTurn: boolean;
   isAdmin?: boolean;
-  onComplete?: () => void;
+  onComplete?: (wasCompleted?: boolean) => void;
 }) {
   const router = useRouter();
 
@@ -270,7 +270,7 @@ function FormTaskAction({
               <Button
                 variant="outline"
                 className="w-full"
-                onClick={() => router.push(`/forms/submit/${formConfigId}`)}
+                onClick={() => window.open(`/forms/submit/${formConfigId}`, "_blank", "noopener,noreferrer")}
               >
                 <ExternalLink className="mr-2 h-4 w-4" />
                 Preview Form
@@ -330,7 +330,7 @@ function AcknowledgementTaskAction({
   taskId: string;
   instructions?: string;
   isYourTurn: boolean;
-  onComplete?: () => void;
+  onComplete?: (wasCompleted?: boolean) => void;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -352,7 +352,7 @@ function AcknowledgementTaskAction({
       }
 
       toast.success("Task acknowledged successfully");
-      onComplete?.();
+      onComplete?.(true);
     } catch (error) {
       toast.error("Failed to acknowledge task");
     } finally {
@@ -411,7 +411,7 @@ function FileUploadTaskAction({
   isYourTurn: boolean;
   isAdmin?: boolean;
   isCompleted?: boolean;
-  onComplete?: () => void;
+  onComplete?: (wasCompleted?: boolean) => void;
 }) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -620,7 +620,7 @@ function FileUploadTaskAction({
       }
 
       toast.success("Task completed successfully");
-      onComplete?.();
+      onComplete?.(true);
     } catch (error) {
       toast.error("Failed to complete task");
     }
@@ -702,7 +702,7 @@ function ApprovalTaskAction({
 }: {
   taskId: string;
   isYourTurn: boolean;
-  onComplete?: () => void;
+  onComplete?: (wasCompleted?: boolean) => void;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showRejectReason, setShowRejectReason] = useState(false);
@@ -726,7 +726,7 @@ function ApprovalTaskAction({
       }
 
       toast.success("Approved successfully");
-      onComplete?.();
+      onComplete?.(true);
     } catch (error) {
       toast.error("Failed to approve");
     } finally {
@@ -753,7 +753,7 @@ function ApprovalTaskAction({
       }
 
       toast.success("Rejected successfully");
-      onComplete?.();
+      onComplete?.(true);
     } catch (error) {
       toast.error("Failed to reject");
     } finally {
@@ -843,7 +843,7 @@ function BookingTaskAction({
   bookingLink?: string;
   isYourTurn: boolean;
   isAdmin?: boolean;
-  onComplete?: () => void;
+  onComplete?: (wasCompleted?: boolean) => void;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -872,7 +872,7 @@ function BookingTaskAction({
         }
 
         toast.success("Booking completed successfully");
-        onComplete?.();
+        onComplete?.(true);
       } catch (error) {
         toast.error("Failed to complete booking");
       } finally {
@@ -955,7 +955,7 @@ function BookingTaskActionLegacy({
 }: {
   taskId: string;
   isYourTurn: boolean;
-  onComplete?: () => void;
+  onComplete?: (wasCompleted?: boolean) => void;
 }) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -1006,7 +1006,7 @@ function BookingTaskActionLegacy({
       }
 
       toast.success("Time booked successfully");
-      onComplete?.();
+      onComplete?.(true);
     } catch (error) {
       toast.error("Failed to book time");
     } finally {
@@ -1083,7 +1083,7 @@ function ESignTaskAction({
   signerEmail?: string;
   isYourTurn: boolean;
   isAdmin?: boolean;
-  onComplete?: () => void;
+  onComplete?: (wasCompleted?: boolean) => void;
 }) {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
@@ -1104,10 +1104,10 @@ function ESignTaskAction({
 
       if (data.taskCompleted) {
         toast.success("Document signed! Task completed.");
-        onComplete?.();
+        onComplete?.(true);
       } else if (data.status === "completed") {
         toast.success("Document signed!");
-        onComplete?.();
+        onComplete?.(true);
       } else {
         setStatusMessage(`Status: ${data.status || data.message}`);
         toast.info(data.message || `Document status: ${data.status}`);

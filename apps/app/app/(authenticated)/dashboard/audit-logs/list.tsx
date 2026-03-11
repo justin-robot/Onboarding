@@ -1,6 +1,6 @@
 "use client";
 
-import { useListContext, ListBase as RaList } from "ra-core";
+import { useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/design/components/ui/select";
-import { FileText } from "lucide-react";
+import { FileText, Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface AuditLog {
@@ -54,131 +54,45 @@ const eventTypeColors: Record<string, string> = {
   "message.sent": "bg-gray-100 text-gray-800",
 };
 
-const AuditLogListInner = () => {
-  const { data, isPending, setFilters, filterValues } = useListContext<AuditLog>();
+export const AuditLogList = () => {
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [eventTypeFilter, setEventTypeFilter] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("");
 
-  if (isPending) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <p className="text-muted-foreground">Loading audit logs...</p>
-      </div>
-    );
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const response = await fetch("/api/admin/audit-logs", {
+          credentials: "include",
+        });
+        if (!response.ok) throw new Error("Failed to fetch audit logs");
+
+        const result = await response.json();
+        setLogs(result.data || []);
+      } catch (error) {
+        console.error("Error fetching audit logs:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLogs();
+  }, []);
+
+  let filteredData = logs;
+
+  if (eventTypeFilter) {
+    filteredData = filteredData.filter((log) => log.eventType === eventTypeFilter);
+  }
+
+  if (sourceFilter) {
+    filteredData = filteredData.filter((log) => log.source === sourceFilter);
   }
 
   // Extract unique event types from data
-  const eventTypes = Array.from(new Set(data?.map((log) => log.eventType) || [])).sort();
+  const eventTypes = Array.from(new Set(logs.map((log) => log.eventType))).sort();
 
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            <CardTitle>Audit Logs</CardTitle>
-          </div>
-        </div>
-        <div className="mt-4 flex gap-4">
-          <Select
-            value={filterValues?.eventType || ""}
-            onValueChange={(value) => setFilters({ ...filterValues, eventType: value || undefined })}
-          >
-            <SelectTrigger className="w-60">
-              <SelectValue placeholder="All event types" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All event types</SelectItem>
-              {eventTypes.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {type}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={filterValues?.source || ""}
-            onValueChange={(value) => setFilters({ ...filterValues, source: value || undefined })}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="All sources" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All sources</SelectItem>
-              <SelectItem value="web">Web</SelectItem>
-              <SelectItem value="api">API</SelectItem>
-              <SelectItem value="system">System</SelectItem>
-              <SelectItem value="signnow">SignNow</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Time</TableHead>
-              <TableHead>Event</TableHead>
-              <TableHead>Actor</TableHead>
-              <TableHead>Workspace</TableHead>
-              <TableHead>Task</TableHead>
-              <TableHead>Source</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {!data || data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                  No audit logs found
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.map((log) => (
-                <TableRow key={log.id}>
-                  <TableCell className="whitespace-nowrap">
-                    <div className="text-sm">
-                      {formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(log.createdAt).toLocaleString()}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${eventTypeColors[log.eventType] || "bg-gray-100 text-gray-800"}`}>
-                      {log.eventType}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {log.actorName || log.actorEmail || (
-                      <span className="text-muted-foreground">System</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {log.workspaceName || (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="max-w-xs truncate">
-                    {log.taskTitle || (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {log.source ? (
-                      <Badge variant="outline">{log.source}</Badge>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
-};
-
-export const AuditLogList = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
@@ -187,9 +101,113 @@ export const AuditLogList = () => {
           View system activity and audit trail
         </p>
       </div>
-      <RaList perPage={50}>
-        <AuditLogListInner />
-      </RaList>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              <CardTitle>Audit Logs</CardTitle>
+            </div>
+          </div>
+          <div className="mt-4 flex gap-4">
+            <Select value={eventTypeFilter || "all"} onValueChange={(v) => setEventTypeFilter(v === "all" ? "" : v)}>
+              <SelectTrigger className="w-60">
+                <SelectValue placeholder="All event types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All event types</SelectItem>
+                {eventTypes.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={sourceFilter || "all"} onValueChange={(v) => setSourceFilter(v === "all" ? "" : v)}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="All sources" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All sources</SelectItem>
+                <SelectItem value="web">Web</SelectItem>
+                <SelectItem value="api">API</SelectItem>
+                <SelectItem value="system">System</SelectItem>
+                <SelectItem value="signnow">SignNow</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center p-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-muted-foreground">Loading audit logs...</span>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Time</TableHead>
+                  <TableHead>Event</TableHead>
+                  <TableHead>Actor</TableHead>
+                  <TableHead>Workspace</TableHead>
+                  <TableHead>Task</TableHead>
+                  <TableHead>Source</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {!filteredData || filteredData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      No audit logs found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredData.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell className="whitespace-nowrap">
+                        <div className="text-sm">
+                          {formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(log.createdAt).toLocaleString()}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${eventTypeColors[log.eventType] || "bg-gray-100 text-gray-800"}`}>
+                          {log.eventType}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {log.actorName || log.actorEmail || (
+                          <span className="text-muted-foreground">System</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {log.workspaceName || (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="max-w-xs truncate">
+                        {log.taskTitle || (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {log.source ? (
+                          <Badge variant="outline">{log.source}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

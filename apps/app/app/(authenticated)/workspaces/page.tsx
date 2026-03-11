@@ -61,7 +61,7 @@ export default async function WorkspacesPage() {
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="h-full overflow-y-auto bg-slate-50 dark:bg-slate-950">
       <WorkspaceList
         workspaces={validWorkspaces}
         userId={session.user.id}

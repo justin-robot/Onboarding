@@ -1,6 +1,6 @@
 "use client";
 
-import { useListContext, ListBase as RaList } from "ra-core";
+import { useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -19,8 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/design/components/ui/select";
-import { SearchIcon, UserPlus } from "lucide-react";
-import { useState } from "react";
+import { SearchIcon, UserPlus, Loader2 } from "lucide-react";
 
 interface Member {
   id: string;
@@ -39,109 +38,47 @@ const roleVariants: Record<string, "default" | "secondary" | "outline"> = {
   user: "outline",
 };
 
-const MemberListInner = () => {
-  const { data, isPending, setFilters, filterValues } = useListContext<Member>();
+export const MemberList = () => {
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
 
-  if (isPending) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <p className="text-muted-foreground">Loading members...</p>
-      </div>
+  useEffect(() => {
+    const fetchMembers = async () => {
+      try {
+        const response = await fetch("/api/admin/members", {
+          credentials: "include",
+        });
+        if (!response.ok) throw new Error("Failed to fetch members");
+
+        const result = await response.json();
+        setMembers(result.data || []);
+      } catch (error) {
+        console.error("Error fetching members:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMembers();
+  }, []);
+
+  let filteredData = members;
+
+  if (searchValue) {
+    filteredData = filteredData.filter(
+      (member) =>
+        member.userName?.toLowerCase().includes(searchValue.toLowerCase()) ||
+        member.userEmail?.toLowerCase().includes(searchValue.toLowerCase()) ||
+        member.workspaceName?.toLowerCase().includes(searchValue.toLowerCase())
     );
   }
 
-  const filteredData = searchValue
-    ? data?.filter(
-        (member) =>
-          member.userName?.toLowerCase().includes(searchValue.toLowerCase()) ||
-          member.userEmail?.toLowerCase().includes(searchValue.toLowerCase()) ||
-          member.workspaceName?.toLowerCase().includes(searchValue.toLowerCase())
-      )
-    : data;
+  if (roleFilter) {
+    filteredData = filteredData.filter((member) => member.role === roleFilter);
+  }
 
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
-            <CardTitle>Workspace Members</CardTitle>
-          </div>
-        </div>
-        <div className="mt-4 flex gap-4">
-          <div className="relative flex-1">
-            <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search by name, email, or workspace..."
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Select
-            value={filterValues?.role || ""}
-            onValueChange={(value) => setFilters({ ...filterValues, role: value || undefined })}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="All roles" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All roles</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="account_manager">Account Manager</SelectItem>
-              <SelectItem value="user">User</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>User</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Workspace</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Joined</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {!filteredData || filteredData.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                  No members found
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredData.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell className="font-medium">{member.userName}</TableCell>
-                  <TableCell>{member.userEmail}</TableCell>
-                  <TableCell>{member.workspaceName}</TableCell>
-                  <TableCell>
-                    <Badge variant={roleVariants[member.role] || "outline"}>
-                      {member.role?.replace("_", " ")}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(member.createdAt).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
-};
-
-export const MemberList = () => {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
@@ -150,9 +87,87 @@ export const MemberList = () => {
           View all workspace memberships across the system
         </p>
       </div>
-      <RaList>
-        <MemberListInner />
-      </RaList>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5" />
+              <CardTitle>Workspace Members</CardTitle>
+            </div>
+          </div>
+          <div className="mt-4 flex gap-4">
+            <div className="relative flex-1">
+              <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, email, or workspace..."
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={roleFilter || "all"} onValueChange={(v) => setRoleFilter(v === "all" ? "" : v)}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="All roles" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All roles</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="account_manager">Account Manager</SelectItem>
+                <SelectItem value="user">User</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center p-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-muted-foreground">Loading members...</span>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Workspace</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Joined</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {!filteredData || filteredData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      No members found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredData.map((member) => (
+                    <TableRow key={member.id}>
+                      <TableCell className="font-medium">{member.userName}</TableCell>
+                      <TableCell>{member.userEmail}</TableCell>
+                      <TableCell>{member.workspaceName}</TableCell>
+                      <TableCell>
+                        <Badge variant={roleVariants[member.role] || "outline"}>
+                          {member.role?.replace("_", " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(member.createdAt).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

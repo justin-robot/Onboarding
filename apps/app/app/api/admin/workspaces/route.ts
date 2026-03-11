@@ -47,6 +47,19 @@ export async function GET(request: NextRequest) {
           .whereRef("section.workspaceId", "=", "workspace.id")
           .where("task.deletedAt", "is", null)
           .as("taskCount"),
+        eb
+          .selectFrom("task")
+          .innerJoin("section", "section.id", "task.sectionId")
+          .select((eb2) => eb2.fn.count("task.id").as("count"))
+          .whereRef("section.workspaceId", "=", "workspace.id")
+          .where("task.deletedAt", "is", null)
+          .where("task.status", "=", "completed")
+          .as("completedTaskCount"),
+        eb
+          .selectFrom("moxo_audit_log_entry")
+          .select(sql<Date>`MAX("moxo_audit_log_entry"."createdAt")`.as("lastActivity"))
+          .whereRef("moxo_audit_log_entry.workspaceId", "=", "workspace.id")
+          .as("lastActivityAt"),
       ]);
 
     // Filter by deleted status
@@ -99,11 +112,22 @@ export async function GET(request: NextRequest) {
     const workspaces = await query.execute();
 
     return json({
-      data: workspaces.map((w) => ({
-        ...w,
-        memberCount: Number(w.memberCount || 0),
-        taskCount: Number(w.taskCount || 0),
-      })),
+      data: workspaces.map((w) => {
+        const taskCount = Number(w.taskCount || 0);
+        const completedTaskCount = Number(w.completedTaskCount || 0);
+        const progress = taskCount > 0 ? Math.round((completedTaskCount / taskCount) * 100) : 0;
+        const isOverdue = w.dueDate && new Date(w.dueDate) < new Date() && progress < 100;
+
+        return {
+          ...w,
+          memberCount: Number(w.memberCount || 0),
+          taskCount,
+          completedTaskCount,
+          progress,
+          isOverdue: !!isOverdue,
+          lastActivityAt: w.lastActivityAt || null,
+        };
+      }),
       total,
     });
   });
