@@ -14,7 +14,6 @@ import {
   Plus,
   FolderPlus,
   Users,
-  Zap,
 } from "lucide-react";
 
 interface WorkspaceMenuProps {
@@ -57,15 +56,6 @@ export function WorkspaceMenu({
           <Users className="mr-2 h-4 w-4" />
           Members
         </DropdownMenuItem>
-        {isAdmin && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <Zap className="mr-2 h-4 w-4" />
-              Automations & Events
-            </DropdownMenuItem>
-          </>
-        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

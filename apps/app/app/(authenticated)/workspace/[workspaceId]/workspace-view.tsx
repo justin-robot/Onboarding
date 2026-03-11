@@ -33,7 +33,6 @@ import {
   FolderPlus,
   Plus,
   Users,
-  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { NotificationsTrigger } from "@repo/notifications";
@@ -555,15 +554,6 @@ export function WorkspaceView({
             <Calendar className="mr-2 h-4 w-4" />
             Meetings
           </Button>
-          {currentUserRole === "admin" && (
-            <>
-              <div className="my-4 border-t" />
-              <Button variant="ghost" className="w-full justify-start">
-                <Zap className="mr-2 h-4 w-4" />
-                Automations & Events
-              </Button>
-            </>
-          )}
         </div>
       </SheetContent>
     </Sheet>
