@@ -33,6 +33,7 @@ interface User {
 interface WorkspaceDetail {
   workspaceId: string;
   workspaceName: string;
+  role: string;
   totalTasks: number;
   completedTasks: number;
 }
@@ -274,7 +275,15 @@ export const UserList = () => {
                                       key={ws.workspaceId}
                                       className="flex items-center justify-between bg-background rounded-md px-3 py-2"
                                     >
-                                      <span className="text-sm">{ws.workspaceName}</span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-sm">{ws.workspaceName}</span>
+                                        <Badge
+                                          variant={ws.role === "admin" ? "default" : ws.role === "account_manager" ? "secondary" : "outline"}
+                                          className="text-xs"
+                                        >
+                                          {ws.role?.replace("_", " ")}
+                                        </Badge>
+                                      </div>
                                       <div className="flex items-center gap-2">
                                         <Progress
                                           value={

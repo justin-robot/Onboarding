@@ -8,7 +8,6 @@ import {
   Users,
   Building2,
   CheckSquare,
-  UserPlus,
   Mail,
   FileText,
   LogOut,
@@ -28,7 +27,6 @@ const navItems: NavItem[] = [
   { label: "Users", href: "/dashboard/users", icon: Users, resource: "users" },
   { label: "Workspaces", href: "/dashboard/workspaces", icon: Building2, resource: "workspaces" },
   { label: "Tasks", href: "/dashboard/tasks", icon: CheckSquare, resource: "tasks" },
-  { label: "Members", href: "/dashboard/members", icon: UserPlus, resource: "members" },
   { label: "Invitations", href: "/dashboard/invitations", icon: Mail, resource: "invitations" },
   { label: "Audit Logs", href: "/dashboard/audit-logs", icon: FileText, resource: "audit-logs" },
 ];

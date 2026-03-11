@@ -25,6 +25,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
       .select([
         "workspace.id as workspaceId",
         "workspace.name as workspaceName",
+        "workspace_member.role",
       ])
       .select((eb) => [
         // Total tasks assigned to user in this workspace
@@ -65,6 +66,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
     const workspacesWithProgress = workspaces.map((w) => ({
       workspaceId: w.workspaceId,
       workspaceName: w.workspaceName,
+      role: w.role,
       totalTasks: Number(w.totalTasks || 0),
       completedTasks: Number(w.completedTasks || 0),
     }));
