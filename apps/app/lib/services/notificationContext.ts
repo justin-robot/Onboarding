@@ -155,6 +155,8 @@ export interface WorkflowDataMap {
 export interface TriggerWorkflowOptions<W extends NotificationWorkflowId = NotificationWorkflowId> {
   workflowId: W;
   recipientId: string;
+  recipientName?: string; // For inline user identification in Knock
+  recipientEmail?: string; // For inline user identification in Knock
   data: W extends keyof WorkflowDataMap ? WorkflowDataMap[W] : NotificationWorkflowData;
   tenant?: string;
 }

@@ -138,6 +138,8 @@ export const assigneeService = {
       const result = await notificationContext.triggerWorkflow({
         workflowId: "task-assigned",
         recipientId: userId,
+        recipientName: assigneeUser?.name || undefined,
+        recipientEmail: assigneeUser?.email || undefined,
         data: {
           workspaceId: taskWithWorkspace.workspaceId,
           workspaceName: taskWithWorkspace.workspaceName,

@@ -139,6 +139,8 @@ export interface WorkflowDataMap {
 export interface TriggerWorkflowOptions<W extends NotificationWorkflow> {
   workflowId: W;
   recipientId: string;
+  recipientName?: string; // For inline user identification
+  recipientEmail?: string; // For inline user identification
   data: WorkflowDataMap[W];
   actorId?: string; // Who triggered the notification (for attribution)
   tenant?: string; // For multi-tenant support (workspace ID)
@@ -178,8 +180,13 @@ export function createNotificationService(
           `[notifications] Triggering workflow: ${options.workflowId} for user: ${options.recipientId}`
         );
 
+        // Use inline identification - Knock will auto-create the user if they don't exist
+        const recipient = options.recipientName
+          ? { id: options.recipientId, name: options.recipientName, email: options.recipientEmail }
+          : options.recipientId;
+
         const result = await knockClient.workflows.trigger(options.workflowId, {
-          recipients: [options.recipientId],
+          recipients: [recipient],
           data: options.data as unknown as Record<string, unknown>,
           actor: options.actorId,
           tenant: options.tenant,
