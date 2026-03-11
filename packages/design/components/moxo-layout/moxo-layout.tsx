@@ -503,7 +503,9 @@ export function MoxoLayout({
           </div>
         </Panel>
 
-        <PanelResizeHandle className="w-1 bg-border hover:bg-primary/20 transition-colors cursor-col-resize" />
+        <PanelResizeHandle className="group relative w-0.5 bg-transparent hover:bg-primary/30 transition-colors cursor-col-resize data-[resize-handle-active]:bg-primary/50">
+          <div className="absolute inset-y-0 -left-1 -right-1 group-hover:bg-primary/10" />
+        </PanelResizeHandle>
 
         {/* Main Content */}
         <Panel
@@ -527,7 +529,9 @@ export function MoxoLayout({
 
         {showRightPanel && (
           <>
-            <PanelResizeHandle className="w-1 bg-border hover:bg-primary/20 transition-colors cursor-col-resize" />
+            <PanelResizeHandle className="group relative w-0.5 bg-transparent hover:bg-primary/30 transition-colors cursor-col-resize data-[resize-handle-active]:bg-primary/50">
+              <div className="absolute inset-y-0 -left-1 -right-1 group-hover:bg-primary/10" />
+            </PanelResizeHandle>
 
             {/* Right Panel */}
             <Panel
@@ -570,6 +574,7 @@ export function MoxoLayout({
 
 /**
  * Resize handle component with visual feedback
+ * Subtle by default, highlights on hover for better UX
  */
 export function ResizeHandle({
   className,
@@ -581,13 +586,19 @@ export function ResizeHandle({
   return (
     <PanelResizeHandle
       className={cn(
-        "relative transition-colors",
+        "group relative transition-colors",
         orientation === "vertical"
-          ? "w-1 hover:bg-primary/20 cursor-col-resize"
-          : "h-1 hover:bg-primary/20 cursor-row-resize",
-        "after:absolute after:inset-0 after:bg-border",
+          ? "w-0.5 bg-transparent hover:bg-primary/30 cursor-col-resize data-[resize-handle-active]:bg-primary/50"
+          : "h-0.5 bg-transparent hover:bg-primary/30 cursor-row-resize data-[resize-handle-active]:bg-primary/50",
         className
       )}
-    />
+    >
+      <div
+        className={cn(
+          "absolute group-hover:bg-primary/10",
+          orientation === "vertical" ? "inset-y-0 -left-1 -right-1" : "inset-x-0 -top-1 -bottom-1"
+        )}
+      />
+    </PanelResizeHandle>
   );
 }

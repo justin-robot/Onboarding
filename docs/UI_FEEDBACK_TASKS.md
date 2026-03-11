@@ -12,7 +12,7 @@ Extracted from review transcripts. Priority: High (H), Medium (M), Low (L)
 | 2 | **No way to exit workspace** - Add navigation to home view/sign out from workspace | H | [x] |
 | 3 | **Top bar should be fixed** - Prevent scrolling past the header bar | M | [ ] |
 | 4 | **Horizontal scroll issues** - Remove unexpected horizontal scroll in multiple areas | M | [x] |
-| 5 | **Drag bar placement** - Resize handle is in a weird position; check Moxo for reference | L | [ ] |
+| 5 | **Drag bar placement** - Resize handle is in a weird position; check Moxo for reference | L | [x] |
 
 ---
 
