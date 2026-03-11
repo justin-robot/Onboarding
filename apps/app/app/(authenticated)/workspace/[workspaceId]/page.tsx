@@ -1,5 +1,5 @@
 import { auth } from "@repo/auth/server";
-import { workspaceService, memberService, assigneeService } from "@/lib/services";
+import { workspaceService, memberService, assigneeService, dependencyService } from "@/lib/services";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
@@ -69,12 +69,32 @@ export default async function WorkspacePage({ params }: PageProps) {
 
   const validSidebarWorkspaces = sidebarWorkspaces.filter((w): w is NonNullable<typeof w> => w !== null);
 
-  // Get assignees per task for "your turn" detection
-  const taskAssignments = new Map<string, string[]>();
+  // Get assignees per task for "your turn" detection and display
+  // Get blocking dependencies for locked tasks
+  const taskAssignments = new Map<string, { userIds: string[]; names: string[] }>();
+  const taskBlockingDeps = new Map<string, Array<{ id: string; title: string }>>();
+
   for (const section of (workspace.sections || [])) {
     for (const task of (section.tasks || [])) {
-      const assignees = await assigneeService.getByTaskId(task.id);
-      taskAssignments.set(task.id, assignees.map(a => a.userId));
+      const assignees = await assigneeService.getByTaskIdWithUserInfo(task.id);
+      taskAssignments.set(task.id, {
+        userIds: assignees.map(a => a.userId),
+        names: assignees.map(a => a.name),
+      });
+
+      // Fetch blocking dependencies for locked tasks
+      if (task.locked) {
+        const blockingDeps = await dependencyService.getBlockingDependencies(task.id);
+        if (blockingDeps.length > 0) {
+          taskBlockingDeps.set(
+            task.id,
+            blockingDeps.map(dep => ({
+              id: dep.blockedByTask.id,
+              title: dep.blockedByTask.title,
+            }))
+          );
+        }
+      }
     }
   }
 
@@ -117,8 +137,9 @@ export default async function WorkspacePage({ params }: PageProps) {
         description: null,
         status,
         tasks: tasks.map((task, index) => {
-          const assignees = taskAssignments.get(task.id) || [];
-          const isYourTurn = assignees.includes(session.user.id) && task.status !== "completed" && !task.locked;
+          const assigneeData = taskAssignments.get(task.id) || { userIds: [], names: [] };
+          const isYourTurn = assigneeData.userIds.includes(session.user.id) && task.status !== "completed" && !task.locked;
+          const lockedByTasks = taskBlockingDeps.get(task.id);
 
           return {
             id: task.id,
@@ -128,6 +149,8 @@ export default async function WorkspacePage({ params }: PageProps) {
             isYourTurn,
             isCompleted: task.status === "completed",
             isLocked: task.locked,
+            lockedByTasks,
+            assignees: assigneeData.names,
             description: task.description,
             dueDate: task.dueDateValue?.toISOString(),
             dueDateType: task.dueDateType as "absolute" | "relative" | undefined,
@@ -149,7 +172,7 @@ export default async function WorkspacePage({ params }: PageProps) {
   }));
 
   return (
-    <div className="h-screen">
+    <div className="h-full">
       <WorkspaceView
         workspace={workspaceData}
         members={members}

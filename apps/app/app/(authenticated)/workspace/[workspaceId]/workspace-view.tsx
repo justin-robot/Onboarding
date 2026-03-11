@@ -58,6 +58,8 @@ interface WorkspaceData {
       isYourTurn: boolean;
       isCompleted: boolean;
       isLocked: boolean;
+      lockedByTasks?: Array<{ id: string; title: string }>;
+      assignees?: string[];
       description: string | null;
       dueDate?: string;
       dueDateType?: "absolute" | "relative";
@@ -182,6 +184,8 @@ export function WorkspaceView({
       isYourTurn: task.isYourTurn,
       isCompleted: task.isCompleted,
       isLocked: task.isLocked,
+      lockedByTasks: task.lockedByTasks,
+      assignees: task.assignees,
       description: task.description || undefined,
       dueDate: task.dueDate,
     })),
