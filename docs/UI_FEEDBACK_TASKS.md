@@ -8,9 +8,9 @@ Extracted from review transcripts. Priority: High (H), Medium (M), Low (L)
 
 | # | Task | Priority | Status |
 |---|------|----------|--------|
-| 1 | **Sidebar collapse icon wrong** - Shows collapse arrow when collapsed; should show expand arrow | H | [ ] |
+| 1 | **Sidebar collapse icon wrong** - Shows collapse arrow when collapsed; should show expand arrow | H | [x] |
 | 2 | **No way to exit workspace** - Add navigation to home view/sign out from workspace | H | [x] |
-| 3 | **Top bar should be fixed** - Prevent scrolling past the header bar | M | [ ] |
+| 3 | **Top bar should be fixed** - Prevent scrolling past the header bar | M | [x] |
 | 4 | **Horizontal scroll issues** - Remove unexpected horizontal scroll in multiple areas | M | [x] |
 | 5 | **Drag bar placement** - Resize handle is in a weird position; check Moxo for reference | L | [x] |
 
@@ -20,9 +20,9 @@ Extracted from review transcripts. Priority: High (H), Medium (M), Low (L)
 
 | # | Task | Priority | Status |
 |---|------|----------|--------|
-| 6 | **Weird card formatting** - Cards on workspaces page need better spacing | M | [ ] |
+| 6 | **Weird card formatting** - Cards on workspaces page need better spacing | M | [x] |
 | 7 | **"Add new" button misbehavior** - Clicking takes user back to workspaces unexpectedly | H | [ ] |
-| 8 | **Hide "Create workspace" for clients** - Regular users/clients shouldn't see this option | H | [ ] |
+| 8 | **Hide "Create workspace" for clients** - Regular users/clients shouldn't see this option | H | [x] |
 
 ---
 
@@ -43,7 +43,7 @@ Extracted from review transcripts. Priority: High (H), Medium (M), Low (L)
 | # | Task | Priority | Status |
 |---|------|----------|--------|
 | 14 | **Make member avatars hoverable** - Show all workspace members when hovering the avatar stack | M | [ ] |
-| 15 | **Show logged-in user** - Display which account is logged in (e.g., "Sarah Chen") | H | [ ] |
+| 15 | **Show logged-in user** - Display which account is logged in (e.g., "Sarah Chen") | H | [x] |
 
 ---
 
@@ -95,9 +95,11 @@ Extracted from review transcripts. Priority: High (H), Medium (M), Low (L)
 ## Summary
 
 - **Total tasks:** 25
-- **High priority:** 10
-- **Medium priority:** 10
-- **Low priority:** 5
+- **Completed:** 8
+- **Remaining:** 17
+  - High priority: 5
+  - Medium priority: 8
+  - Low priority: 4
 
 ### Reference Links
 - [Tremor Settings Template](https://www.tremor.so/blocks/settings-page)
