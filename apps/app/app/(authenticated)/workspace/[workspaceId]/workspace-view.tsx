@@ -38,6 +38,7 @@ import {
 import { toast } from "sonner";
 import { NotificationsTrigger } from "@repo/notifications";
 import { UserMenu } from "../../components/user-menu";
+import { CreateWorkspaceDialog } from "../../workspaces/create-workspace-dialog";
 
 interface WorkspaceData {
   id: string;
@@ -112,6 +113,7 @@ export function WorkspaceView({
   const [addSectionDialogOpen, setAddSectionDialogOpen] = useState(false);
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [createWorkspaceDialogOpen, setCreateWorkspaceDialogOpen] = useState(false);
   const [previewFile, setPreviewFile] = useState<PreviewFile | null>(null);
   const [workspaceFiles, setWorkspaceFiles] = useState<FileItem[]>(files);
 
@@ -308,7 +310,7 @@ export function WorkspaceView({
           workspaces={sidebarWorkspaces}
           selectedWorkspaceId={currentWorkspaceId}
           onWorkspaceSelect={handleWorkspaceSelect}
-          onCreateWorkspace={currentUserRole === "admin" ? () => router.push("/workspaces") : undefined}
+          onCreateWorkspace={currentUserRole === "admin" ? () => setCreateWorkspaceDialogOpen(true) : undefined}
           onHomeClick={() => router.push("/workspaces")}
           footer={<UserMenu />}
         />
@@ -428,6 +430,13 @@ export function WorkspaceView({
       workspaceId={currentWorkspaceId}
       currentSectionCount={(workspace.sections || []).length}
       onSectionCreated={() => router.refresh()}
+    />
+
+    {/* Create Workspace Dialog */}
+    <CreateWorkspaceDialog
+      open={createWorkspaceDialogOpen}
+      onOpenChange={setCreateWorkspaceDialogOpen}
+      userId={currentUserId}
     />
 
     {/* Upload Dialog */}

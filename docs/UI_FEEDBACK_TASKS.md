@@ -21,7 +21,7 @@ Extracted from review transcripts. Priority: High (H), Medium (M), Low (L)
 | # | Task | Priority | Status |
 |---|------|----------|--------|
 | 6 | **Weird card formatting** - Cards on workspaces page need better spacing | M | [x] |
-| 7 | **"Add new" button misbehavior** - Clicking takes user back to workspaces unexpectedly | H | [ ] |
+| 7 | **"Add new" button misbehavior** - Clicking takes user back to workspaces unexpectedly | H | [x] |
 | 8 | **Hide "Create workspace" for clients** - Regular users/clients shouldn't see this option | H | [x] |
 
 ---
@@ -95,9 +95,9 @@ Extracted from review transcripts. Priority: High (H), Medium (M), Low (L)
 ## Summary
 
 - **Total tasks:** 25
-- **Completed:** 8
-- **Remaining:** 17
-  - High priority: 5
+- **Completed:** 9
+- **Remaining:** 16
+  - High priority: 4
   - Medium priority: 8
   - Low priority: 4
 
