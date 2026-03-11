@@ -303,14 +303,14 @@ test.describe("Audit Log", () => {
         metadata: {
           memberUserId: "user-1",
           previousRole: "user",
-          newRole: "account_manager",
+          newRole: "admin",
           changedBy: "admin-1",
         },
         createdAt: new Date().toISOString(),
       };
 
       expect(entry.metadata.previousRole).toBe("user");
-      expect(entry.metadata.newRole).toBe("account_manager");
+      expect(entry.metadata.newRole).toBe("admin");
     });
   });
 

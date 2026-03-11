@@ -7,7 +7,7 @@ export interface UserProfile {
   email: string;
   username: string | null;
   image: string | null;
-  role: "admin" | "account_manager" | "user" | null;
+  role: "admin" | "user" | null;
 }
 
 export interface UpdateProfileInput {

@@ -32,7 +32,6 @@ interface Invitation {
 
 const roleVariants: Record<string, "default" | "secondary" | "outline"> = {
   admin: "default",
-  account_manager: "secondary",
   user: "outline",
 };
 

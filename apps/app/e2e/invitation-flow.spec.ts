@@ -14,7 +14,7 @@ import { test, expect } from "@playwright/test";
  * Full UI navigation tests are blocked by ably/keyv bundling issues.
  */
 
-type InvitationRole = "admin" | "account_manager" | "user";
+type InvitationRole = "admin" | "user";
 
 interface Invitation {
   id: string;
@@ -71,14 +71,13 @@ test.describe("Invitation and Authentication Flow", () => {
     });
 
     test("validates invitation roles", () => {
-      const validRoles: InvitationRole[] = ["admin", "account_manager", "user"];
+      const validRoles: InvitationRole[] = ["admin", "user"];
 
       const isValidRole = (role: string): role is InvitationRole => {
         return validRoles.includes(role as InvitationRole);
       };
 
       expect(isValidRole("admin")).toBe(true);
-      expect(isValidRole("account_manager")).toBe(true);
       expect(isValidRole("user")).toBe(true);
       expect(isValidRole("superadmin")).toBe(false);
       expect(isValidRole("guest")).toBe(false);
@@ -342,7 +341,6 @@ test.describe("Invitation and Authentication Flow", () => {
       };
 
       expect(canInvite("user")).toBe(false);
-      expect(canInvite("account_manager")).toBe(false);
     });
 
     test("admin can revoke invitations", () => {

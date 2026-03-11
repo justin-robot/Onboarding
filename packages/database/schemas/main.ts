@@ -59,7 +59,7 @@ export interface UserTable {
   email: string;
   emailVerified: boolean;
   image: string | null;
-  role: "admin" | "account_manager" | "user" | null;
+  role: "admin" | "user" | null;
   isPlatformAdmin: Generated<boolean>;
   communications: boolean | null;
   banned: boolean;
@@ -138,7 +138,7 @@ export interface WorkspaceMemberTable {
   id: Generated<string>;
   workspaceId: string;
   userId: string;
-  role: "admin" | "account_manager" | "user";
+  role: "admin" | "user";
   createdAt: Generated<Date>;
   updatedAt: Generated<Date>;
 }
@@ -275,7 +275,7 @@ export interface PendingInvitationTable {
   id: Generated<string>;
   workspaceId: string;
   email: string;
-  role: "admin" | "account_manager" | "user";
+  role: "admin" | "user";
   token: string;
   expiresAt: Date;
   invitedBy: string;

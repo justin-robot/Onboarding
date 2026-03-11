@@ -122,23 +122,29 @@ export async function GET(_request: NextRequest) {
       .execute();
 
     // Get last activity for each user (most recent task completion - scoped)
-    let lastActivityQuery = database
-      .selectFrom("task_assignee")
-      .select([
-        "task_assignee.userId",
-        sql<Date>`MAX(task_assignee."completedAt")`.as("lastActivity"),
-      ])
-      .where("task_assignee.completedAt", "is not", null)
-      .groupBy("task_assignee.userId");
-
-    if (!isPlatformAdmin && workspaceIds !== null) {
-      lastActivityQuery = lastActivityQuery
-        .innerJoin("task", "task.id", "task_assignee.taskId")
-        .innerJoin("section", "section.id", "task.sectionId")
-        .where("section.workspaceId", "in", workspaceIds);
-    }
-
-    const lastActivities = await lastActivityQuery.execute();
+    // Build last activity query with proper scoping
+    const lastActivities = !isPlatformAdmin && workspaceIds !== null
+      ? await database
+          .selectFrom("task_assignee")
+          .innerJoin("task", "task.id", "task_assignee.taskId")
+          .innerJoin("section", "section.id", "task.sectionId")
+          .select([
+            "task_assignee.userId",
+            sql<Date>`MAX(task_assignee."completedAt")`.as("lastActivity"),
+          ])
+          .where("task_assignee.completedAt", "is not", null)
+          .where("section.workspaceId", "in", workspaceIds)
+          .groupBy("task_assignee.userId")
+          .execute()
+      : await database
+          .selectFrom("task_assignee")
+          .select([
+            "task_assignee.userId",
+            sql<Date>`MAX(task_assignee."completedAt")`.as("lastActivity"),
+          ])
+          .where("task_assignee.completedAt", "is not", null)
+          .groupBy("task_assignee.userId")
+          .execute();
 
     // Create a map for quick lookup
     const lastActivityMap = new Map(

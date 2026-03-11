@@ -34,7 +34,6 @@ interface Member {
 
 const roleVariants: Record<string, "default" | "secondary" | "outline"> = {
   admin: "default",
-  account_manager: "secondary",
   user: "outline",
 };
 
@@ -112,7 +111,6 @@ export const MemberList = () => {
               <SelectContent>
                 <SelectItem value="all">All roles</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="account_manager">Account Manager</SelectItem>
                 <SelectItem value="user">User</SelectItem>
               </SelectContent>
             </Select>

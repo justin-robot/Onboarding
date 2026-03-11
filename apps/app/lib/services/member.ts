@@ -15,7 +15,7 @@ async function getAblyService() {
 }
 
 // Role type for workspace members
-export type MemberRole = "admin" | "account_manager" | "user";
+export type MemberRole = "admin" | "user";
 
 export const memberService = {
   /**

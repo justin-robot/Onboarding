@@ -317,7 +317,7 @@ async function seed() {
       .execute();
     await db
       .updateTable("user")
-      .set({ role: "account_manager" })
+      .set({ role: "user" })
       .where("id", "=", ids.accountManager)
       .execute();
 
@@ -367,7 +367,7 @@ async function seed() {
         id: uuid(),
         workspaceId: ids.workspace1,
         userId: ids.accountManager,
-        role: "account_manager" as const,
+        role: "user" as const,
       },
       {
         id: uuid(),
@@ -392,7 +392,7 @@ async function seed() {
         id: uuid(),
         workspaceId: ids.workspace2,
         userId: ids.accountManager,
-        role: "account_manager" as const,
+        role: "user" as const,
       },
       {
         id: uuid(),
@@ -1422,7 +1422,7 @@ async function seed() {
         taskId: null,
         eventType: "workspace.member_added",
         actorId: ids.adminUser,
-        metadata: { userId: ids.accountManager, role: "account_manager", email: "sarah@example.com" },
+        metadata: { userId: ids.accountManager, role: "user", email: "sarah@example.com" },
         source: "web",
         createdAt: threeDaysAgo,
       },
@@ -1831,7 +1831,7 @@ async function seed() {
         taskId: null,
         eventType: "workspace.member_added",
         actorId: ids.adminUser,
-        metadata: { userId: ids.accountManager, role: "account_manager", email: "sarah@example.com" },
+        metadata: { userId: ids.accountManager, role: "user", email: "sarah@example.com" },
         source: "web",
         createdAt: oneDayAgo,
       },

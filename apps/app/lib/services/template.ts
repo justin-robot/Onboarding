@@ -6,6 +6,7 @@ export interface DuplicateWorkspaceOptions {
   name: string;
   description?: string;
   dueDate?: Date;
+  adminUserId: string;
   assignToUsers?: string[];
 }
 
@@ -313,10 +314,23 @@ export const templateService = {
         .execute();
     }
 
-    // Assign users to workspace if specified
+    // Add admin user to workspace
+    await database
+      .insertInto("workspace_member")
+      .values({
+        workspaceId: newWorkspace.id,
+        userId: options.adminUserId,
+        role: "admin",
+      })
+      .onConflict((oc) => oc.doNothing())
+      .execute();
+
+    // Assign additional users to workspace if specified
     if (options.assignToUsers && options.assignToUsers.length > 0) {
-      // Add users as workspace members
+      // Add users as workspace members (skip admin if already in list)
       for (const userId of options.assignToUsers) {
+        if (userId === options.adminUserId) continue; // Admin already added above
+
         await database
           .insertInto("workspace_member")
           .values({

@@ -27,12 +27,20 @@ import {
   FormDescription,
 } from "@repo/design/components/ui/form";
 import { Loader2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/design/components/ui/select";
 import { toast } from "sonner";
 
 const duplicateSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   dueDate: z.string().optional(),
+  adminUserId: z.string().min(1, "Admin is required"),
   assignToUsers: z.array(z.string()).optional(),
 });
 
@@ -73,6 +81,7 @@ export const DuplicateDialog = ({
       name: "",
       description: "",
       dueDate: "",
+      adminUserId: "",
       assignToUsers: [],
     },
   });
@@ -83,6 +92,7 @@ export const DuplicateDialog = ({
         name: `${workspace.name} (Copy)`,
         description: workspace.description || "",
         dueDate: "",
+        adminUserId: "",
         assignToUsers: [],
       });
 
@@ -109,6 +119,7 @@ export const DuplicateDialog = ({
           name: data.name,
           description: data.description || null,
           dueDate: data.dueDate || null,
+          adminUserId: data.adminUserId,
           assignToUsers: data.assignToUsers,
         }),
       });
@@ -196,6 +207,39 @@ export const DuplicateDialog = ({
                     <Input type="date" {...field} />
                   </FormControl>
                   <FormDescription>Optional due date for the new workspace</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="adminUserId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Workspace Admin</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select an admin" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {loadingUsers ? (
+                        <div className="flex items-center gap-2 p-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span className="text-sm">Loading...</span>
+                        </div>
+                      ) : (
+                        users.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.name} ({user.email})
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>This user will be the admin of the new workspace</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

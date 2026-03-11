@@ -204,7 +204,8 @@ export async function requireAdmin(
 }
 
 /**
- * Require account manager or admin role for an API route
+ * Require admin role for an API route (previously account manager or admin)
+ * @deprecated Use requireAdmin instead - this function name is misleading now that account_manager role is removed
  */
 export async function requireAccountManager(
   workspaceId: string
@@ -212,7 +213,7 @@ export async function requireAccountManager(
   | { success: true; user: AuthenticatedUser; role: MemberRole; auditContext: AuditContext }
   | { success: false; response: NextResponse }
 > {
-  return requireRole(workspaceId, "account_manager");
+  return requireRole(workspaceId, "admin");
 }
 
 /**

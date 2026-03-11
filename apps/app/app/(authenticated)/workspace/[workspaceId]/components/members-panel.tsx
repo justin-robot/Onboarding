@@ -72,8 +72,6 @@ function getRoleBadgeVariant(role: string): "default" | "secondary" | "outline" 
   switch (role) {
     case "admin":
       return "default";
-    case "account_manager":
-      return "secondary";
     default:
       return "outline";
   }
@@ -83,8 +81,6 @@ function formatRole(role: string): string {
   switch (role) {
     case "admin":
       return "Admin";
-    case "account_manager":
-      return "Account Manager";
     case "user":
       return "User";
     default:
@@ -263,7 +259,6 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole }: MembersP
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="user">User</SelectItem>
-                          <SelectItem value="account_manager">Account Manager</SelectItem>
                           <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
                       </Select>

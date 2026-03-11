@@ -73,8 +73,26 @@ export class AuthError extends Error {
  * Custom error for forbidden access
  */
 export class ForbiddenError extends Error {
-  constructor() {
-    super("Forbidden");
+  constructor(message = "Forbidden") {
+    super(message);
+  }
+}
+
+/**
+ * Custom error for validation failures
+ */
+export class ValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+/**
+ * Custom error for not found resources
+ */
+export class NotFoundError extends Error {
+  constructor(message = "Not found") {
+    super(message);
   }
 }
 
@@ -91,7 +109,13 @@ export async function withErrorHandler(
       return errorResponse("Unauthorized", 401);
     }
     if (error instanceof ForbiddenError) {
-      return errorResponse("Forbidden", 403);
+      return errorResponse(error.message || "Forbidden", 403);
+    }
+    if (error instanceof ValidationError) {
+      return errorResponse(error.message, 400);
+    }
+    if (error instanceof NotFoundError) {
+      return errorResponse(error.message || "Not found", 404);
     }
     console.error("API Error:", error);
     return errorResponse("Internal server error", 500);

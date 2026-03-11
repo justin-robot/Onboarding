@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { AdminLayout } from "./admin-layout";
 import { DashboardOverview } from "./overview";
 import { UserList } from "./users/list";
@@ -16,6 +17,23 @@ import { AuditLogList } from "./audit-logs/list";
 
 const AdminClient = () => {
   const pathname = usePathname();
+  const [isPlatformAdmin, setIsPlatformAdmin] = useState<boolean>(false);
+
+  useEffect(() => {
+    const fetchAdminProfile = async () => {
+      try {
+        const response = await fetch("/api/admin/me", { credentials: "include" });
+        if (response.ok) {
+          const data = await response.json();
+          setIsPlatformAdmin(data.isPlatformAdmin);
+        }
+      } catch (error) {
+        console.error("Error fetching admin profile:", error);
+      }
+    };
+
+    fetchAdminProfile();
+  }, []);
 
   // Determine which component to render based on the pathname
   const renderContent = () => {
@@ -31,7 +49,7 @@ const AdminClient = () => {
       }
     }
     if (pathname === "/dashboard/users") {
-      return <UserList />;
+      return <UserList isPlatformAdmin={isPlatformAdmin} />;
     }
 
     // Workspace routes

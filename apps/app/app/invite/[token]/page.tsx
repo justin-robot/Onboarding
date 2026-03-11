@@ -35,8 +35,6 @@ function formatRole(role: string): string {
   switch (role) {
     case "admin":
       return "Admin";
-    case "account_manager":
-      return "Account Manager";
     case "user":
       return "Member";
     default:

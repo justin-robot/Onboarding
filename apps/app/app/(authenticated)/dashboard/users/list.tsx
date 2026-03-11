@@ -15,7 +15,18 @@ import { Badge } from "@repo/design/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/design/components/ui/card";
 import { Input } from "@repo/design/components/ui/input";
 import { Progress } from "@repo/design/components/ui/progress";
-import { PlusIcon, SearchIcon, Loader2, AlertCircle, ChevronDown, ChevronRight } from "lucide-react";
+import { PlusIcon, SearchIcon, Loader2, AlertCircle, ChevronDown, ChevronRight, Check, ChevronsUpDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@repo/design/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@repo/design/components/ui/tooltip";
 
 interface User {
   id: string;
@@ -38,7 +49,11 @@ interface WorkspaceDetail {
   completedTasks: number;
 }
 
-export const UserList = () => {
+interface UserListProps {
+  isPlatformAdmin?: boolean;
+}
+
+export const UserList = ({ isPlatformAdmin = false }: UserListProps) => {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,6 +61,7 @@ export const UserList = () => {
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [workspaceDetails, setWorkspaceDetails] = useState<Record<string, WorkspaceDetail[]>>({});
   const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
+  const [updatingRole, setUpdatingRole] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -99,6 +115,38 @@ export const UserList = () => {
       } finally {
         setLoadingDetails((prev) => ({ ...prev, [userId]: false }));
       }
+    }
+  };
+
+  const updateMemberRole = async (userId: string, workspaceId: string, newRole: string) => {
+    const key = `${userId}-${workspaceId}`;
+    setUpdatingRole((prev) => ({ ...prev, [key]: true }));
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/workspaces/${workspaceId}/role`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ role: newRole }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        setWorkspaceDetails((prev) => ({
+          ...prev,
+          [userId]: prev[userId]?.map((ws) =>
+            ws.workspaceId === workspaceId ? { ...ws, role: newRole } : ws
+          ),
+        }));
+      } else {
+        const error = await response.json();
+        console.error("Failed to update role:", error);
+        alert(error.error || "Failed to update role");
+      }
+    } catch (error) {
+      console.error("Error updating role:", error);
+      alert("Failed to update role");
+    } finally {
+      setUpdatingRole((prev) => ({ ...prev, [key]: false }));
     }
   };
 
@@ -229,10 +277,17 @@ export const UserList = () => {
                         </TableCell>
                         <TableCell>
                           {user.overdueTasks > 0 ? (
-                            <Badge variant="destructive" className="gap-1">
-                              <AlertCircle className="h-3 w-3" />
-                              {user.overdueTasks}
-                            </Badge>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="destructive" className="gap-1 cursor-help">
+                                  <AlertCircle className="h-3 w-3" />
+                                  {user.overdueTasks}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {user.overdueTasks} overdue {user.overdueTasks === 1 ? "task" : "tasks"}
+                              </TooltipContent>
+                            </Tooltip>
                           ) : (
                             <span className="text-muted-foreground">—</span>
                           )}
@@ -241,19 +296,21 @@ export const UserList = () => {
                           {formatLastActivity(user.lastActivity)}
                         </TableCell>
                         <TableCell>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="cursor-pointer"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              window.location.href = `/dashboard/users/${user.id}`;
-                            }}
-                          >
-                            Edit
-                          </Button>
+                          {isPlatformAdmin && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="cursor-pointer"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                window.location.href = `/dashboard/users/${user.id}`;
+                              }}
+                            >
+                              Edit
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                       {expandedUserId === user.id && (
@@ -270,35 +327,71 @@ export const UserList = () => {
                               <div className="pl-10">
                                 <h4 className="text-sm font-medium mb-3">Workspace Breakdown</h4>
                                 <div className="grid gap-2">
-                                  {workspaceDetails[user.id].map((ws) => (
-                                    <div
-                                      key={ws.workspaceId}
-                                      className="flex items-center justify-between bg-background rounded-md px-3 py-2"
-                                    >
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-sm">{ws.workspaceName}</span>
-                                        <Badge
-                                          variant={ws.role === "admin" ? "default" : ws.role === "account_manager" ? "secondary" : "outline"}
-                                          className="text-xs"
-                                        >
-                                          {ws.role?.replace("_", " ")}
-                                        </Badge>
+                                  {workspaceDetails[user.id].map((ws) => {
+                                    const roleKey = `${user.id}-${ws.workspaceId}`;
+                                    const isUpdating = updatingRole[roleKey];
+                                    return (
+                                      <div
+                                        key={ws.workspaceId}
+                                        className="flex items-center justify-between bg-background rounded-md px-3 py-2"
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-sm">{ws.workspaceName}</span>
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 px-2 gap-1"
+                                                disabled={isUpdating}
+                                              >
+                                                <Badge
+                                                  variant={ws.role === "admin" ? "default" : "outline"}
+                                                  className="text-xs pointer-events-none"
+                                                >
+                                                  {ws.role}
+                                                </Badge>
+                                                {isUpdating ? (
+                                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                                ) : (
+                                                  <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
+                                                )}
+                                              </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="start">
+                                              <DropdownMenuItem
+                                                onClick={() => updateMemberRole(user.id, ws.workspaceId, "admin")}
+                                                className="flex items-center justify-between"
+                                              >
+                                                Admin
+                                                {ws.role === "admin" && <Check className="h-4 w-4" />}
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem
+                                                onClick={() => updateMemberRole(user.id, ws.workspaceId, "user")}
+                                                className="flex items-center justify-between"
+                                              >
+                                                User
+                                                {ws.role === "user" && <Check className="h-4 w-4" />}
+                                              </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <Progress
+                                            value={
+                                              ws.totalTasks > 0
+                                                ? (ws.completedTasks / ws.totalTasks) * 100
+                                                : 0
+                                            }
+                                            className="h-2 w-24"
+                                          />
+                                          <span className="text-xs text-muted-foreground">
+                                            {ws.completedTasks}/{ws.totalTasks}
+                                          </span>
+                                        </div>
                                       </div>
-                                      <div className="flex items-center gap-2">
-                                        <Progress
-                                          value={
-                                            ws.totalTasks > 0
-                                              ? (ws.completedTasks / ws.totalTasks) * 100
-                                              : 0
-                                          }
-                                          className="h-2 w-24"
-                                        />
-                                        <span className="text-xs text-muted-foreground">
-                                          {ws.completedTasks}/{ws.totalTasks}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               </div>
                             ) : (

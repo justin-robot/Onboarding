@@ -36,7 +36,7 @@ export class InsufficientPermissionsError extends AccessDeniedError {
  * Role hierarchy for permission checking
  * Higher index = more permissions
  */
-const roleHierarchy: MemberRole[] = ["user", "account_manager", "admin"];
+const roleHierarchy: MemberRole[] = ["user", "admin"];
 
 /**
  * Check if a role meets the minimum required role
@@ -136,11 +136,11 @@ export const accessService = {
 
   /**
    * Check if a user can create/edit sections
-   * Requires account_manager or admin role
+   * Requires admin role
    */
   async canManageSections(workspaceId: string, userId: string): Promise<boolean> {
     try {
-      await this.requireMinimumRole(workspaceId, userId, "account_manager");
+      await this.requireMinimumRole(workspaceId, userId, "admin");
       return true;
     } catch {
       return false;
@@ -149,11 +149,11 @@ export const accessService = {
 
   /**
    * Check if a user can create/edit tasks
-   * Requires account_manager or admin role
+   * Requires admin role
    */
   async canManageTasks(workspaceId: string, userId: string): Promise<boolean> {
     try {
-      await this.requireMinimumRole(workspaceId, userId, "account_manager");
+      await this.requireMinimumRole(workspaceId, userId, "admin");
       return true;
     } catch {
       return false;

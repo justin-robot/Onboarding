@@ -75,7 +75,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     // Validate role
-    const validRoles = ["admin", "account_manager", "user"];
+    const validRoles = ["admin", "user"];
     if (!validRoles.includes(role)) {
       return errorResponse(`role must be one of: ${validRoles.join(", ")}`, 400);
     }

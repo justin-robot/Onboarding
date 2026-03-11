@@ -36,7 +36,7 @@ const userSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  role: z.enum(["admin", "account_manager", "user"]).optional().nullable(),
+  role: z.enum(["admin", "user"]).optional().nullable(),
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
@@ -165,7 +165,6 @@ export const UserCreate = () => {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="user">User</SelectItem>
-                        <SelectItem value="account_manager">Account Manager</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
                     </Select>
