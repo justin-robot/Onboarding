@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Table,
@@ -230,8 +230,8 @@ export const UserList = ({ isPlatformAdmin = false }: UserListProps) => {
                   </TableRow>
                 ) : (
                   filteredData.map((user) => (
-                    <>
-                      <TableRow key={user.id}>
+                    <React.Fragment key={user.id}>
+                      <TableRow>
                         <TableCell>
                           {user.totalTasks > 0 && (
                             <Button
@@ -402,7 +402,7 @@ export const UserList = ({ isPlatformAdmin = false }: UserListProps) => {
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </React.Fragment>
                   ))
                 )}
               </TableBody>
