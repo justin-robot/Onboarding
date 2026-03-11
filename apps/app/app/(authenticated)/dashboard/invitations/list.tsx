@@ -131,13 +131,13 @@ export const InvitationList = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Workspace</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Invited By</TableHead>
-                  <TableHead>Expires</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="w-[20%]">Email</TableHead>
+                  <TableHead className="w-[20%]">Workspace</TableHead>
+                  <TableHead className="w-[10%]">Role</TableHead>
+                  <TableHead className="w-[15%]">Invited By</TableHead>
+                  <TableHead className="w-[12%]">Expires</TableHead>
+                  <TableHead className="w-[10%]">Status</TableHead>
+                  <TableHead className="w-[13%]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

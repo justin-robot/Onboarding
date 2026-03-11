@@ -128,11 +128,11 @@ export const MemberList = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Workspace</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Joined</TableHead>
+                  <TableHead className="w-[20%]">User</TableHead>
+                  <TableHead className="w-[25%]">Email</TableHead>
+                  <TableHead className="w-[25%]">Workspace</TableHead>
+                  <TableHead className="w-[15%]">Role</TableHead>
+                  <TableHead className="w-[15%]">Joined</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

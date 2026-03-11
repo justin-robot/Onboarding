@@ -161,15 +161,15 @@ export const UserList = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-8"></TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Workspaces</TableHead>
-                  <TableHead>Task Progress</TableHead>
-                  <TableHead>Overdue</TableHead>
-                  <TableHead>Last Activity</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="w-[3%]"></TableHead>
+                  <TableHead className="w-[15%]">Name</TableHead>
+                  <TableHead className="w-[20%]">Email</TableHead>
+                  <TableHead className="w-[10%]">Role</TableHead>
+                  <TableHead className="w-[10%]">Workspaces</TableHead>
+                  <TableHead className="w-[18%]">Task Progress</TableHead>
+                  <TableHead className="w-[8%]">Overdue</TableHead>
+                  <TableHead className="w-[10%]">Last Activity</TableHead>
+                  <TableHead className="w-[6%]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

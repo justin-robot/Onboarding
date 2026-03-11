@@ -269,14 +269,14 @@ export const TaskList = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Workspace</TableHead>
-                  <TableHead>Section</TableHead>
-                  <TableHead>Assignees</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="w-[20%]">Title</TableHead>
+                  <TableHead className="w-[10%]">Type</TableHead>
+                  <TableHead className="w-[10%]">Status</TableHead>
+                  <TableHead className="w-[18%]">Workspace</TableHead>
+                  <TableHead className="w-[15%]">Section</TableHead>
+                  <TableHead className="w-[8%]">Assignees</TableHead>
+                  <TableHead className="w-[10%]">Due Date</TableHead>
+                  <TableHead className="w-[9%]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

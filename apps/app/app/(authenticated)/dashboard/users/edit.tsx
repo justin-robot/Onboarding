@@ -110,10 +110,12 @@ export const UserEdit = ({ userId }: UserEditProps) => {
         credentials: "include",
         body: JSON.stringify({
           userId: user.id,
-          name: data.name,
-          email: data.email,
-          role: data.role,
-          ...(data.password ? { password: data.password } : {}),
+          data: {
+            name: data.name,
+            email: data.email,
+            role: data.role,
+            ...(data.password ? { password: data.password } : {}),
+          },
         }),
       });
 

@@ -147,12 +147,12 @@ export const AuditLogList = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Event</TableHead>
-                  <TableHead>Actor</TableHead>
-                  <TableHead>Workspace</TableHead>
-                  <TableHead>Task</TableHead>
-                  <TableHead>Source</TableHead>
+                  <TableHead className="w-[15%]">Time</TableHead>
+                  <TableHead className="w-[20%]">Event</TableHead>
+                  <TableHead className="w-[18%]">Actor</TableHead>
+                  <TableHead className="w-[20%]">Workspace</TableHead>
+                  <TableHead className="w-[17%]">Task</TableHead>
+                  <TableHead className="w-[10%]">Source</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

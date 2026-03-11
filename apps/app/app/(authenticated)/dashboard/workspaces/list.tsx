@@ -259,13 +259,13 @@ export const WorkspaceList = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Members</TableHead>
-                  <TableHead>Progress</TableHead>
-                  <TableHead>Due Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Last Activity</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="w-[25%]">Name</TableHead>
+                  <TableHead className="w-[10%]">Members</TableHead>
+                  <TableHead className="w-[18%]">Progress</TableHead>
+                  <TableHead className="w-[12%]">Due Date</TableHead>
+                  <TableHead className="w-[10%]">Status</TableHead>
+                  <TableHead className="w-[12%]">Last Activity</TableHead>
+                  <TableHead className="w-[13%]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
