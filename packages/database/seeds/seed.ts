@@ -5,116 +5,116 @@ import { createDb, pool } from "../index";
 import type { Database } from "../schemas/main";
 import type { Kysely } from "kysely";
 
-// Helper to generate UUIDs
+// Helper to generate UUIDs (only used for non-critical IDs like workspace members)
 const uuid = () => crypto.randomUUID();
 
-// Pre-generate IDs so we can reference them across tables
+// Fixed UUIDs for reproducible seed data
 const ids = {
-  // Users
-  adminUser: uuid(),
-  accountManager: uuid(),
-  user1: uuid(),
-  user2: uuid(),
+  // Users (will be overwritten by actual user IDs from Better Auth)
+  adminUser: "00000000-0000-0000-0000-000000000001",
+  accountManager: "00000000-0000-0000-0000-000000000002",
+  user1: "00000000-0000-0000-0000-000000000003",
+  user2: "00000000-0000-0000-0000-000000000004",
 
   // Workspaces
-  workspace1: uuid(),
-  workspace2: uuid(),
+  workspace1: "11111111-1111-1111-1111-111111111101",
+  workspace2: "11111111-1111-1111-1111-111111111102",
 
   // Sections (workspace 1)
-  w1Section1: uuid(),
-  w1Section2: uuid(),
-  w1Section3: uuid(),
+  w1Section1: "22222222-2222-2222-2222-222222222201",
+  w1Section2: "22222222-2222-2222-2222-222222222202",
+  w1Section3: "22222222-2222-2222-2222-222222222203",
   // Sections (workspace 2)
-  w2Section1: uuid(),
-  w2Section2: uuid(),
+  w2Section1: "22222222-2222-2222-2222-222222222211",
+  w2Section2: "22222222-2222-2222-2222-222222222212",
 
   // Tasks (workspace 1, section 1 - onboarding)
-  taskForm: uuid(),
-  taskAck: uuid(),
-  taskBooking: uuid(),
+  taskForm: "33333333-3333-3333-3333-333333333301",
+  taskAck: "33333333-3333-3333-3333-333333333302",
+  taskBooking: "33333333-3333-3333-3333-333333333303",
   // Tasks (workspace 1, section 2 - documents)
-  taskEsign: uuid(),
-  taskFileReq: uuid(),
+  taskEsign: "33333333-3333-3333-3333-333333333304",
+  taskFileReq: "33333333-3333-3333-3333-333333333305",
   // Tasks (workspace 1, section 3 - review)
-  taskApproval: uuid(),
+  taskApproval: "33333333-3333-3333-3333-333333333306",
   // Tasks (workspace 2, section 1)
-  taskForm2: uuid(),
-  taskAck2: uuid(),
+  taskForm2: "33333333-3333-3333-3333-333333333311",
+  taskAck2: "33333333-3333-3333-3333-333333333312",
   // Tasks (workspace 2, section 2)
-  taskApproval2: uuid(),
+  taskApproval2: "33333333-3333-3333-3333-333333333321",
 
   // Form configs
-  formConfig1: uuid(),
-  formConfig2: uuid(),
-  formPage1: uuid(),
-  formPage2: uuid(),
-  formElement1: uuid(),
-  formElement2: uuid(),
-  formElement3: uuid(),
-  formElement4: uuid(),
-  formElement5: uuid(),
-  formElement6: uuid(),
+  formConfig1: "44444444-4444-4444-4444-444444444401",
+  formConfig2: "44444444-4444-4444-4444-444444444402",
+  formPage1: "44444444-4444-4444-4444-444444444411",
+  formPage2: "44444444-4444-4444-4444-444444444412",
+  formElement1: "44444444-4444-4444-4444-444444444421",
+  formElement2: "44444444-4444-4444-4444-444444444422",
+  formElement3: "44444444-4444-4444-4444-444444444423",
+  formElement4: "44444444-4444-4444-4444-444444444424",
+  formElement5: "44444444-4444-4444-4444-444444444425",
+  formElement6: "44444444-4444-4444-4444-444444444426",
 
   // Acknowledgement configs
-  ackConfig1: uuid(),
-  ackConfig2: uuid(),
+  ackConfig1: "55555555-5555-5555-5555-555555555501",
+  ackConfig2: "55555555-5555-5555-5555-555555555502",
 
   // Time booking config
-  bookingConfig1: uuid(),
+  bookingConfig1: "66666666-6666-6666-6666-666666666601",
 
   // E-sign config
-  esignConfig1: uuid(),
+  esignConfig1: "77777777-7777-7777-7777-777777777701",
 
   // File request config
-  fileReqConfig1: uuid(),
+  fileReqConfig1: "88888888-8888-8888-8888-888888888801",
 
   // Approval configs
-  approvalConfig1: uuid(),
-  approvalConfig2: uuid(),
+  approvalConfig1: "99999999-9999-9999-9999-999999999901",
+  approvalConfig2: "99999999-9999-9999-9999-999999999902",
 
   // Files
-  file1: uuid(),
-  file2: uuid(),
-  file3: uuid(),
+  file1: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa101",
+  file2: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa102",
+  file3: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaa103",
 
   // Comments
-  comment1: uuid(),
-  comment2: uuid(),
-  comment3: uuid(),
-  comment4: uuid(),
+  comment1: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb101",
+  comment2: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb102",
+  comment3: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb103",
+  comment4: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb104",
 
   // Messages
-  msg1: uuid(),
-  msg2: uuid(),
-  msg3: uuid(),
-  msg4: uuid(),
-  msg5: uuid(),
-  msg6: uuid(),
+  msg1: "cccccccc-cccc-cccc-cccc-ccccccccc101",
+  msg2: "cccccccc-cccc-cccc-cccc-ccccccccc102",
+  msg3: "cccccccc-cccc-cccc-cccc-ccccccccc103",
+  msg4: "cccccccc-cccc-cccc-cccc-ccccccccc104",
+  msg5: "cccccccc-cccc-cccc-cccc-ccccccccc105",
+  msg6: "cccccccc-cccc-cccc-cccc-ccccccccc106",
 
   // Form submissions
-  formSubmission1: uuid(),
-  formSubmission2: uuid(),
+  formSubmission1: "dddddddd-dddd-dddd-dddd-ddddddddd101",
+  formSubmission2: "dddddddd-dddd-dddd-dddd-ddddddddd102",
 
   // Form field responses
-  fieldResponse1: uuid(),
-  fieldResponse2: uuid(),
-  fieldResponse3: uuid(),
-  fieldResponse4: uuid(),
+  fieldResponse1: "eeeeeeee-eeee-eeee-eeee-eeeeeeeee101",
+  fieldResponse2: "eeeeeeee-eeee-eeee-eeee-eeeeeeeee102",
+  fieldResponse3: "eeeeeeee-eeee-eeee-eeee-eeeeeeeee103",
+  fieldResponse4: "eeeeeeee-eeee-eeee-eeee-eeeeeeeee104",
 
   // Acknowledgements
-  ack1: uuid(),
-  ack2: uuid(),
-  ack3: uuid(),
+  ack1: "ffffffff-ffff-ffff-ffff-fffffffffff1",
+  ack2: "ffffffff-ffff-ffff-ffff-fffffffffff2",
+  ack3: "ffffffff-ffff-ffff-ffff-fffffffffff3",
 
   // Bookings
-  booking1: uuid(),
+  booking1: "10101010-1010-1010-1010-101010101001",
 
   // File uploaded for file request
-  uploadedFile1: uuid(),
+  uploadedFile1: "20202020-2020-2020-2020-202020202001",
 
   // Pending invitations
-  invitation1: uuid(),
-  invitation2: uuid(),
+  invitation1: "30303030-3030-3030-3030-303030303001",
+  invitation2: "30303030-3030-3030-3030-303030303002",
 };
 
 async function seed() {
