@@ -29,7 +29,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
         "task.title",
         "task.type",
         "task.status as taskStatus",
-        "task.dueDate",
+        "task.dueDateValue as dueDate",
         "task.completedAt as taskCompletedAt",
         "task_assignee.status as assigneeStatus",
         "task_assignee.completedAt as assigneeCompletedAt",
