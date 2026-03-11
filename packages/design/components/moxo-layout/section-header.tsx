@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "../../lib/utils";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { ChevronDown, ChevronRight, MoreHorizontal, Loader2 } from "lucide-react";
+import { ChevronDown, ChevronRight, MoreHorizontal } from "lucide-react";
 
 type SectionStatus = "not_started" | "in_progress" | "completed";
 
@@ -38,31 +38,28 @@ interface SectionHeaderProps {
 // Status badge configuration
 const statusConfig: Record<
   SectionStatus,
-  { label: string; badgeClassName: string; borderClassName: string; iconColor: string }
+  { label: string; badgeClassName: string; borderClassName: string }
 > = {
   not_started: {
     label: "Not Started",
     badgeClassName: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
     borderClassName: "border-slate-300 dark:border-slate-600",
-    iconColor: "text-slate-400",
   },
   in_progress: {
     label: "In Progress",
     badgeClassName: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
     borderClassName: "border-blue-500",
-    iconColor: "text-blue-500",
   },
   completed: {
     label: "Completed",
     badgeClassName: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
     borderClassName: "border-green-500",
-    iconColor: "text-green-500",
   },
 };
 
 /**
  * Section header component matching Moxo's design
- * Features full border container, status badge with spinner, and progress counter
+ * Features full border container, status badge, and progress counter
  */
 export function SectionHeader({
   title,
@@ -102,18 +99,15 @@ export function SectionHeader({
           )}
         </div>
 
-        {/* Status badge with spinner and counter */}
+        {/* Status badge and counter */}
         <div className="flex items-center gap-2 shrink-0">
           <Badge
             variant="secondary"
             className={cn(
-              "text-xs px-2 py-0.5 font-medium flex items-center gap-1.5",
+              "text-xs px-2 py-0.5 font-medium",
               config.badgeClassName
             )}
           >
-            {status === "in_progress" && (
-              <Loader2 className={cn("h-3 w-3 animate-spin", config.iconColor)} />
-            )}
             {config.label}
           </Badge>
           {hasProgress && (

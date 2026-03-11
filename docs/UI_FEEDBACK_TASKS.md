@@ -30,7 +30,7 @@ Extracted from review transcripts. Priority: High (H), Medium (M), Low (L)
 
 | # | Task | Priority | Status |
 |---|------|----------|--------|
-| 9 | **Remove loading spinner on "In Progress"** - Progress indicator shouldn't show loading state | M | [ ] |
+| 9 | **Remove loading spinner on "In Progress"** - Progress indicator shouldn't show loading state | M | [x] |
 | 10 | **Show locked task indicator** - Add lock icon for locked tasks; hoverable to show unlock requirements | H | [ ] |
 | 11 | **Color inconsistency** - Task type colors differ between views (blue vs gray); make consistent | M | [ ] |
 | 12 | **Show assignees on task card** - Display who a task is assigned to on the task list view | M | [ ] |
@@ -95,10 +95,10 @@ Extracted from review transcripts. Priority: High (H), Medium (M), Low (L)
 ## Summary
 
 - **Total tasks:** 25
-- **Completed:** 9
-- **Remaining:** 16
+- **Completed:** 10
+- **Remaining:** 15
   - High priority: 4
-  - Medium priority: 8
+  - Medium priority: 7
   - Low priority: 4
 
 ### Reference Links
