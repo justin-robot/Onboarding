@@ -1,8 +1,1 @@
-:root {
-  --rnf-notification-icon-button-size: 1rem;
-}
-
-.rnf-notification-icon-button svg {
-  width: var(--rnf-notification-icon-button-size);
-  height: var(--rnf-notification-icon-button-size);
-}
+/* Custom notification trigger styles - Knock feed popover styling is in @knocklabs/react/dist/index.css */
