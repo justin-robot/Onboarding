@@ -44,13 +44,6 @@ export function NotificationPreferences({
     preferences.documents !== initialPreferences.documents ||
     preferences.meetings !== initialPreferences.meetings;
 
-  function handleToggle(category: keyof NotificationPrefsType) {
-    setPreferences((prev) => ({
-      ...prev,
-      [category]: !prev[category],
-    }));
-  }
-
   async function handleSave() {
     setIsSubmitting(true);
 
@@ -111,8 +104,11 @@ export function NotificationPreferences({
               </div>
               <Switch
                 id={key}
+                name={key}
                 checked={preferences[key]}
-                onChange={() => handleToggle(key)}
+                onChange={(value) =>
+                  setPreferences((prev) => ({ ...prev, [key]: value }))
+                }
               />
             </ListItem>
           );
