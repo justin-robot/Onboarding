@@ -10,7 +10,6 @@ import {
   CheckSquare,
   Mail,
   FileText,
-  LogOut,
   ChevronLeft,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -87,18 +86,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             );
           })}
         </nav>
-
-        {/* Footer */}
-        <div className="p-4 border-t">
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-3 text-muted-foreground"
-            onClick={() => router.push("/workspaces")}
-          >
-            <LogOut className="h-4 w-4" />
-            Exit Admin
-          </Button>
-        </div>
       </aside>
 
       {/* Main content */}
