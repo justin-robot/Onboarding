@@ -7,11 +7,11 @@ import {
   Title,
   Text,
   Divider,
-  Switch,
   Button,
   List,
   ListItem,
 } from "@tremor/react";
+import { Switch } from "@repo/design/components/ui/switch";
 import { CheckSquare, Calendar, FileText, Video, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -104,10 +104,9 @@ export function NotificationPreferences({
               </div>
               <Switch
                 id={key}
-                name={key}
                 checked={preferences[key]}
-                onChange={(value) =>
-                  setPreferences((prev) => ({ ...prev, [key]: value }))
+                onCheckedChange={(checked) =>
+                  setPreferences((prev) => ({ ...prev, [key]: checked }))
                 }
               />
             </ListItem>
