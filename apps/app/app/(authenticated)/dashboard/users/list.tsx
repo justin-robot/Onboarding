@@ -213,8 +213,8 @@ export const UserList = ({ isPlatformAdmin = false }: UserListProps) => {
                   <TableHead className="w-[3%]"></TableHead>
                   <TableHead className="w-[15%]">Name</TableHead>
                   <TableHead className="w-[20%]">Email</TableHead>
-                  <TableHead className="w-[10%]">Role</TableHead>
-                  <TableHead className="w-[10%]">Workspaces</TableHead>
+                  <TableHead className="w-[12%]">Platform Role</TableHead>
+                  <TableHead className="w-[8%]">Workspaces</TableHead>
                   <TableHead className="w-[18%]">Task Progress</TableHead>
                   <TableHead className="w-[8%]">Overdue</TableHead>
                   <TableHead className="w-[10%]">Last Activity</TableHead>
