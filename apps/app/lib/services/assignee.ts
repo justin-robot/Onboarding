@@ -134,7 +134,8 @@ export const assigneeService = {
 
     // Trigger notification
     if (notificationContext) {
-      await notificationContext.triggerWorkflow({
+      console.log("[assignee] Triggering task-assigned notification for user:", userId);
+      const result = await notificationContext.triggerWorkflow({
         workflowId: "task-assigned",
         recipientId: userId,
         data: {
@@ -145,6 +146,9 @@ export const assigneeService = {
         },
         tenant: taskWithWorkspace.workspaceId,
       });
+      console.log("[assignee] Notification result:", result);
+    } else {
+      console.log("[assignee] No notificationContext provided, skipping notification");
     }
 
     return { success: true, assignee };

@@ -1,5 +1,6 @@
 import { taskService, configService, sectionService, assigneeService } from "@/lib/services";
 import { ablyService, WORKSPACE_EVENTS } from "@/lib/services/ably";
+import { notificationService } from "@repo/notifications";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 import type { TaskType, DueDateType } from "@repo/database";
@@ -24,7 +25,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
  */
 export async function POST(request: NextRequest, { params }: Params) {
   return withErrorHandler(async () => {
-    await requireAuth();
+    const user = await requireAuth();
     const { id: sectionId } = await params;
     const body = await request.json();
 
@@ -59,7 +60,10 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (Array.isArray(assigneeIds) && assigneeIds.length > 0) {
       for (const userId of assigneeIds) {
         if (typeof userId === "string") {
-          await assigneeService.assign(task.id, userId);
+          await assigneeService.assign(task.id, userId, notificationService, {
+            actorId: user.id,
+            source: "web",
+          });
         }
       }
     }
