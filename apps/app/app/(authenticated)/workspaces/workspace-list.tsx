@@ -62,7 +62,7 @@ export function WorkspaceList({ workspaces, userId, userRole }: WorkspaceListPro
   );
 
   return (
-    <div className="container max-w-7xl py-8">
+    <div className="container max-w-7xl py-8 px-4 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>

@@ -30,7 +30,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="h-full overflow-y-auto bg-slate-50 dark:bg-slate-950">
-      <div className="container max-w-2xl py-8">
+      <div className="container max-w-2xl py-8 px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-2xl font-bold tracking-tight">Account Settings</h1>
           <p className="text-muted-foreground">
