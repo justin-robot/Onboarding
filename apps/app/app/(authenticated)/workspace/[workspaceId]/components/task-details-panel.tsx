@@ -60,6 +60,8 @@ import { cn } from "@repo/design/lib/utils";
 import { toast } from "sonner";
 import { CommentSection } from "./comment-section";
 import { TaskDependencies } from "./task-dependencies";
+import { DueDateSelector } from "./due-date-selector";
+import { DueDateDisplay } from "./due-date-display";
 
 interface Assignee {
   id: string;
@@ -138,7 +140,7 @@ interface TaskDetailsPanelProps {
   workspaceId: string;
   currentUserId: string;
   onClose: () => void;
-  onTaskComplete: () => void;
+  onTaskComplete: (wasCompleted?: boolean) => void;
   onTaskDelete?: () => void;
   isAdmin?: boolean;
 }
@@ -513,6 +515,28 @@ export function TaskDetailsPanel({
           {task.description && (
             <p className="text-sm text-muted-foreground mb-4">{task.description}</p>
           )}
+
+          {/* Due Date Section */}
+          <div className="mb-4">
+            <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
+              Due Date
+            </h4>
+            {isAdmin ? (
+              <DueDateSelector
+                taskId={task.id}
+                currentDueDate={task.dueDate}
+                dueDateType={task.dueDateType}
+                onDueDateChange={onTaskComplete}
+                disabled={task.isCompleted}
+              />
+            ) : (
+              <DueDateDisplay
+                dueDate={task.dueDate}
+                dueDateType={task.dueDateType}
+                isCompleted={task.isCompleted}
+              />
+            )}
+          </div>
 
           {/* Form Response Section - compact clickable row */}
           {task.type === "form" && config && (task.isCompleted || currentUserCompleted || viewingSubmissionUserId) && (

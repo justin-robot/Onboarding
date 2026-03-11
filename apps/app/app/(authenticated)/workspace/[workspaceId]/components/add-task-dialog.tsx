@@ -10,9 +10,16 @@ import {
   DialogContent,
   DialogTitle,
 } from "@repo/design/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@repo/design/components/ui/popover";
+import { Calendar as CalendarPicker } from "@repo/design/components/ui/calendar";
 import { ScrollArea } from "@repo/design/components/ui/scroll-area";
 import { Checkbox } from "@repo/design/components/ui/checkbox";
 import { Badge } from "@repo/design/components/ui/badge";
+import { format } from "date-fns";
 import {
   FileText,
   CheckSquare,
@@ -30,62 +37,62 @@ import {
 import { toast } from "sonner";
 import { cn } from "@repo/design/lib/utils";
 
-// Task type definitions with Moxo-style colors
+// Task type definitions with colors matching task-card.tsx
 const TASK_TYPES = [
   {
     value: "APPROVAL",
     label: "Approval",
     icon: ThumbsUp,
-    color: "bg-teal-700",
+    color: "bg-blue-600",
     iconColor: "text-white"
   },
   {
     value: "ACKNOWLEDGEMENT",
     label: "Acknowledgement",
     icon: CheckSquare,
-    color: "bg-amber-700",
+    color: "bg-amber-600",
     iconColor: "text-white"
   },
   {
     value: "FILE_REQUEST",
     label: "File Request",
     icon: Upload,
-    color: "bg-green-700",
+    color: "bg-purple-600",
     iconColor: "text-white"
   },
   {
     value: "E_SIGN",
     label: "E-Sign",
     icon: FileSignature,
-    color: "bg-stone-500",
+    color: "bg-indigo-600",
     iconColor: "text-white"
   },
   {
     value: "TIME_BOOKING",
     label: "Time Booking",
     icon: Calendar,
-    color: "bg-orange-500",
+    color: "bg-orange-600",
     iconColor: "text-white"
   },
   {
     value: "FORM",
     label: "Form",
     icon: FileText,
-    color: "bg-emerald-600",
+    color: "bg-teal-600",
     iconColor: "text-white"
   },
 ] as const;
 
 type TaskType = typeof TASK_TYPES[number]["value"];
 
-// Map frontend task types to display icons
+// Map frontend task types to display icons (colors matching task-card.tsx)
 const TASK_TYPE_ICONS: Record<string, { icon: typeof FileText; color: string }> = {
-  form: { icon: FileText, color: "bg-emerald-600" },
-  acknowledgement: { icon: CheckSquare, color: "bg-amber-700" },
-  file_upload: { icon: Upload, color: "bg-green-700" },
-  approval: { icon: ThumbsUp, color: "bg-teal-700" },
-  booking: { icon: Calendar, color: "bg-orange-500" },
-  esign: { icon: FileSignature, color: "bg-stone-500" },
+  form: { icon: FileText, color: "bg-teal-600" },
+  acknowledgement: { icon: CheckSquare, color: "bg-amber-600" },
+  file_upload: { icon: Upload, color: "bg-purple-600" },
+  approval: { icon: ThumbsUp, color: "bg-blue-600" },
+  booking: { icon: Calendar, color: "bg-orange-600" },
+  esign: { icon: FileSignature, color: "bg-indigo-600" },
 };
 
 interface Task {
@@ -139,6 +146,7 @@ export function AddTaskDialog({
   // Form fields
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
 
   const handleTypeSelect = (type: TaskType) => {
@@ -180,6 +188,8 @@ export function AddTaskDialog({
           type: selectedType,
           position: selectedPosition,
           assigneeIds: selectedAssignees,
+          dueDateType: dueDate ? "absolute" : undefined,
+          dueDateValue: dueDate ? dueDate.toISOString() : undefined,
         }),
       });
 
@@ -205,6 +215,7 @@ export function AddTaskDialog({
     setSelectedPosition(0);
     setTitle("");
     setDescription("");
+    setDueDate(undefined);
     setSelectedAssignees([]);
     onOpenChange(false);
   };
@@ -264,6 +275,8 @@ export function AddTaskDialog({
             setTitle={setTitle}
             description={description}
             setDescription={setDescription}
+            dueDate={dueDate}
+            setDueDate={setDueDate}
             selectedAssignees={selectedAssignees}
             setSelectedAssignees={setSelectedAssignees}
             members={members}
@@ -379,6 +392,8 @@ function DetailsStep({
   setTitle,
   description,
   setDescription,
+  dueDate,
+  setDueDate,
   selectedAssignees,
   setSelectedAssignees,
   members,
@@ -390,6 +405,8 @@ function DetailsStep({
   setTitle: (value: string) => void;
   description: string;
   setDescription: (value: string) => void;
+  dueDate: Date | undefined;
+  setDueDate: (value: Date | undefined) => void;
   selectedAssignees: string[];
   setSelectedAssignees: (value: string[]) => void;
   members: Member[];
@@ -426,6 +443,51 @@ function DetailsStep({
             disabled={creating}
             rows={3}
           />
+        </div>
+
+        {/* Due Date */}
+        <div className="space-y-2">
+          <Label>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              Due Date <span className="text-muted-foreground">(optional)</span>
+            </div>
+          </Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !dueDate && "text-muted-foreground"
+                )}
+                disabled={creating}
+              >
+                <Calendar className="mr-2 h-4 w-4" />
+                {dueDate ? format(dueDate, "PPP") : "Select due date"}
+                {dueDate && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDueDate(undefined);
+                    }}
+                    className="ml-auto hover:text-destructive"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarPicker
+                mode="single"
+                selected={dueDate}
+                onSelect={setDueDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* Assignees */}

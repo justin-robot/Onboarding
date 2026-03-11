@@ -4,6 +4,7 @@ import * as React from "react";
 import { cn } from "../../lib/utils";
 import { formatTaskTimestamp } from "../../lib/date-utils";
 import { Button } from "../ui/button";
+import { format, differenceInDays, isPast } from "date-fns";
 import {
   FileText,
   CheckSquare,
@@ -13,7 +14,14 @@ import {
   ThumbsUp,
   LucideIcon,
   Check,
+  Lock,
+  AlertCircle,
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "../ui/tooltip";
 
 // Task types matching the database schema
 type TaskType =
@@ -40,8 +48,12 @@ interface TaskCardProps {
   isCompleted?: boolean;
   /** Whether task is locked (dependencies not met) */
   isLocked?: boolean;
+  /** Tasks that are blocking this task (shown in lock tooltip) */
+  lockedByTasks?: Array<{ id: string; title: string }>;
   /** Whether this task is currently selected */
   isSelected?: boolean;
+  /** Whether this task was recently completed (shows green highlight) */
+  isRecentlyCompleted?: boolean;
   /** Position in the timeline (1-indexed) */
   position?: number;
   /** Optional description or subtitle */
@@ -68,45 +80,45 @@ interface TaskCardProps {
   onReviewClick?: () => void;
 }
 
-// Type-specific styling configuration
+// Type-specific styling configuration - using solid colors to match Add Task dialog
 const typeConfig: Record<
   TaskType,
   { icon: LucideIcon; bgColor: string; textColor: string; label: string }
 > = {
   form: {
     icon: FileText,
-    bgColor: "bg-teal-100 dark:bg-teal-900/30",
-    textColor: "text-teal-600 dark:text-teal-400",
+    bgColor: "bg-teal-600",
+    textColor: "text-white",
     label: "Form",
   },
   acknowledgement: {
     icon: CheckSquare,
-    bgColor: "bg-amber-100 dark:bg-amber-900/30",
-    textColor: "text-amber-700 dark:text-amber-400",
+    bgColor: "bg-amber-600",
+    textColor: "text-white",
     label: "Acknowledgement",
   },
   file_upload: {
     icon: Upload,
-    bgColor: "bg-purple-100 dark:bg-purple-900/30",
-    textColor: "text-purple-600 dark:text-purple-400",
+    bgColor: "bg-purple-600",
+    textColor: "text-white",
     label: "File Upload",
   },
   approval: {
     icon: ThumbsUp,
-    bgColor: "bg-blue-100 dark:bg-blue-900/30",
-    textColor: "text-blue-600 dark:text-blue-400",
+    bgColor: "bg-blue-600",
+    textColor: "text-white",
     label: "Approval",
   },
   booking: {
     icon: Calendar,
-    bgColor: "bg-orange-100 dark:bg-orange-900/30",
-    textColor: "text-orange-600 dark:text-orange-400",
+    bgColor: "bg-orange-600",
+    textColor: "text-white",
     label: "Booking",
   },
   esign: {
     icon: FileSignature,
-    bgColor: "bg-indigo-100 dark:bg-indigo-900/30",
-    textColor: "text-indigo-600 dark:text-indigo-400",
+    bgColor: "bg-indigo-600",
+    textColor: "text-white",
     label: "E-Signature",
   },
 };
@@ -121,6 +133,48 @@ function getInitials(name: string): string {
     .join("")
     .toUpperCase()
     .slice(0, 2);
+}
+
+/**
+ * Get due date badge info
+ */
+function getDueDateBadge(
+  dueDate: Date | string | undefined,
+  isCompleted: boolean | undefined
+): { label: string; colorClass: string; isOverdue: boolean } | null {
+  if (!dueDate || isCompleted) return null;
+
+  const date = typeof dueDate === "string" ? new Date(dueDate) : dueDate;
+  const now = new Date();
+  const daysUntil = differenceInDays(date, now);
+  const isOverdue = isPast(date);
+
+  if (isOverdue) {
+    return {
+      label: "Overdue",
+      colorClass: "text-red-600 dark:text-red-400",
+      isOverdue: true,
+    };
+  }
+  if (daysUntil <= 3) {
+    return {
+      label: `${daysUntil}d`,
+      colorClass: "text-orange-600 dark:text-orange-400",
+      isOverdue: false,
+    };
+  }
+  if (daysUntil <= 7) {
+    return {
+      label: `${daysUntil}d`,
+      colorClass: "text-yellow-600 dark:text-yellow-400",
+      isOverdue: false,
+    };
+  }
+  return {
+    label: format(date, "MMM d"),
+    colorClass: "text-muted-foreground",
+    isOverdue: false,
+  };
 }
 
 /**
@@ -207,7 +261,9 @@ export function TaskCard({
   isYourTurn,
   isCompleted,
   isLocked,
+  lockedByTasks,
   isSelected,
+  isRecentlyCompleted,
   position,
   description,
   dueDate,
@@ -224,6 +280,8 @@ export function TaskCard({
   const config = typeConfig[type];
   const Icon = config.icon;
   const statusSubtitle = getStatusSubtitle(isCompleted, isYourTurn, isLocked);
+  const hasBlockingTasks = lockedByTasks && lockedByTasks.length > 0;
+  const dueDateBadge = getDueDateBadge(dueDate, isCompleted);
 
   // Handle review button click without triggering card click
   const handleReviewClick = (e: React.MouseEvent) => {
@@ -248,11 +306,13 @@ export function TaskCard({
         className={cn(
           "group relative flex flex-1 items-center gap-3 py-3 px-4 text-left transition-all rounded-lg border",
           "hover:border-gray-300 dark:hover:border-gray-600",
+          // Recently completed task gets green highlight with animation
+          isRecentlyCompleted && "border-green-500 bg-green-50/50 dark:bg-green-950/20 ring-2 ring-green-500/30 animate-pulse",
           // Current/active task gets highlighted border
-          timelineStatus === "current" && "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 shadow-sm",
+          !isRecentlyCompleted && timelineStatus === "current" && "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 shadow-sm",
           // Default subtle border
-          timelineStatus !== "current" && "border-gray-200 dark:border-gray-700",
-          isSelected && "border-blue-500 bg-blue-50/50 dark:bg-blue-950/20",
+          !isRecentlyCompleted && timelineStatus !== "current" && "border-gray-200 dark:border-gray-700",
+          !isRecentlyCompleted && isSelected && "border-blue-500 bg-blue-50/50 dark:bg-blue-950/20",
           isLocked && "opacity-60"
         )}
       >
@@ -276,10 +336,48 @@ export function TaskCard({
           >
             {title}
           </h3>
-          <p className={cn("text-xs mt-0.5", statusSubtitle.className)}>
-            {statusSubtitle.text}
-          </p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className={cn("text-xs", statusSubtitle.className)}>
+              {statusSubtitle.text}
+            </span>
+            {dueDateBadge && (
+              <span className={cn("flex items-center gap-1 text-xs font-medium", dueDateBadge.colorClass)}>
+                {dueDateBadge.isOverdue && <AlertCircle className="h-3 w-3" />}
+                {dueDateBadge.label}
+              </span>
+            )}
+          </div>
         </div>
+
+        {/* Lock indicator for locked tasks */}
+        {isLocked && (
+          <div className="shrink-0">
+            {hasBlockingTasks ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-gray-100 dark:bg-gray-800 cursor-help">
+                    <Lock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs">
+                  <p className="font-medium text-xs mb-1">Waiting for:</p>
+                  <ul className="text-xs space-y-0.5">
+                    {lockedByTasks.map((task) => (
+                      <li key={task.id} className="flex items-center gap-1.5">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
+                        <span className="truncate">{task.title}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-gray-100 dark:bg-gray-800">
+                <Lock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Review button for Your Turn tasks OR Assignee avatars */}
         <div className="flex items-center gap-2 shrink-0">
