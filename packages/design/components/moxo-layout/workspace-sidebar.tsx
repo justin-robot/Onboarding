@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
-import { Plus, Building2, CheckCircle2 } from "lucide-react";
+import { Plus, Home, CheckCircle2 } from "lucide-react";
 
 interface Workspace {
   id: string;
@@ -30,12 +30,16 @@ interface WorkspaceSidebarProps {
   onWorkspaceSelect?: (workspaceId: string) => void;
   /** Callback when create button is clicked */
   onCreateWorkspace?: () => void;
+  /** Callback when home button is clicked */
+  onHomeClick?: () => void;
   /** Whether workspaces are loading */
   isLoading?: boolean;
   /** Optional class name */
   className?: string;
   /** Header title (defaults to "Workspaces") */
   title?: string;
+  /** Footer content (e.g., user menu) */
+  footer?: React.ReactNode;
 }
 
 /**
@@ -47,12 +51,32 @@ export function WorkspaceSidebar({
   selectedWorkspaceId,
   onWorkspaceSelect,
   onCreateWorkspace,
+  onHomeClick,
   isLoading,
   className,
   title = "Workspaces",
+  footer,
 }: WorkspaceSidebarProps) {
   return (
     <div className={cn("flex h-full flex-col bg-slate-50 dark:bg-slate-900", className)}>
+      {/* Home Button */}
+      {onHomeClick && (
+        <div className="border-b border-border/50 p-1.5">
+          <button
+            onClick={onHomeClick}
+            className={cn(
+              "flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors",
+              "hover:bg-white dark:hover:bg-slate-800 text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-200 dark:bg-slate-700">
+              <Home className="h-4 w-4" />
+            </div>
+            <span className="text-sm font-medium">Home</span>
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border/50 px-3 py-2">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -95,6 +119,13 @@ export function WorkspaceSidebar({
           )}
         </div>
       </ScrollArea>
+
+      {/* Footer (e.g., user menu) */}
+      {footer && (
+        <div className="border-t border-border/50 p-2">
+          {footer}
+        </div>
+      )}
     </div>
   );
 }

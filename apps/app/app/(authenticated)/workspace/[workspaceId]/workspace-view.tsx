@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { NotificationsTrigger } from "@repo/notifications";
+import { UserMenu } from "../../components/user-menu";
 
 interface WorkspaceData {
   id: string;
@@ -307,7 +308,9 @@ export function WorkspaceView({
           workspaces={sidebarWorkspaces}
           selectedWorkspaceId={currentWorkspaceId}
           onWorkspaceSelect={handleWorkspaceSelect}
-          onCreateWorkspace={() => router.push("/workspaces")}
+          onCreateWorkspace={currentUserRole === "admin" ? () => router.push("/workspaces") : undefined}
+          onHomeClick={() => router.push("/workspaces")}
+          footer={<UserMenu />}
         />
       }
       flowContent={
