@@ -60,6 +60,7 @@ export interface UserTable {
   emailVerified: boolean;
   image: string | null;
   role: "admin" | "account_manager" | "user" | null;
+  isPlatformAdmin: Generated<boolean>;
   communications: boolean | null;
   banned: boolean;
   banReason: string | null;

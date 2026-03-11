@@ -1,18 +1,14 @@
 import { database } from "@repo/database";
 import { invitationService } from "@/lib/services";
-import { json, errorResponse, requireAuth, withErrorHandler } from "../../_lib/api-utils";
+import { json, errorResponse, requireAdminAuth, withErrorHandler } from "../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
 /**
- * GET /api/admin/invitations - List all pending invitations with pagination
+ * GET /api/admin/invitations - List pending invitations (scoped by admin access)
  */
 export async function GET(request: NextRequest) {
   return withErrorHandler(async () => {
-    const user = await requireAuth();
-
-    if (user.role !== "admin") {
-      return errorResponse("Forbidden", 403);
-    }
+    const { workspaceIds } = await requireAdminAuth();
 
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "25", 10);
@@ -22,6 +18,11 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const workspaceId = searchParams.get("workspaceId") || "";
     const includeExpired = searchParams.get("includeExpired") === "true";
+
+    // If user has no admin workspaces, return empty
+    if (workspaceIds !== null && workspaceIds.length === 0) {
+      return json({ data: [], total: 0 });
+    }
 
     // Build base query with joins
     let query = database
@@ -41,6 +42,11 @@ export async function GET(request: NextRequest) {
         "inviter.email as inviterEmail",
       ]);
 
+    // Scope by workspace IDs if not platform admin
+    if (workspaceIds !== null) {
+      query = query.where("workspace.id", "in", workspaceIds);
+    }
+
     // Filter expired
     if (!includeExpired) {
       query = query.where("pending_invitation.expiresAt", ">", new Date());
@@ -56,16 +62,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Workspace filter
+    // Workspace filter (additional filter on top of scope)
     if (workspaceId) {
       query = query.where("pending_invitation.workspaceId", "=", workspaceId);
     }
 
-    // Get total count
+    // Get total count (with same scoping)
     let countQuery = database
       .selectFrom("pending_invitation")
       .innerJoin("workspace", "workspace.id", "pending_invitation.workspaceId")
       .select((eb) => eb.fn.count("pending_invitation.id").as("total"));
+
+    // Apply workspace scope to count query
+    if (workspaceIds !== null) {
+      countQuery = countQuery.where("workspace.id", "in", workspaceIds);
+    }
 
     if (!includeExpired) {
       countQuery = countQuery.where("pending_invitation.expiresAt", ">", new Date());
@@ -113,17 +124,26 @@ export async function GET(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   return withErrorHandler(async () => {
-    const user = await requireAuth();
-
-    if (user.role !== "admin") {
-      return errorResponse("Forbidden", 403);
-    }
+    const { workspaceIds } = await requireAdminAuth();
 
     const body = await request.json();
     const { id } = body;
 
     if (!id) {
       return errorResponse("Invitation ID is required", 400);
+    }
+
+    // Check if the invitation belongs to a workspace the user can admin
+    if (workspaceIds !== null) {
+      const invitation = await database
+        .selectFrom("pending_invitation")
+        .select("workspaceId")
+        .where("id", "=", id)
+        .executeTakeFirst();
+
+      if (!invitation || !workspaceIds.includes(invitation.workspaceId)) {
+        return errorResponse("Invitation not found", 404);
+      }
     }
 
     const success = await invitationService.cancel(id);

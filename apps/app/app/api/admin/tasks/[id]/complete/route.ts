@@ -1,6 +1,6 @@
 import { completionService, auditLogService } from "@/lib/services";
 import { database } from "@repo/database";
-import { json, errorResponse, requireAuth, withErrorHandler } from "../../../../_lib/api-utils";
+import { json, errorResponse, requireAdminAuth, withErrorHandler } from "../../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -20,11 +20,7 @@ const completeTaskSchema = z.object({
  */
 export async function POST(request: NextRequest, { params }: Params) {
   return withErrorHandler(async () => {
-    const admin = await requireAuth();
-
-    if (admin.role !== "admin") {
-      return errorResponse("Forbidden", 403);
-    }
+    const { user: admin, workspaceIds } = await requireAdminAuth();
 
     const { id: taskId } = await params;
     const body = await request.json().catch(() => ({}));
@@ -52,6 +48,11 @@ export async function POST(request: NextRequest, { params }: Params) {
       .executeTakeFirst();
 
     if (!task) {
+      return errorResponse("Task not found", 404);
+    }
+
+    // Check workspace access
+    if (workspaceIds !== null && !workspaceIds.includes(task.workspaceId)) {
       return errorResponse("Task not found", 404);
     }
 

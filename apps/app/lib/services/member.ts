@@ -237,4 +237,54 @@ export const memberService = {
       .where("workspace_member.workspaceId", "=", workspaceId)
       .execute();
   },
+
+  /**
+   * Check if a user is an admin in any workspace
+   */
+  async isAdminInAnyWorkspace(userId: string): Promise<boolean> {
+    const result = await database
+      .selectFrom("workspace_member")
+      .select("id")
+      .where("userId", "=", userId)
+      .where("role", "=", "admin")
+      .limit(1)
+      .executeTakeFirst();
+
+    return result !== undefined;
+  },
+
+  /**
+   * Get all workspace IDs where a user is an admin
+   */
+  async getWorkspaceIdsWhereAdmin(userId: string): Promise<string[]> {
+    const results = await database
+      .selectFrom("workspace_member")
+      .select("workspaceId")
+      .where("userId", "=", userId)
+      .where("role", "=", "admin")
+      .execute();
+
+    return results.map((r) => r.workspaceId);
+  },
+
+  /**
+   * Get all workspaces where a user is an admin (with workspace details)
+   */
+  async getWorkspacesWhereAdmin(userId: string) {
+    return database
+      .selectFrom("workspace_member")
+      .innerJoin("workspace", "workspace.id", "workspace_member.workspaceId")
+      .select([
+        "workspace.id",
+        "workspace.name",
+        "workspace.description",
+        "workspace.dueDate",
+        "workspace.createdAt",
+        "workspace.updatedAt",
+        "workspace.deletedAt",
+      ])
+      .where("workspace_member.userId", "=", userId)
+      .where("workspace_member.role", "=", "admin")
+      .execute();
+  },
 };

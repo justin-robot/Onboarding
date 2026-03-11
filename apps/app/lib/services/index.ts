@@ -74,3 +74,6 @@ export type { UserProfile, UpdateProfileInput } from "./user";
 
 export { templateService } from "./template";
 export type { DuplicateWorkspaceOptions, DuplicateWorkspaceResult } from "./template";
+
+export { adminAccessService } from "./adminAccess";
+export type { AdminAccessResult } from "./adminAccess";

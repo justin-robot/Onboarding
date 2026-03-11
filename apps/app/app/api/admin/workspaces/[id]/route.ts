@@ -1,21 +1,32 @@
 import { workspaceService } from "@/lib/services";
-import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
+import { json, errorResponse, requireAdminAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
 type Params = { params: Promise<{ id: string }> };
+
+/**
+ * Check if user can access a specific workspace
+ */
+async function checkWorkspaceAccess(workspaceIds: string[] | null, workspaceId: string): Promise<boolean> {
+  // Platform admin can access all workspaces
+  if (workspaceIds === null) return true;
+  // Workspace admin can only access their workspaces
+  return workspaceIds.includes(workspaceId);
+}
 
 /**
  * GET /api/admin/workspaces/[id] - Get workspace details
  */
 export async function GET(_request: NextRequest, { params }: Params) {
   return withErrorHandler(async () => {
-    const user = await requireAuth();
-
-    if (user.role !== "admin") {
-      return errorResponse("Forbidden", 403);
-    }
+    const { workspaceIds } = await requireAdminAuth();
 
     const { id } = await params;
+
+    if (!(await checkWorkspaceAccess(workspaceIds, id))) {
+      return errorResponse("Workspace not found", 404);
+    }
+
     const workspace = await workspaceService.getByIdWithNested(id);
 
     if (!workspace) {
@@ -31,13 +42,14 @@ export async function GET(_request: NextRequest, { params }: Params) {
  */
 export async function PUT(request: NextRequest, { params }: Params) {
   return withErrorHandler(async () => {
-    const user = await requireAuth();
-
-    if (user.role !== "admin") {
-      return errorResponse("Forbidden", 403);
-    }
+    const { workspaceIds } = await requireAdminAuth();
 
     const { id } = await params;
+
+    if (!(await checkWorkspaceAccess(workspaceIds, id))) {
+      return errorResponse("Workspace not found", 404);
+    }
+
     const body = await request.json();
 
     const { name, description, dueDate } = body;
@@ -61,13 +73,14 @@ export async function PUT(request: NextRequest, { params }: Params) {
  */
 export async function DELETE(_request: NextRequest, { params }: Params) {
   return withErrorHandler(async () => {
-    const user = await requireAuth();
-
-    if (user.role !== "admin") {
-      return errorResponse("Forbidden", 403);
-    }
+    const { workspaceIds } = await requireAdminAuth();
 
     const { id } = await params;
+
+    if (!(await checkWorkspaceAccess(workspaceIds, id))) {
+      return errorResponse("Workspace not found", 404);
+    }
+
     const success = await workspaceService.softDelete(id);
 
     if (!success) {
@@ -83,13 +96,14 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
  */
 export async function PATCH(request: NextRequest, { params }: Params) {
   return withErrorHandler(async () => {
-    const user = await requireAuth();
-
-    if (user.role !== "admin") {
-      return errorResponse("Forbidden", 403);
-    }
+    const { workspaceIds } = await requireAdminAuth();
 
     const { id } = await params;
+
+    if (!(await checkWorkspaceAccess(workspaceIds, id))) {
+      return errorResponse("Workspace not found", 404);
+    }
+
     const body = await request.json();
 
     if (body.action === "restore") {

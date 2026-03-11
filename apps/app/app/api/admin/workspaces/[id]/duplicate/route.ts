@@ -1,5 +1,5 @@
 import { templateService } from "@/lib/services";
-import { json, errorResponse, requireAuth, withErrorHandler } from "../../../../_lib/api-utils";
+import { json, errorResponse, requireAdminAuth, withErrorHandler } from "../../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -17,13 +17,15 @@ const duplicateWorkspaceSchema = z.object({
  */
 export async function POST(request: NextRequest, { params }: Params) {
   return withErrorHandler(async () => {
-    const user = await requireAuth();
-
-    if (user.role !== "admin") {
-      return errorResponse("Forbidden", 403);
-    }
+    const { user, workspaceIds } = await requireAdminAuth();
 
     const { id: sourceWorkspaceId } = await params;
+
+    // Check workspace access
+    if (workspaceIds !== null && !workspaceIds.includes(sourceWorkspaceId)) {
+      return errorResponse("Workspace not found", 404);
+    }
+
     const body = await request.json();
     const parsed = duplicateWorkspaceSchema.safeParse(body);
 

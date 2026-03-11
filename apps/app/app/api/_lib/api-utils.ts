@@ -1,5 +1,6 @@
 import { currentUser } from "@repo/auth/server";
 import { NextResponse } from "next/server";
+import { adminAccessService } from "@/lib/services";
 
 /**
  * Standard JSON response helper
@@ -27,11 +28,53 @@ export async function requireAuth() {
 }
 
 /**
+ * Admin scope info returned by requireAdminAuth
+ */
+export interface AdminScope {
+  user: NonNullable<Awaited<ReturnType<typeof currentUser>>>;
+  isPlatformAdmin: boolean;
+  /** Workspace IDs the user can admin. null means all (platform admin). */
+  workspaceIds: string[] | null;
+}
+
+/**
+ * Admin auth guard - returns user with admin scope or throws
+ * Use this for admin API routes to get properly scoped data.
+ */
+export async function requireAdminAuth(): Promise<AdminScope> {
+  const user = await currentUser();
+  if (!user) {
+    throw new AuthError();
+  }
+
+  const access = await adminAccessService.checkAccess(user.id);
+
+  if (!access.canAccess) {
+    throw new ForbiddenError();
+  }
+
+  return {
+    user,
+    isPlatformAdmin: access.isPlatformAdmin,
+    workspaceIds: access.isPlatformAdmin ? null : access.adminWorkspaceIds,
+  };
+}
+
+/**
  * Custom error for auth failures
  */
 export class AuthError extends Error {
   constructor() {
     super("Unauthorized");
+  }
+}
+
+/**
+ * Custom error for forbidden access
+ */
+export class ForbiddenError extends Error {
+  constructor() {
+    super("Forbidden");
   }
 }
 
@@ -46,6 +89,9 @@ export async function withErrorHandler(
   } catch (error) {
     if (error instanceof AuthError) {
       return errorResponse("Unauthorized", 401);
+    }
+    if (error instanceof ForbiddenError) {
+      return errorResponse("Forbidden", 403);
     }
     console.error("API Error:", error);
     return errorResponse("Internal server error", 500);

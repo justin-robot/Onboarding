@@ -1,5 +1,5 @@
 import { database } from "@repo/database";
-import { json, errorResponse, requireAuth, withErrorHandler } from "../../../../_lib/api-utils";
+import { json, requireAdminAuth, withErrorHandler } from "../../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
 type Params = { params: Promise<{ id: string }> };
@@ -9,16 +9,17 @@ type Params = { params: Promise<{ id: string }> };
  */
 export async function GET(_request: NextRequest, { params }: Params) {
   return withErrorHandler(async () => {
-    const user = await requireAuth();
-
-    if (user.role !== "admin") {
-      return errorResponse("Forbidden", 403);
-    }
+    const { workspaceIds } = await requireAdminAuth();
 
     const { id: userId } = await params;
 
-    // Get all workspaces the user is a member of with task stats
-    const workspaces = await database
+    // If user has no admin workspaces, return empty
+    if (workspaceIds !== null && workspaceIds.length === 0) {
+      return json({ data: [] });
+    }
+
+    // Get all workspaces the user is a member of with task stats (scoped)
+    let query = database
       .selectFrom("workspace_member")
       .innerJoin("workspace", "workspace.id", "workspace_member.workspaceId")
       .select([
@@ -49,7 +50,14 @@ export async function GET(_request: NextRequest, { params }: Params) {
           .as("completedTasks"),
       ])
       .where("workspace_member.userId", "=", userId)
-      .where("workspace.deletedAt", "is", null)
+      .where("workspace.deletedAt", "is", null);
+
+    // Scope by workspace IDs if not platform admin
+    if (workspaceIds !== null) {
+      query = query.where("workspace.id", "in", workspaceIds);
+    }
+
+    const workspaces = await query
       .orderBy("workspace.name", "asc")
       .execute();
 

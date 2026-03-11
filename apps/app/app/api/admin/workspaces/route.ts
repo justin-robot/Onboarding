@@ -1,18 +1,14 @@
 import { database } from "@repo/database";
 import { sql } from "kysely";
-import { json, errorResponse, requireAuth, withErrorHandler } from "../../_lib/api-utils";
+import { json, requireAdminAuth, withErrorHandler } from "../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
 /**
- * GET /api/admin/workspaces - List all workspaces with pagination
+ * GET /api/admin/workspaces - List workspaces (scoped by admin access)
  */
 export async function GET(request: NextRequest) {
   return withErrorHandler(async () => {
-    const user = await requireAuth();
-
-    if (user.role !== "admin") {
-      return errorResponse("Forbidden", 403);
-    }
+    const { workspaceIds } = await requireAdminAuth();
 
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "25", 10);
@@ -62,6 +58,15 @@ export async function GET(request: NextRequest) {
           .as("lastActivityAt"),
       ]);
 
+    // Scope by workspace IDs if not platform admin
+    if (workspaceIds !== null) {
+      if (workspaceIds.length === 0) {
+        // No workspaces to admin - return empty
+        return json({ data: [], total: 0 });
+      }
+      query = query.where("workspace.id", "in", workspaceIds);
+    }
+
     // Filter by deleted status
     if (!includeDeleted) {
       query = query.where("workspace.deletedAt", "is", null);
@@ -77,10 +82,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get total count
-    const countQuery = database
+    // Get total count (with same scoping)
+    let countQuery = database
       .selectFrom("workspace")
       .select((eb) => eb.fn.count("id").as("total"));
+
+    // Apply workspace scope to count query
+    if (workspaceIds !== null) {
+      countQuery = countQuery.where("id", "in", workspaceIds);
+    }
 
     let countQueryWithFilters = includeDeleted
       ? countQuery

@@ -1,121 +1,133 @@
 # Admin Role Architecture
 
-## Current State
+## Implemented Solution: Workspace-Scoped Admin Access
 
-The platform currently has **two separate admin role systems** that create confusion:
+The platform now uses **Option 2: Only Workspace Admins** with a platform admin escape hatch.
 
-### 1. Platform Admin (`user.role`)
-- Stored on the `user` table
-- Values: `"admin"`, `"account_manager"`, `"user"`
-- Grants access to `/dashboard` (admin panel)
-- Can see and manage **ALL** workspaces, tasks, users
+### How It Works
 
-### 2. Workspace Admin (`workspace_member.role`)
-- Stored on the `workspace_member` table
-- Values: `"admin"`, `"account_manager"`, `"user"`
-- Grants admin privileges **within a specific workspace**
-- Can manage tasks, members, settings for that workspace only
+1. **Workspace Admin** (`workspace_member.role = "admin"`):
+   - Can access the admin panel
+   - Sees only workspaces where they are an admin
+   - Can manage tasks, members, invitations within their workspaces
+   - Primary admin mechanism for most users
 
-## The Problem
+2. **Platform Admin** (`user.isPlatformAdmin = true`):
+   - Can access the admin panel
+   - Sees ALL workspaces across the platform
+   - Used for super-admin needs (bootstrap, global oversight)
+   - Set via direct database update or during seeding
 
-1. **Naming confusion**: Both use "admin" but mean different things
-2. **Access mismatch**: A workspace admin cannot access the admin panel, even for their own workspace
-3. **All-or-nothing**: Platform admin sees everything, no middle ground
-4. **No self-service path**: Users cannot become platform admins through any UI flow (requires existing platform admin or direct database access)
-
-## Options
-
-### Option 1: Only Platform Admins
-
-Keep `user.role = "admin"` as the only admin mechanism. Remove workspace-level admin distinction.
-
-| Pros | Cons |
-|------|------|
-| Simple mental model | No delegation possible |
-| Clear who can do what | Doesn't scale for large organizations |
-| Easy to implement | Forces all-or-nothing trust |
-| One place to check permissions | Can't have "department leads" |
-
-**Best for:** Small teams, single-tenant deployments
-
-### Option 2: Only Workspace Admins (Recommended)
-
-Remove `user.role`. Admin panel access based on `workspace_member.role = "admin"`.
-
-| Pros | Cons |
-|------|------|
-| Granular, scoped permissions | Need bootstrap mechanism for first user |
-| Scales to large organizations | Global operations need special handling |
-| Admin panel useful to more people | Slightly more complex queries |
-| No confusing dual "admin" concept | |
-| Natural delegation model | |
-
-**Implementation:**
-- Admin panel shows only workspaces where `workspace_member.role = "admin"`
-- User management scoped to workspaces you admin
-- Add `user.isPlatformAdmin` boolean for rare super-admin needs (bootstrap, global view)
-
-**Best for:** Multi-tenant SaaS, organizations with multiple teams
-
-### Option 3: Keep Both Systems
-
-Maintain current architecture with both role systems.
-
-| Pros | Cons |
-|------|------|
-| Maximum flexibility | Confusing - two "admin" concepts |
-| Platform oversight + workspace delegation | More complex to explain to users |
-| No migration needed | Two permission systems to maintain |
-| | Easy to misconfigure |
-
-**Best for:** Complex enterprise deployments with clear role documentation
-
-## Recommendation
-
-**Option 2: Only Workspace Admins** with a platform admin escape hatch.
-
-### Proposed Schema Change
-
-```sql
--- Remove role from user table (or keep for backwards compat)
-ALTER TABLE "user" ADD COLUMN "isPlatformAdmin" BOOLEAN DEFAULT FALSE;
-
--- Workspace member role becomes the primary permission system
--- Already exists: workspace_member.role
-```
-
-### Proposed Access Logic
+### Access Check Flow
 
 ```typescript
-// Admin panel access
-const canAccessAdminPanel =
-  user.isPlatformAdmin ||
-  (await hasWorkspaceAdminRole(user.id));
+// In dashboard layout
+const access = await adminAccessService.checkAccess(userId);
+// Returns: { canAccess: boolean, isPlatformAdmin: boolean, adminWorkspaceIds: string[] }
 
-// Admin panel data scope
-const workspaces = user.isPlatformAdmin
-  ? await getAllWorkspaces()
-  : await getWorkspacesWhereAdmin(user.id);
+// In API routes
+const { workspaceIds, isPlatformAdmin } = await requireAdminAuth();
+// workspaceIds is null for platform admins (no filter)
+// workspaceIds is string[] for workspace admins (filter to these workspaces)
 ```
 
-### Migration Path
+### Database Schema
 
+```sql
+-- User table has isPlatformAdmin column
+ALTER TABLE "user" ADD COLUMN "isPlatformAdmin" BOOLEAN DEFAULT FALSE;
+
+-- Workspace member role determines per-workspace admin access
+-- workspace_member.role: "admin" | "account_manager" | "user"
+```
+
+### Migration
+
+Run the migration to add the `isPlatformAdmin` column:
+
+```bash
+pnpm --filter @repo/database migrate:dev
+```
+
+The migration (`20250311120000_add_is_platform_admin.ts`) will:
 1. Add `isPlatformAdmin` column to `user` table
-2. Set `isPlatformAdmin = true` for users where `role = 'admin'`
-3. Update admin panel to scope data by workspace membership
-4. Update permission checks throughout the app
-5. Deprecate `user.role` (or repurpose for other uses)
+2. Set `isPlatformAdmin = true` for existing users with `role = 'admin'`
 
-## Questions to Resolve
+### Key Files
 
-1. **User creation**: Should workspace admins be able to create new users, or only invite to their workspaces?
-2. **Cross-workspace visibility**: Should workspace admins see any data from workspaces they don't admin?
-3. **Platform admin UI**: Should platform admins have a toggle to "see all" vs "see my workspaces"?
-4. **Audit logs**: Should audit logs be scoped per-workspace in the admin panel?
+| File | Purpose |
+|------|---------|
+| `lib/services/adminAccess.ts` | Admin access checking service |
+| `lib/services/member.ts` | Added `isAdminInAnyWorkspace()`, `getWorkspaceIdsWhereAdmin()` |
+| `app/api/_lib/api-utils.ts` | Added `requireAdminAuth()` helper |
+| `dashboard/layout.tsx` | Updated to use `adminAccessService.checkAccess()` |
+| `api/admin/**/route.ts` | All routes updated to scope data by workspace |
 
-## Related Files
+### API Route Scoping
 
-- `apps/app/app/(authenticated)/dashboard/layout.tsx` - Admin panel access check
-- `apps/app/app/(authenticated)/dashboard/users/edit.tsx` - User role editing
-- `packages/database/schemas/main.ts` - Database schema
-- `packages/database/seeds/seed.ts` - Seed data with role assignments
+All admin API routes now:
+1. Use `requireAdminAuth()` instead of checking `user.role === "admin"`
+2. Filter data by `workspaceIds` when not a platform admin
+3. Return 404 (not 403) when accessing resources outside scope
+
+Example:
+```typescript
+export async function GET(request: NextRequest) {
+  return withErrorHandler(async () => {
+    const { workspaceIds } = await requireAdminAuth();
+
+    // If not platform admin and no admin workspaces, return empty
+    if (workspaceIds !== null && workspaceIds.length === 0) {
+      return json({ data: [], total: 0 });
+    }
+
+    let query = database.selectFrom("workspace")...;
+
+    // Scope by workspace IDs if not platform admin
+    if (workspaceIds !== null) {
+      query = query.where("workspace.id", "in", workspaceIds);
+    }
+
+    // ... rest of query
+  });
+}
+```
+
+### Becoming an Admin
+
+| Admin Type | How to Get |
+|------------|------------|
+| Workspace Admin | Be added as admin to a workspace via invitation or direct member add |
+| Platform Admin | Set `isPlatformAdmin = true` in database (seeded for admin@test.com) |
+
+### Setting a Platform Admin
+
+Currently requires direct database access:
+
+```sql
+UPDATE "user" SET "isPlatformAdmin" = true WHERE email = 'admin@example.com';
+```
+
+Or via seed data in `packages/database/seeds/seed.ts`:
+```typescript
+await db
+  .updateTable("user")
+  .set({ role: "admin", isPlatformAdmin: true })
+  .where("id", "=", ids.adminUser)
+  .execute();
+```
+
+### Future Improvements
+
+1. **UI for Platform Admin**: Add toggle in user edit form (only for existing platform admins)
+2. **Self-Service Workspace Admin**: Allow workspace admins to promote members
+3. **Deprecate user.role**: Once migration is complete, `user.role` can be removed or repurposed
+
+## Legacy: user.role Field
+
+The `user.role` field still exists but is no longer used for admin panel access:
+- `"admin"` - Previously granted full admin access, now just indicates user type
+- `"account_manager"` - Business role, not related to permissions
+- `"user"` - Default role
+
+This field may be deprecated in a future version.

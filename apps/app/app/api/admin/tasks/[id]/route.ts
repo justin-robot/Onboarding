@@ -1,5 +1,6 @@
 import { taskService } from "@/lib/services";
-import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
+import { database } from "@repo/database";
+import { json, errorResponse, requireAdminAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -15,17 +16,38 @@ const updateTaskSchema = z.object({
 });
 
 /**
+ * Check if user can access a task via its workspace
+ */
+async function checkTaskAccess(workspaceIds: string[] | null, taskId: string): Promise<boolean> {
+  // Platform admin can access all tasks
+  if (workspaceIds === null) return true;
+
+  // Get the workspace ID for this task
+  const task = await database
+    .selectFrom("task")
+    .innerJoin("section", "section.id", "task.sectionId")
+    .select("section.workspaceId")
+    .where("task.id", "=", taskId)
+    .executeTakeFirst();
+
+  if (!task) return false;
+
+  return workspaceIds.includes(task.workspaceId);
+}
+
+/**
  * GET /api/admin/tasks/[id] - Get task details with full config
  */
 export async function GET(_request: NextRequest, { params }: Params) {
   return withErrorHandler(async () => {
-    const user = await requireAuth();
-
-    if (user.role !== "admin") {
-      return errorResponse("Forbidden", 403);
-    }
+    const { workspaceIds } = await requireAdminAuth();
 
     const { id } = await params;
+
+    if (!(await checkTaskAccess(workspaceIds, id))) {
+      return errorResponse("Task not found", 404);
+    }
+
     const task = await taskService.getByIdFull(id);
 
     if (!task) {
@@ -41,13 +63,14 @@ export async function GET(_request: NextRequest, { params }: Params) {
  */
 export async function PUT(request: NextRequest, { params }: Params) {
   return withErrorHandler(async () => {
-    const user = await requireAuth();
-
-    if (user.role !== "admin") {
-      return errorResponse("Forbidden", 403);
-    }
+    const { user, workspaceIds } = await requireAdminAuth();
 
     const { id } = await params;
+
+    if (!(await checkTaskAccess(workspaceIds, id))) {
+      return errorResponse("Task not found", 404);
+    }
+
     const body = await request.json();
     const parsed = updateTaskSchema.safeParse(body);
 

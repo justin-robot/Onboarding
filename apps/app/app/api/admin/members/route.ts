@@ -1,17 +1,13 @@
 import { database } from "@repo/database";
-import { json, errorResponse, requireAuth, withErrorHandler } from "../../_lib/api-utils";
+import { json, requireAdminAuth, withErrorHandler } from "../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
 /**
- * GET /api/admin/members - List all workspace members with pagination
+ * GET /api/admin/members - List workspace members (scoped by admin access)
  */
 export async function GET(request: NextRequest) {
   return withErrorHandler(async () => {
-    const user = await requireAuth();
-
-    if (user.role !== "admin") {
-      return errorResponse("Forbidden", 403);
-    }
+    const { workspaceIds } = await requireAdminAuth();
 
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "25", 10);
@@ -21,6 +17,11 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") || "";
     const workspaceId = searchParams.get("workspaceId") || "";
     const role = searchParams.get("role") || "";
+
+    // If user has no admin workspaces, return empty
+    if (workspaceIds !== null && workspaceIds.length === 0) {
+      return json({ data: [], total: 0 });
+    }
 
     // Build base query with joins
     let query = database
@@ -40,6 +41,11 @@ export async function GET(request: NextRequest) {
       ])
       .where("workspace.deletedAt", "is", null);
 
+    // Scope by workspace IDs if not platform admin
+    if (workspaceIds !== null) {
+      query = query.where("workspace.id", "in", workspaceIds);
+    }
+
     // Search filter (by user name or email)
     if (search) {
       query = query.where((eb) =>
@@ -51,7 +57,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Workspace filter
+    // Workspace filter (additional filter on top of scope)
     if (workspaceId) {
       query = query.where("workspace_member.workspaceId", "=", workspaceId);
     }
@@ -61,13 +67,18 @@ export async function GET(request: NextRequest) {
       query = query.where("workspace_member.role", "=", role as any);
     }
 
-    // Get total count
+    // Get total count (with same scoping)
     let countQuery = database
       .selectFrom("workspace_member")
       .innerJoin("user", "user.id", "workspace_member.userId")
       .innerJoin("workspace", "workspace.id", "workspace_member.workspaceId")
       .select((eb) => eb.fn.count("workspace_member.id").as("total"))
       .where("workspace.deletedAt", "is", null);
+
+    // Apply workspace scope to count query
+    if (workspaceIds !== null) {
+      countQuery = countQuery.where("workspace.id", "in", workspaceIds);
+    }
 
     if (search) {
       countQuery = countQuery.where((eb) =>

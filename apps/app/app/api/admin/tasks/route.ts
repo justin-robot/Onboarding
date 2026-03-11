@@ -1,17 +1,13 @@
 import { database } from "@repo/database";
-import { json, errorResponse, requireAuth, withErrorHandler } from "../../_lib/api-utils";
+import { json, requireAdminAuth, withErrorHandler } from "../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
 /**
- * GET /api/admin/tasks - List all tasks with pagination
+ * GET /api/admin/tasks - List tasks (scoped by admin access)
  */
 export async function GET(request: NextRequest) {
   return withErrorHandler(async () => {
-    const user = await requireAuth();
-
-    if (user.role !== "admin") {
-      return errorResponse("Forbidden", 403);
-    }
+    const { workspaceIds } = await requireAdminAuth();
 
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "25", 10);
@@ -22,6 +18,11 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get("status") || "";
     const type = searchParams.get("type") || "";
     const workspaceId = searchParams.get("workspaceId") || "";
+
+    // If user has no admin workspaces, return empty
+    if (workspaceIds !== null && workspaceIds.length === 0) {
+      return json({ data: [], total: 0 });
+    }
 
     // Build base query with joins
     let query = database
@@ -55,6 +56,11 @@ export async function GET(request: NextRequest) {
       ])
       .where("task.deletedAt", "is", null);
 
+    // Scope by workspace IDs if not platform admin
+    if (workspaceIds !== null) {
+      query = query.where("workspace.id", "in", workspaceIds);
+    }
+
     // Search filter
     if (search) {
       query = query.where((eb) =>
@@ -75,18 +81,23 @@ export async function GET(request: NextRequest) {
       query = query.where("task.type", "=", type as any);
     }
 
-    // Workspace filter
+    // Workspace filter (additional filter on top of scope)
     if (workspaceId) {
       query = query.where("workspace.id", "=", workspaceId);
     }
 
-    // Get total count
+    // Get total count (with same scoping)
     let countQuery = database
       .selectFrom("task")
       .innerJoin("section", "section.id", "task.sectionId")
       .innerJoin("workspace", "workspace.id", "section.workspaceId")
       .select((eb) => eb.fn.count("task.id").as("total"))
       .where("task.deletedAt", "is", null);
+
+    // Apply workspace scope to count query
+    if (workspaceIds !== null) {
+      countQuery = countQuery.where("workspace.id", "in", workspaceIds);
+    }
 
     if (search) {
       countQuery = countQuery.where((eb) =>

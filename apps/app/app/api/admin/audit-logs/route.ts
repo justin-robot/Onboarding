@@ -1,17 +1,13 @@
 import { database } from "@repo/database";
-import { json, errorResponse, requireAuth, withErrorHandler } from "../../_lib/api-utils";
+import { json, requireAdminAuth, withErrorHandler } from "../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
 /**
- * GET /api/admin/audit-logs - List all audit log entries with pagination
+ * GET /api/admin/audit-logs - List audit log entries (scoped by admin access)
  */
 export async function GET(request: NextRequest) {
   return withErrorHandler(async () => {
-    const user = await requireAuth();
-
-    if (user.role !== "admin") {
-      return errorResponse("Forbidden", 403);
-    }
+    const { workspaceIds } = await requireAdminAuth();
 
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "50", 10);
@@ -21,6 +17,11 @@ export async function GET(request: NextRequest) {
     const workspaceId = searchParams.get("workspaceId") || "";
     const actorId = searchParams.get("actorId") || "";
     const source = searchParams.get("source") || "";
+
+    // If user has no admin workspaces, return empty
+    if (workspaceIds !== null && workspaceIds.length === 0) {
+      return json({ data: [], total: 0, filters: { eventTypes: [] } });
+    }
 
     // Build base query with joins
     let query = database
@@ -44,12 +45,17 @@ export async function GET(request: NextRequest) {
         "task.title as taskTitle",
       ]);
 
+    // Scope by workspace IDs if not platform admin
+    if (workspaceIds !== null) {
+      query = query.where("moxo_audit_log_entry.workspaceId", "in", workspaceIds);
+    }
+
     // Event type filter
     if (eventType) {
       query = query.where("moxo_audit_log_entry.eventType", "=", eventType);
     }
 
-    // Workspace filter
+    // Workspace filter (additional filter on top of scope)
     if (workspaceId) {
       query = query.where("moxo_audit_log_entry.workspaceId", "=", workspaceId);
     }
@@ -64,10 +70,15 @@ export async function GET(request: NextRequest) {
       query = query.where("moxo_audit_log_entry.source", "=", source);
     }
 
-    // Get total count
+    // Get total count (with same scoping)
     let countQuery = database
       .selectFrom("moxo_audit_log_entry")
       .select((eb) => eb.fn.count("id").as("total"));
+
+    // Apply workspace scope to count query
+    if (workspaceIds !== null) {
+      countQuery = countQuery.where("workspaceId", "in", workspaceIds);
+    }
 
     if (eventType) {
       countQuery = countQuery.where("eventType", "=", eventType);
@@ -96,13 +107,18 @@ export async function GET(request: NextRequest) {
 
     const logs = await query.execute();
 
-    // Get distinct event types for filtering
-    const eventTypes = await database
+    // Get distinct event types for filtering (scoped)
+    let eventTypesQuery = database
       .selectFrom("moxo_audit_log_entry")
       .select("eventType")
       .distinct()
-      .orderBy("eventType", "asc")
-      .execute();
+      .orderBy("eventType", "asc");
+
+    if (workspaceIds !== null) {
+      eventTypesQuery = eventTypesQuery.where("workspaceId", "in", workspaceIds);
+    }
+
+    const eventTypes = await eventTypesQuery.execute();
 
     return json({
       data: logs,

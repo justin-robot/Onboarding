@@ -2,6 +2,7 @@ import { auth } from "@repo/auth/server";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
+import { adminAccessService } from "@/lib/services";
 
 type DashboardLayoutProperties = {
   readonly children: ReactNode;
@@ -15,8 +16,11 @@ const DashboardLayout = async ({ children }: DashboardLayoutProperties) => {
     redirect("/sign-in");
   }
 
-  // Check if user has admin role
-  if (session.user.role !== "admin") {
+  // Check if user can access admin panel
+  // Either: isPlatformAdmin = true OR is workspace admin somewhere
+  const access = await adminAccessService.checkAccess(session.user.id);
+
+  if (!access.canAccess) {
     redirect("/");
   }
 

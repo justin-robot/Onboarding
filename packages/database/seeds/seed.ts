@@ -309,10 +309,10 @@ async function seed() {
 
     console.log(`\n${createdUsers.length} users ready.\n`);
 
-    // Update user roles
+    // Update user roles and platform admin status
     await db
       .updateTable("user")
-      .set({ role: "admin" })
+      .set({ role: "admin", isPlatformAdmin: true })
       .where("id", "=", ids.adminUser)
       .execute();
     await db
@@ -321,7 +321,7 @@ async function seed() {
       .where("id", "=", ids.accountManager)
       .execute();
 
-    console.log("  Updated user roles.\n");
+    console.log("  Updated user roles and platform admin status.\n");
 
     // =====================
     // WORKSPACES
