@@ -28,7 +28,7 @@ export function SettingsTabs({
       </Link>
 
       <TabGroup>
-        <TabList variant="solid">
+        <TabList variant="line">
           <Tab>Profile</Tab>
           <Tab>Notifications</Tab>
         </TabList>
