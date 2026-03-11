@@ -1,4 +1,5 @@
 import { database } from "@repo/database";
+import { sql } from "kysely";
 import { json, requireAdminAuth, withErrorHandler } from "../../_lib/api-utils";
 
 /**
@@ -31,7 +32,7 @@ export async function GET() {
       // Workspace admins see unique users in their workspaces
       const userStats = await database
         .selectFrom("workspace_member")
-        .select((eb) => [eb.fn.countDistinct("userId").as("total")])
+        .select(sql<number>`COUNT(DISTINCT "userId")`.as("total"))
         .where("workspaceId", "in", workspaceIds!)
         .executeTakeFirst();
       userTotal = Number(userStats?.total || 0);
