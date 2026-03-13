@@ -118,7 +118,7 @@ export function ChatPanel({
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Count active meetings for badge
   const activeMeetingsCount = meetings.filter((m) => m.isActive).length;
@@ -148,6 +148,10 @@ export function ChatPanel({
       setNewMessage("");
       setSelectedFile(null);
       setReplyingTo(null);
+      // Reset textarea height
+      if (inputRef.current) {
+        inputRef.current.style.height = "auto";
+      }
     } catch (error) {
       toast.error("Failed to send message");
     } finally {
@@ -187,7 +191,8 @@ export function ChatPanel({
 
   const handleEmojiSelect = (emoji: string) => {
     setNewMessage((prev) => prev + emoji);
-    setEmojiPickerOpen(false);
+    // Keep picker open so users can select multiple emojis
+    // Picker closes when clicking outside
   };
 
   const clearSelectedFile = () => {
@@ -331,15 +336,21 @@ export function ChatPanel({
             />
 
             {/* Input container with embedded icons */}
-            <div className="flex items-center rounded-lg border border-border bg-background px-3 py-1.5 focus-within:ring-1 focus-within:ring-ring">
-              <input
+            <div className="flex items-end rounded-lg border border-border bg-background px-3 py-1.5 focus-within:ring-1 focus-within:ring-ring">
+              <textarea
                 ref={inputRef}
-                placeholder="Send message... (Shift + Enter to insert a new line)"
+                placeholder="Send message... (Shift + Enter for new line)"
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
+                onChange={(e) => {
+                  setNewMessage(e.target.value);
+                  // Auto-resize textarea
+                  e.target.style.height = "auto";
+                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
+                }}
                 onKeyDown={handleKeyDown}
                 disabled={isSending}
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
+                rows={1}
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed resize-none min-h-[24px] max-h-[120px] py-0.5"
               />
 
               {isSending && (
