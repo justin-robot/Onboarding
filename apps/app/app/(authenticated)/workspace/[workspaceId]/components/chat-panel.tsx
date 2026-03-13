@@ -637,7 +637,7 @@ function MessageBubble({
 
         {/* Text content - plain text like Moxo */}
         {(message.type === "text" || (message.type !== "file" && message.content)) && (
-          <p className="text-sm text-foreground">
+          <p className="text-sm text-foreground whitespace-pre-wrap break-words">
             {message.content}
           </p>
         )}

@@ -180,6 +180,8 @@ export function TaskAction({
           taskId={taskId}
           instructions={instructions}
           isYourTurn={isYourTurn}
+          isCompleted={isCompleted}
+          currentUserCompleted={currentUserCompleted}
           onComplete={onComplete}
         />
       );
@@ -325,14 +327,42 @@ function AcknowledgementTaskAction({
   taskId,
   instructions,
   isYourTurn,
+  isCompleted,
+  currentUserCompleted,
   onComplete,
 }: {
   taskId: string;
   instructions?: string;
   isYourTurn: boolean;
+  isCompleted?: boolean;
+  currentUserCompleted?: boolean;
   onComplete?: (wasCompleted?: boolean) => void;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Show completed state if user has already acknowledged
+  if (currentUserCompleted || isCompleted) {
+    return (
+      <div className="space-y-4">
+        {instructions && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Instructions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">{instructions}</p>
+            </CardContent>
+          </Card>
+        )}
+        <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-center dark:border-green-900/30 dark:bg-green-950/20">
+          <CheckSquare className="mx-auto h-8 w-8 text-green-500" />
+          <p className="mt-2 text-sm font-medium text-green-700 dark:text-green-400">
+            {currentUserCompleted ? "You have acknowledged this task" : "This task has been acknowledged"}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isYourTurn) {
     return (
@@ -457,60 +487,52 @@ function FileUploadTaskAction({
     }
 
     return (
-      <div className="space-y-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-2">
-              <Upload className="h-5 w-5 text-purple-600" />
-              <CardTitle className="text-base">Uploaded Files</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {allFiles.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No files have been uploaded yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {allFiles.map((file) => (
-                  <button
-                    key={file.id}
-                    type="button"
-                    className="flex w-full items-center justify-between rounded-md border p-2 hover:bg-muted/50 transition-colors cursor-pointer text-left"
-                    onClick={async () => {
-                      try {
-                        const response = await fetch(`/api/files/${file.id}`);
-                        if (response.ok) {
-                          const data = await response.json();
-                          if (data.url) {
-                            window.open(data.url, "_blank");
-                          }
-                        }
-                      } catch (error) {
-                        console.error("Failed to get download URL:", error);
+      <div className="space-y-3">
+        {allFiles.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No files have been uploaded yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {allFiles.map((file) => (
+              <button
+                key={file.id}
+                type="button"
+                className="flex w-full items-center justify-between rounded-md border p-3 hover:bg-muted/50 transition-colors cursor-pointer text-left"
+                onClick={async () => {
+                  try {
+                    const response = await fetch(`/api/files/${file.id}`);
+                    if (response.ok) {
+                      const data = await response.json();
+                      if (data.url) {
+                        window.open(data.url, "_blank");
                       }
-                    }}
-                  >
-                    <div className="flex items-center gap-2 text-foreground min-w-0">
-                      <FileText className="h-4 w-4 shrink-0" />
-                      <span className="text-sm truncate">{file.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 ml-2">
-                      <span className="text-xs text-muted-foreground">
-                        {formatFileSize(file.size)}
-                      </span>
-                      <Download className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    }
+                  } catch (error) {
+                    console.error("Failed to get download URL:", error);
+                  }
+                }}
+              >
+                <div className="flex items-center gap-3 text-foreground min-w-0">
+                  <FileText className="h-5 w-5 shrink-0 text-muted-foreground" />
+                  <span className="text-sm font-medium truncate">{file.name}</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0 ml-2">
+                  <span className="text-xs text-muted-foreground">
+                    {formatFileSize(file.size)}
+                  </span>
+                  <Download className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
         {isCompleted && (
-          <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-center dark:border-green-900/30 dark:bg-green-950/20">
-            <CheckSquare className="mx-auto h-6 w-6 text-green-500" />
-            <p className="mt-1 text-sm font-medium text-green-700 dark:text-green-400">
-              Files submitted successfully
-            </p>
+          <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-center dark:border-green-900/30 dark:bg-green-950/20">
+            <div className="flex items-center justify-center gap-2">
+              <CheckSquare className="h-4 w-4 text-green-500" />
+              <p className="text-sm font-medium text-green-700 dark:text-green-400">
+                Files submitted successfully
+              </p>
+            </div>
           </div>
         )}
       </div>

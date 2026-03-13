@@ -454,8 +454,8 @@ export function TaskDetailsPanel({
 
   return (
     <div className="flex h-full flex-col bg-background">
-      {/* Header - "Action Details (Step X)" style */}
-      <div className="flex-shrink-0 border-b border-border px-4 py-3">
+      {/* Header - "Action Details (Step X)" style - sticky at top */}
+      <div className="sticky top-0 z-20 flex-shrink-0 border-b border-border bg-background px-4 py-3">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-medium text-foreground">
             Action Details (Step {task.position})

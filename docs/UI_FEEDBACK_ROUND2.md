@@ -8,9 +8,9 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 
 | # | Task | Priority | Status | Notes |
 |---|------|----------|--------|-------|
-| 1 | **Header layout restructure** - Move "Workspaces" title to far left, account/user menu to far right | H | [ ] | Create proper header with spread layout |
-| 2 | **Reposition Create Workspace & Admin buttons** - Move to appropriate header positions | M | [ ] | Needs visual reference |
-| 3 | **Move search to left** - Search workspaces input should be on the left side | M | [ ] | |
+| 1 | **Header layout restructure** - Move "Workspaces" title to far left, account/user menu to far right | H | [x] | Fixed flex alignment with explicit items-start and justify-between |
+| 2 | **Reposition Create Workspace & Admin buttons** - Move to appropriate header positions | M | [x] | Buttons now on right with UserMenu, shrink-0 prevents compression |
+| 3 | **Move search to left** - Search workspaces input should be on the left side | M | [x] | Search now left-aligned with full width on mobile |
 
 ---
 
@@ -18,14 +18,14 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 
 | # | Task | Priority | Status | Notes |
 |---|------|----------|--------|-------|
-| 4 | **Add bottom border to header** - Add subtle border at bottom of top bar | L | [ ] | |
+| 4 | **Add bottom border to header** - Add subtle border at bottom of top bar | L | [x] | Added border-b to desktop header |
 | 5 | **Fix Shift+Enter for new line in chat** - Currently not working | H | [x] | Replaced input with auto-growing textarea |
 | 6 | **Emoji reaction behavior** - Reactions disappear on click, feels finicky | M | [x] | Picker now stays open for multiple selections |
 | 7 | **Remove "Powered by Knock"** - Hide branding if possible | L | [x] | Hidden via CSS |
-| 8 | **Button placement in task view** - Move button further right | M | [ ] | Needs visual reference |
-| 9 | **In Progress indicator gap** - Strange gap in progress indicator | M | [ ] | Check Moxo for reference |
-| 10 | **Make task header sticky** - Header should stick to top when scrolling | H | [ ] | CSS `position: sticky` |
-| 11 | **Consolidate file upload position** - File element position inconsistent | M | [ ] | Sometimes in different places |
+| 8 | **Button placement in task view** - Move button further right | M | [x] | Grouped View and X buttons on far right |
+| 9 | **In Progress indicator gap** - Strange gap in progress indicator | M | [x] | Changed justify-between to gap-3 |
+| 10 | **Make task header sticky** - Header should stick to top when scrolling | H | [x] | Task title/desc now sticky in details panel |
+| 11 | **Consolidate file upload position** - File element position inconsistent | M | [x] | Added dedicated "Uploaded Files" section at consistent position |
 
 ---
 
@@ -33,7 +33,7 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 
 | # | Task | Priority | Status | Notes |
 |---|------|----------|--------|-------|
-| 12 | **Fix meetings container scroll** - Unable to scroll within meetings container | H | [ ] | |
+| 12 | **Fix meetings container scroll** - Unable to scroll within meetings container | H | [x] | Added min-h-0 to flex containers |
 | 13 | **Add spacing to meeting elements** - More spacing on top and bottom | L | [ ] | |
 
 ---
@@ -42,8 +42,8 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 
 | # | Task | Priority | Status | Notes |
 |---|------|----------|--------|-------|
-| 14 | **Bug: Re-acknowledge already acknowledged task** - Shows "Failed to Acknowledge" when clicking on completed task | H | [ ] | Should disable button or show different state |
-| 15 | **Activity log not showing acknowledgment** - Acknowledgment not appearing in activity log | H | [ ] | |
+| 14 | **Bug: Re-acknowledge already acknowledged task** - Shows "Failed to Acknowledge" when clicking on completed task | H | [x] | Now shows "You have acknowledged this task" state instead of button |
+| 15 | **Activity log not showing acknowledgment** - Acknowledgment not appearing in activity log | H | [x] | Fixed event type to always be acknowledgement.completed |
 | 16 | **Acknowledgment element positioning** - Review placement | M | [ ] | Check Moxo for reference |
 
 ---
@@ -100,15 +100,14 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 ## Summary
 
 - **Total tasks:** 30
-- **Completed:** 3
-- **Remaining:** 27
-  - High priority: 10
-  - Medium priority: 12
+- **Completed:** 14
+- **Remaining:** 16
+  - High priority: 5
+  - Medium priority: 6
   - Low priority: 5
 
 ### Items Needing Visual Reference
-- Task 8, 9, 16: Check Moxo screenshots for reference
-- Task 1, 2: Header layout needs design clarity
+- Task 16: Check Moxo screenshots for reference
 - Task 28: Notification formatting
 
 ### Architecture Considerations

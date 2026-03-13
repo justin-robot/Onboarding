@@ -261,11 +261,8 @@ export function CommentSection({
           )}
         </div>
 
-        {/* Moxo-style input with paperclip and emoji */}
+        {/* Moxo-style input with emoji and paperclip on right */}
         <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
-          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground">
-            <Paperclip className="h-4 w-4" />
-          </Button>
           <input
             type="text"
             value={content}
@@ -282,6 +279,9 @@ export function CommentSection({
           />
           <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground">
             <Smile className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground">
+            <Paperclip className="h-4 w-4" />
           </Button>
         </div>
       </div>

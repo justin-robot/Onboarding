@@ -62,16 +62,16 @@ export function WorkspaceList({ workspaces, userId, userRole }: WorkspaceListPro
   );
 
   return (
-    <div className="container max-w-7xl py-8 px-4 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
+    <div className="mx-auto max-w-7xl py-8 px-4 sm:px-6 lg:px-8">
+      {/* Header - Title left, buttons right */}
+      <div className="mb-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-left">
           <h1 className="text-2xl font-bold tracking-tight">Workspaces</h1>
           <p className="text-muted-foreground">
             Manage your client workspaces and workflows
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {canAccessAdmin && (
             <Link href="/dashboard">
               <Button variant="outline">
@@ -88,9 +88,9 @@ export function WorkspaceList({ workspaces, userId, userRole }: WorkspaceListPro
         </div>
       </div>
 
-      {/* Search and View Toggle */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
+      {/* Search and View Toggle - Search left, toggle right */}
+      <div className="mb-6 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:flex-1 sm:max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search workspaces..."
@@ -99,7 +99,7 @@ export function WorkspaceList({ workspaces, userId, userRole }: WorkspaceListPro
             className="pl-9"
           />
         </div>
-        <div className="flex items-center gap-1 rounded-lg border bg-background p-1">
+        <div className="flex items-center gap-1 rounded-lg border bg-background p-1 shrink-0">
           <Button
             variant={viewMode === "grid" ? "secondary" : "ghost"}
             size="sm"
