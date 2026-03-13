@@ -499,9 +499,9 @@ export function TaskDetailsPanel({
 
       {/* Scrollable content */}
       <ScrollArea className="flex-1">
-        <div className="p-4">
-          {/* Task title with icon */}
-          <div className="flex items-start gap-3 mb-2">
+        {/* Sticky task title header */}
+        <div className="sticky top-0 z-10 bg-background border-b border-border px-4 py-3">
+          <div className="flex items-start gap-3">
             <div className={cn("p-2 rounded-md bg-muted/50", iconColor)}>
               <Icon className="h-5 w-5" />
             </div>
@@ -510,11 +510,13 @@ export function TaskDetailsPanel({
               <p className="text-xs text-muted-foreground capitalize">{task.type.replace("_", " ")}</p>
             </div>
           </div>
-
           {/* Description */}
           {task.description && (
-            <p className="text-sm text-muted-foreground mb-4">{task.description}</p>
+            <p className="text-sm text-muted-foreground mt-2">{task.description}</p>
           )}
+        </div>
+
+        <div className="p-4">
 
           {/* Due Date Section */}
           <div className="mb-4">
