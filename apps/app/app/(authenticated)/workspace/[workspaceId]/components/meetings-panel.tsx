@@ -408,17 +408,19 @@ export function MeetingsPanel({ workspaceId, onClose, hideHeader = false }: Meet
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex h-full flex-col">
+      <div className="flex h-full flex-col overflow-hidden">
         {!hideHeader && (
-          <div className="flex items-center justify-between border-b px-4 py-3">
+          <div className="flex-shrink-0 flex items-center justify-between border-b px-4 py-3">
             <h2 className="text-lg font-semibold">Meetings</h2>
           </div>
         )}
-        <div className="flex-1 p-4 space-y-4">
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-32 w-full" />
-        </div>
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="p-4 space-y-4">
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+        </ScrollArea>
       </div>
     );
   }
@@ -426,13 +428,13 @@ export function MeetingsPanel({ workspaceId, onClose, hideHeader = false }: Meet
   // Not connected state
   if (isConnected === false) {
     return (
-      <div className="flex h-full flex-col">
+      <div className="flex h-full flex-col overflow-hidden">
         {!hideHeader && (
-          <div className="flex items-center justify-between border-b px-4 py-3">
+          <div className="flex-shrink-0 flex items-center justify-between border-b px-4 py-3">
             <h2 className="text-lg font-semibold">Meetings</h2>
           </div>
         )}
-        <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
+        <div className="flex flex-1 min-h-0 flex-col items-center justify-center p-6 text-center overflow-auto">
           <Calendar className="mb-4 h-12 w-12 text-muted-foreground" />
           <h3 className="mb-2 text-lg font-medium">Connect Google Calendar</h3>
           <p className="mb-6 text-sm text-muted-foreground">
@@ -451,16 +453,16 @@ export function MeetingsPanel({ workspaceId, onClose, hideHeader = false }: Meet
   // Error state
   if (error) {
     return (
-      <div className="flex h-full flex-col">
+      <div className="flex h-full flex-col overflow-hidden">
         {!hideHeader && (
-          <div className="flex items-center justify-between border-b px-4 py-3">
+          <div className="flex-shrink-0 flex items-center justify-between border-b px-4 py-3">
             <h2 className="text-lg font-semibold">Meetings</h2>
             <Button size="sm" variant="ghost" onClick={fetchMeetings}>
               <RefreshCw className="h-4 w-4" />
             </Button>
           </div>
         )}
-        <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
+        <div className="flex flex-1 min-h-0 flex-col items-center justify-center p-6 text-center overflow-auto">
           <AlertCircle className="mb-4 h-12 w-12 text-destructive" />
           <h3 className="mb-2 text-lg font-medium">Failed to load meetings</h3>
           <p className="mb-6 text-sm text-muted-foreground">{error}</p>
@@ -473,9 +475,9 @@ export function MeetingsPanel({ workspaceId, onClose, hideHeader = false }: Meet
   const groupedMeetings = groupMeetingsByDate(meetings);
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col overflow-hidden">
       {!hideHeader && (
-        <div className="flex items-center justify-between border-b px-4 py-3">
+        <div className="flex-shrink-0 flex items-center justify-between border-b px-4 py-3">
           <h2 className="text-lg font-semibold">Meetings</h2>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="ghost" onClick={fetchMeetings}>
@@ -489,7 +491,7 @@ export function MeetingsPanel({ workspaceId, onClose, hideHeader = false }: Meet
         </div>
       )}
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="p-4">
           {meetings.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
