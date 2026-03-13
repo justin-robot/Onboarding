@@ -594,6 +594,29 @@ export function TaskDetailsPanel({
             </div>
           )}
 
+          {/* Uploaded Files Section - for file_upload tasks (consistent with Form Response) */}
+          {task.type === "file_upload" && task.isCompleted && (
+            <div className="mb-4">
+              <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
+                Uploaded Files
+              </h4>
+              <TaskAction
+                taskId={task.id}
+                type={task.type}
+                isYourTurn={task.isYourTurn}
+                isCompleted={task.isCompleted}
+                isLocked={task.isLocked}
+                isAdmin={isAdmin}
+                currentUserCompleted={currentUserCompleted}
+                instructions={task.description || undefined}
+                blockingTasks={blockingTasks}
+                onComplete={onTaskComplete}
+                {...getConfigProps()}
+              />
+            </div>
+          )}
+
+
           {/* Progress Section */}
           <div className="mb-4">
             <div className="flex items-center justify-between mb-2">
@@ -637,26 +660,28 @@ export function TaskDetailsPanel({
                         )}
                       </div>
                     </div>
-                    {isAdmin && task.type === "form" && assignee.status === "completed" && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs text-primary"
-                        onClick={() => setViewingSubmissionUserId(assignee.userId)}
-                      >
-                        View
-                      </Button>
-                    )}
-                    {isAdmin && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-muted-foreground hover:text-destructive"
-                        onClick={() => handleUnassign(assignee.userId)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {isAdmin && task.type === "form" && assignee.status === "completed" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs text-primary"
+                          onClick={() => setViewingSubmissionUserId(assignee.userId)}
+                        >
+                          View
+                        </Button>
+                      )}
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                          onClick={() => handleUnassign(assignee.userId)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -687,8 +712,9 @@ export function TaskDetailsPanel({
             )}
           </div>
 
-          {/* Task action area - only show if not showing form response above */}
-          {!(task.type === "form" && config && (task.isCompleted || currentUserCompleted || viewingSubmissionUserId)) && (
+          {/* Task action area - only show if not showing dedicated section above */}
+          {!(task.type === "form" && config && (task.isCompleted || currentUserCompleted || viewingSubmissionUserId)) &&
+           !(task.type === "file_upload" && task.isCompleted) && (
             <div className="mb-4">
               {loading ? (
                 <div className="flex items-center justify-center py-8">
