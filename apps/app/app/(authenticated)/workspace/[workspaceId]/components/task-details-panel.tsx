@@ -619,7 +619,7 @@ export function TaskDetailsPanel({
 
           {/* Progress Section */}
           <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3 mb-2">
               <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Progress
               </h4>
