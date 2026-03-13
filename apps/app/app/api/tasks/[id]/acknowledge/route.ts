@@ -83,15 +83,17 @@ export async function POST(_request: NextRequest, { params }: Params) {
     // Use completion service to handle completion rule logic
     const completionResult = await completionService.completeTaskForUser(id, user.id, notificationService);
 
-    // Log audit event
+    // Log audit event - always log as acknowledgement.completed
+    // The taskCompleted flag in metadata indicates if the whole task was completed
     await auditLogService.logEvent({
       workspaceId: section.workspaceId,
-      eventType: completionResult.taskCompleted ? "task.completed" : "acknowledgement.completed",
+      eventType: "acknowledgement.completed",
       actorId: user.id,
       taskId: id,
       source: "web",
       metadata: {
         taskTitle: task.title,
+        taskType: task.type,
         taskCompleted: completionResult.taskCompleted,
       },
     });
