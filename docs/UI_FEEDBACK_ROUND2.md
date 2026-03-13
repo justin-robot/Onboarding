@@ -20,7 +20,7 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 |---|------|----------|--------|-------|
 | 4 | **Add bottom border to header** - Add subtle border at bottom of top bar | L | [ ] | |
 | 5 | **Fix Shift+Enter for new line in chat** - Currently not working | H | [ ] | |
-| 6 | **Emoji reaction behavior** - Reactions disappear on click, feels finicky | M | [ ] | May need UX review |
+| 6 | **Emoji reaction behavior** - Reactions disappear on click, feels finicky | M | [x] | Picker now stays open for multiple selections |
 | 7 | **Remove "Powered by Knock"** - Hide branding if possible | L | [ ] | May not be possible depending on Knock plan |
 | 8 | **Button placement in task view** - Move button further right | M | [ ] | Needs visual reference |
 | 9 | **In Progress indicator gap** - Strange gap in progress indicator | M | [ ] | Check Moxo for reference |
@@ -100,10 +100,10 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 ## Summary
 
 - **Total tasks:** 30
-- **Completed:** 0
-- **Remaining:** 30
+- **Completed:** 1
+- **Remaining:** 29
   - High priority: 11
-  - Medium priority: 13
+  - Medium priority: 12
   - Low priority: 6
 
 ### Items Needing Visual Reference
