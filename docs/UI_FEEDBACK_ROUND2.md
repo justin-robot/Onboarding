@@ -19,9 +19,9 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 | # | Task | Priority | Status | Notes |
 |---|------|----------|--------|-------|
 | 4 | **Add bottom border to header** - Add subtle border at bottom of top bar | L | [ ] | |
-| 5 | **Fix Shift+Enter for new line in chat** - Currently not working | H | [ ] | |
+| 5 | **Fix Shift+Enter for new line in chat** - Currently not working | H | [x] | Replaced input with auto-growing textarea |
 | 6 | **Emoji reaction behavior** - Reactions disappear on click, feels finicky | M | [x] | Picker now stays open for multiple selections |
-| 7 | **Remove "Powered by Knock"** - Hide branding if possible | L | [ ] | May not be possible depending on Knock plan |
+| 7 | **Remove "Powered by Knock"** - Hide branding if possible | L | [x] | Hidden via CSS |
 | 8 | **Button placement in task view** - Move button further right | M | [ ] | Needs visual reference |
 | 9 | **In Progress indicator gap** - Strange gap in progress indicator | M | [ ] | Check Moxo for reference |
 | 10 | **Make task header sticky** - Header should stick to top when scrolling | H | [ ] | CSS `position: sticky` |
@@ -100,11 +100,11 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 ## Summary
 
 - **Total tasks:** 30
-- **Completed:** 1
-- **Remaining:** 29
-  - High priority: 11
+- **Completed:** 3
+- **Remaining:** 27
+  - High priority: 10
   - Medium priority: 12
-  - Low priority: 6
+  - Low priority: 5
 
 ### Items Needing Visual Reference
 - Task 8, 9, 16: Check Moxo screenshots for reference

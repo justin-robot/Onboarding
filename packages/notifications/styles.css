@@ -1,1 +1,9 @@
 /* Custom notification trigger styles - Knock feed popover styling is in @knocklabs/react/dist/index.css */
+
+/* Hide "Powered by Knock" branding */
+.rnf-notification-feed__footer,
+.rnf-branding,
+[class*="powered-by"],
+[class*="branding"] {
+  display: none !important;
+}
