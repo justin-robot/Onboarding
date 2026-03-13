@@ -214,7 +214,7 @@ function WorkspaceHeader({
 
   // Full header with banner for desktop
   return (
-    <div className="relative">
+    <div className="relative border-b border-border">
       {/* Banner */}
       <div
         className={cn(
