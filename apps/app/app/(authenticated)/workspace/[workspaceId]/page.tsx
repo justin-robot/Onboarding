@@ -120,6 +120,7 @@ export default async function WorkspacePage({ params }: PageProps) {
     name: workspace.name,
     description: workspace.description,
     dueDate: workspace.dueDate?.toISOString() || null,
+    isPublished: workspace.isPublished,
     sections: (workspace.sections || []).map((section) => {
       const tasks = section.tasks || [];
       const completedTasks = tasks.filter((t) => t.status === "completed").length;

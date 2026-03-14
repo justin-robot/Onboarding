@@ -3,6 +3,26 @@ import { sql } from "kysely";
 import { json, requireAdminAuth, withErrorHandler } from "../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
+// Check if isTemplate column exists (cached for performance)
+let isTemplateColumnExists: boolean | null = null;
+
+async function checkIsTemplateColumn(): Promise<boolean> {
+  if (isTemplateColumnExists !== null) return isTemplateColumnExists;
+
+  try {
+    const result = await sql`
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'workspace' AND column_name = 'isTemplate'
+      ) as exists
+    `.execute(database);
+    isTemplateColumnExists = (result.rows[0] as any)?.exists === true;
+  } catch {
+    isTemplateColumnExists = false;
+  }
+  return isTemplateColumnExists;
+}
+
 /**
  * GET /api/admin/workspaces - List workspaces (scoped by admin access)
  */
@@ -17,6 +37,9 @@ export async function GET(request: NextRequest) {
     const sortDirection = searchParams.get("sortDirection") || "desc";
     const search = searchParams.get("search") || "";
     const includeDeleted = searchParams.get("includeDeleted") === "true";
+
+    // Check if isTemplate column exists (migration may not have run yet)
+    const hasIsTemplateColumn = await checkIsTemplateColumn();
 
     // Build base query
     let query = database
@@ -72,6 +95,16 @@ export async function GET(request: NextRequest) {
       query = query.where("workspace.deletedAt", "is", null);
     }
 
+    // Exclude templates from workspace list (only if column exists)
+    if (hasIsTemplateColumn) {
+      query = query.where((eb) =>
+        eb.or([
+          eb("workspace.isTemplate", "=", false),
+          eb("workspace.isTemplate", "is", null),
+        ])
+      );
+    }
+
     // Search filter
     if (search) {
       query = query.where((eb) =>
@@ -95,6 +128,16 @@ export async function GET(request: NextRequest) {
     let countQueryWithFilters = includeDeleted
       ? countQuery
       : countQuery.where("deletedAt", "is", null);
+
+    // Exclude templates from count (only if column exists)
+    if (hasIsTemplateColumn) {
+      countQueryWithFilters = countQueryWithFilters.where((eb) =>
+        eb.or([
+          eb("isTemplate", "=", false),
+          eb("isTemplate", "is", null),
+        ])
+      );
+    }
 
     if (search) {
       countQueryWithFilters = countQueryWithFilters.where((eb) =>

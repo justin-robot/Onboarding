@@ -16,6 +16,22 @@ export interface DuplicateWorkspaceResult {
   error?: string;
 }
 
+export interface ListTemplatesOptions {
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface Template {
+  id: string;
+  name: string;
+  description: string | null;
+  sectionCount: number;
+  taskCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 /**
  * Template service for workspace duplication
  */
@@ -377,5 +393,288 @@ export const templateService = {
       success: true,
       workspaceId: newWorkspace.id,
     };
+  },
+
+  /**
+   * List all workspace templates
+   */
+  async listTemplates(options?: ListTemplatesOptions): Promise<{ data: Template[]; total: number }> {
+    const limit = options?.limit ?? 25;
+    const offset = options?.offset ?? 0;
+
+    let query = database
+      .selectFrom("workspace")
+      .select([
+        "workspace.id",
+        "workspace.name",
+        "workspace.description",
+        "workspace.createdAt",
+        "workspace.updatedAt",
+      ])
+      .select((eb) => [
+        eb
+          .selectFrom("section")
+          .select((eb2) => eb2.fn.count("id").as("count"))
+          .whereRef("section.workspaceId", "=", "workspace.id")
+          .where("section.deletedAt", "is", null)
+          .as("sectionCount"),
+        eb
+          .selectFrom("task")
+          .innerJoin("section", "section.id", "task.sectionId")
+          .select((eb2) => eb2.fn.count("task.id").as("count"))
+          .whereRef("section.workspaceId", "=", "workspace.id")
+          .where("task.deletedAt", "is", null)
+          .as("taskCount"),
+      ])
+      .where("workspace.isTemplate", "=", true)
+      .where("workspace.deletedAt", "is", null);
+
+    // Apply search filter
+    if (options?.search) {
+      query = query.where((eb) =>
+        eb.or([
+          eb("workspace.name", "ilike", `%${options.search}%`),
+          eb("workspace.description", "ilike", `%${options.search}%`),
+        ])
+      );
+    }
+
+    // Get total count
+    let countQuery = database
+      .selectFrom("workspace")
+      .select((eb) => eb.fn.count("id").as("total"))
+      .where("isTemplate", "=", true)
+      .where("deletedAt", "is", null);
+
+    if (options?.search) {
+      countQuery = countQuery.where((eb) =>
+        eb.or([
+          eb("name", "ilike", `%${options.search}%`),
+          eb("description", "ilike", `%${options.search}%`),
+        ])
+      );
+    }
+
+    const totalResult = await countQuery.executeTakeFirst();
+    const total = Number(totalResult?.total || 0);
+
+    // Apply pagination and sorting
+    query = query.orderBy("workspace.createdAt", "desc").limit(limit).offset(offset);
+
+    const templates = await query.execute();
+
+    return {
+      data: templates.map((t) => ({
+        id: t.id,
+        name: t.name,
+        description: t.description,
+        sectionCount: Number(t.sectionCount || 0),
+        taskCount: Number(t.taskCount || 0),
+        createdAt: t.createdAt,
+        updatedAt: t.updatedAt,
+      })),
+      total,
+    };
+  },
+
+  /**
+   * Get a single template by ID
+   */
+  async getTemplate(templateId: string): Promise<Template | null> {
+    const template = await database
+      .selectFrom("workspace")
+      .select([
+        "workspace.id",
+        "workspace.name",
+        "workspace.description",
+        "workspace.createdAt",
+        "workspace.updatedAt",
+      ])
+      .select((eb) => [
+        eb
+          .selectFrom("section")
+          .select((eb2) => eb2.fn.count("id").as("count"))
+          .whereRef("section.workspaceId", "=", "workspace.id")
+          .where("section.deletedAt", "is", null)
+          .as("sectionCount"),
+        eb
+          .selectFrom("task")
+          .innerJoin("section", "section.id", "task.sectionId")
+          .select((eb2) => eb2.fn.count("task.id").as("count"))
+          .whereRef("section.workspaceId", "=", "workspace.id")
+          .where("task.deletedAt", "is", null)
+          .as("taskCount"),
+      ])
+      .where("workspace.id", "=", templateId)
+      .where("workspace.isTemplate", "=", true)
+      .where("workspace.deletedAt", "is", null)
+      .executeTakeFirst();
+
+    if (!template) return null;
+
+    return {
+      id: template.id,
+      name: template.name,
+      description: template.description,
+      sectionCount: Number(template.sectionCount || 0),
+      taskCount: Number(template.taskCount || 0),
+      createdAt: template.createdAt,
+      updatedAt: template.updatedAt,
+    };
+  },
+
+  /**
+   * Mark a workspace as a template
+   */
+  async markAsTemplate(
+    workspaceId: string,
+    auditContext?: AuditContext
+  ): Promise<{ success: boolean; error?: string }> {
+    const workspace = await database
+      .selectFrom("workspace")
+      .select(["id", "name", "isTemplate"])
+      .where("id", "=", workspaceId)
+      .where("deletedAt", "is", null)
+      .executeTakeFirst();
+
+    if (!workspace) {
+      return { success: false, error: "Workspace not found" };
+    }
+
+    if (workspace.isTemplate) {
+      return { success: false, error: "Workspace is already a template" };
+    }
+
+    await database
+      .updateTable("workspace")
+      .set({ isTemplate: true, updatedAt: new Date() })
+      .where("id", "=", workspaceId)
+      .execute();
+
+    if (auditContext) {
+      await auditLogService.logEvent({
+        workspaceId,
+        eventType: "workspace.marked_as_template",
+        actorId: auditContext.actorId,
+        source: auditContext.source,
+        ipAddress: auditContext.ipAddress,
+        metadata: { workspaceName: workspace.name },
+      });
+    }
+
+    return { success: true };
+  },
+
+  /**
+   * Unmark a template (convert back to regular workspace)
+   */
+  async unmarkAsTemplate(
+    workspaceId: string,
+    auditContext?: AuditContext
+  ): Promise<{ success: boolean; error?: string }> {
+    const workspace = await database
+      .selectFrom("workspace")
+      .select(["id", "name", "isTemplate"])
+      .where("id", "=", workspaceId)
+      .where("deletedAt", "is", null)
+      .executeTakeFirst();
+
+    if (!workspace) {
+      return { success: false, error: "Workspace not found" };
+    }
+
+    if (!workspace.isTemplate) {
+      return { success: false, error: "Workspace is not a template" };
+    }
+
+    await database
+      .updateTable("workspace")
+      .set({ isTemplate: false, updatedAt: new Date() })
+      .where("id", "=", workspaceId)
+      .execute();
+
+    if (auditContext) {
+      await auditLogService.logEvent({
+        workspaceId,
+        eventType: "workspace.unmarked_as_template",
+        actorId: auditContext.actorId,
+        source: auditContext.source,
+        ipAddress: auditContext.ipAddress,
+        metadata: { workspaceName: workspace.name },
+      });
+    }
+
+    return { success: true };
+  },
+
+  /**
+   * Create a new workspace from a template
+   * This is a wrapper around duplicateWorkspace that verifies the source is a template
+   */
+  async createFromTemplate(
+    templateId: string,
+    options: DuplicateWorkspaceOptions,
+    auditContext?: AuditContext
+  ): Promise<DuplicateWorkspaceResult> {
+    // Verify the source is actually a template
+    const template = await database
+      .selectFrom("workspace")
+      .select(["id", "isTemplate"])
+      .where("id", "=", templateId)
+      .where("deletedAt", "is", null)
+      .executeTakeFirst();
+
+    if (!template) {
+      return { success: false, error: "Template not found" };
+    }
+
+    if (!template.isTemplate) {
+      return { success: false, error: "Source workspace is not a template" };
+    }
+
+    // Use the existing duplicateWorkspace method
+    return this.duplicateWorkspace(templateId, options, auditContext);
+  },
+
+  /**
+   * Delete a template (soft delete)
+   */
+  async deleteTemplate(
+    templateId: string,
+    auditContext?: AuditContext
+  ): Promise<{ success: boolean; error?: string }> {
+    const template = await database
+      .selectFrom("workspace")
+      .select(["id", "name", "isTemplate"])
+      .where("id", "=", templateId)
+      .where("deletedAt", "is", null)
+      .executeTakeFirst();
+
+    if (!template) {
+      return { success: false, error: "Template not found" };
+    }
+
+    if (!template.isTemplate) {
+      return { success: false, error: "Workspace is not a template" };
+    }
+
+    await database
+      .updateTable("workspace")
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where("id", "=", templateId)
+      .execute();
+
+    if (auditContext) {
+      await auditLogService.logEvent({
+        workspaceId: templateId,
+        eventType: "workspace.deleted",
+        actorId: auditContext.actorId,
+        source: auditContext.source,
+        ipAddress: auditContext.ipAddress,
+        metadata: { workspaceName: template.name, isTemplate: true },
+      });
+    }
+
+    return { success: true };
   },
 };

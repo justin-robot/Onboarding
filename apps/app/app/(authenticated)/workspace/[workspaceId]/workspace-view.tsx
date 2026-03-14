@@ -28,7 +28,12 @@ import {
   SheetTitle,
 } from "@repo/design/components/ui/sheet";
 import { Button } from "@repo/design/components/ui/button";
+import { Badge } from "@repo/design/components/ui/badge";
+import { Alert, AlertDescription } from "@repo/design/components/ui/alert";
+import { Switch } from "@repo/design/components/ui/switch";
+import { Label } from "@repo/design/components/ui/label";
 import {
+  AlertCircle,
   Calendar,
   FolderPlus,
   Plus,
@@ -44,6 +49,7 @@ interface WorkspaceData {
   name: string;
   description: string | null;
   dueDate: string | null;
+  isPublished: boolean;
   sections: Array<{
     id: string;
     title: string;
@@ -119,6 +125,9 @@ export function WorkspaceView({
   const [workspaceFiles, setWorkspaceFiles] = useState<FileItem[]>(files);
   // Track recently completed task for green border highlight
   const [recentlyCompletedTaskId, setRecentlyCompletedTaskId] = useState<string | null>(null);
+  // Track workspace published state
+  const [isPublished, setIsPublished] = useState(workspace.isPublished);
+  const [publishToggleLoading, setPublishToggleLoading] = useState(false);
 
   // Initial messages state (fetched once, then real-time takes over)
   const [initialMessages, setInitialMessages] = useState<Message[]>([]);
@@ -285,9 +294,36 @@ export function WorkspaceView({
     }
   };
 
+  // Handle publish/unpublish toggle
+  const handlePublishToggle = async (publish: boolean) => {
+    setPublishToggleLoading(true);
+    try {
+      const response = await fetch(`/api/workspaces/${currentWorkspaceId}/publish`, {
+        method: publish ? "POST" : "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error(publish ? "Failed to publish workspace" : "Failed to unpublish workspace");
+      }
+
+      setIsPublished(publish);
+      toast.success(publish ? "Workspace published - notifications enabled" : "Workspace unpublished - notifications paused");
+      router.refresh();
+    } catch (error) {
+      toast.error(publish ? "Failed to publish workspace" : "Failed to unpublish workspace");
+    } finally {
+      setPublishToggleLoading(false);
+    }
+  };
+
   // Workspace header data
   const workspaceHeader = {
     name: workspace.name,
+    badge: !isPublished ? (
+      <Badge variant="outline" className="ml-2 text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+        Draft
+      </Badge>
+    ) : undefined,
     members: members.map((m) => ({
       id: m.id,
       name: m.name,
@@ -308,6 +344,27 @@ export function WorkspaceView({
       workspaceId={currentWorkspaceId}
       onWorkspaceUpdate={() => router.refresh()}
     />
+
+    {/* Draft mode banner */}
+    {!isPublished && currentUserRole === "admin" && (
+      <Alert className="rounded-none border-x-0 border-t-0 bg-yellow-50 border-yellow-200">
+        <AlertCircle className="h-4 w-4 text-yellow-600" />
+        <AlertDescription className="flex items-center justify-between">
+          <span className="text-yellow-700">
+            <strong>Draft Mode</strong> - Notifications are paused while you set up this workspace.
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePublishToggle(true)}
+            disabled={publishToggleLoading}
+            className="ml-4 bg-white hover:bg-yellow-100 border-yellow-300"
+          >
+            Publish Workspace
+          </Button>
+        </AlertDescription>
+      </Alert>
+    )}
 
     <MoxoLayout
       sidebar={
@@ -507,6 +564,23 @@ export function WorkspaceView({
         <div className="mt-6 space-y-2">
           {currentUserRole === "admin" && (
             <>
+              <div className="flex items-center justify-between py-2 px-2">
+                <Label htmlFor="publish-toggle" className="text-sm font-normal cursor-pointer">
+                  {isPublished ? "Published" : "Draft Mode"}
+                </Label>
+                <Switch
+                  id="publish-toggle"
+                  checked={isPublished}
+                  onCheckedChange={handlePublishToggle}
+                  disabled={publishToggleLoading}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground px-2 pb-2">
+                {isPublished
+                  ? "Users will receive notifications"
+                  : "Notifications paused while setting up"}
+              </p>
+              <div className="my-2 border-t" />
               <Button
                 variant="ghost"
                 className="w-full justify-start"

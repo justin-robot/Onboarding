@@ -9,6 +9,7 @@ import { UserEdit } from "./users/edit";
 import { UserCreate } from "./users/create";
 import { WorkspaceList } from "./workspaces/list";
 import { WorkspaceEdit } from "./workspaces/edit";
+import { TemplateList } from "./templates/list";
 import { TaskList } from "./tasks/list";
 import { TaskEdit } from "./tasks/edit";
 import { MemberList } from "./members/list";
@@ -62,6 +63,11 @@ const AdminClient = () => {
     }
     if (pathname === "/dashboard/workspaces") {
       return <WorkspaceList />;
+    }
+
+    // Template routes
+    if (pathname === "/dashboard/templates") {
+      return <TemplateList />;
     }
 
     // Task routes

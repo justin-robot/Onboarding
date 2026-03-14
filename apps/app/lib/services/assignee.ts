@@ -1,6 +1,7 @@
 import { database } from "@repo/database";
 import { memberService } from "./member";
 import { auditLogService, type AuditContext } from "./auditLog";
+import { notificationGuard } from "./notificationGuard";
 import type { TaskAssignee } from "@repo/database";
 import type { NotificationContext } from "./notificationContext";
 
@@ -132,23 +133,28 @@ export const assigneeService = {
       });
     }
 
-    // Trigger notification
+    // Trigger notification (only if workspace is published)
     if (notificationContext) {
-      console.log("[assignee] Triggering task-assigned notification for user:", userId);
-      const result = await notificationContext.triggerWorkflow({
-        workflowId: "task-assigned",
-        recipientId: userId,
-        recipientName: assigneeUser?.name || undefined,
-        recipientEmail: assigneeUser?.email || undefined,
-        data: {
-          workspaceId: taskWithWorkspace.workspaceId,
-          workspaceName: taskWithWorkspace.workspaceName,
-          taskId: taskWithWorkspace.id,
-          taskTitle: taskWithWorkspace.title,
-        },
-        tenant: taskWithWorkspace.workspaceId,
-      });
-      console.log("[assignee] Notification result:", result);
+      const shouldNotify = await notificationGuard.shouldNotify(taskWithWorkspace.workspaceId);
+      if (shouldNotify) {
+        console.log("[assignee] Triggering task-assigned notification for user:", userId);
+        const result = await notificationContext.triggerWorkflow({
+          workflowId: "task-assigned",
+          recipientId: userId,
+          recipientName: assigneeUser?.name || undefined,
+          recipientEmail: assigneeUser?.email || undefined,
+          data: {
+            workspaceId: taskWithWorkspace.workspaceId,
+            workspaceName: taskWithWorkspace.workspaceName,
+            taskId: taskWithWorkspace.id,
+            taskTitle: taskWithWorkspace.title,
+          },
+          tenant: taskWithWorkspace.workspaceId,
+        });
+        console.log("[assignee] Notification result:", result);
+      } else {
+        console.log("[assignee] Workspace not published, skipping notification");
+      }
     } else {
       console.log("[assignee] No notificationContext provided, skipping notification");
     }
@@ -258,5 +264,67 @@ export const assigneeService = {
       .executeTakeFirst();
 
     return assignee !== undefined;
+  },
+
+  /**
+   * Assign a task by email address
+   * If user exists and is a member of the workspace, assigns directly
+   * Otherwise creates a pending assignment
+   */
+  async assignByEmail(
+    taskId: string,
+    email: string,
+    createdBy: string,
+    notificationContext?: NotificationContext,
+    auditContext?: AuditContext
+  ): Promise<{
+    success: boolean;
+    type: "direct" | "pending";
+    error?: string;
+  }> {
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Get task's workspace
+    const taskWithWorkspace = await database
+      .selectFrom("task")
+      .innerJoin("section", "section.id", "task.sectionId")
+      .select(["task.id", "section.workspaceId"])
+      .where("task.id", "=", taskId)
+      .where("task.deletedAt", "is", null)
+      .executeTakeFirst();
+
+    if (!taskWithWorkspace) {
+      return { success: false, type: "pending", error: "TASK_NOT_FOUND" };
+    }
+
+    // Check if user exists with this email
+    const user = await database
+      .selectFrom("user")
+      .select(["id"])
+      .where("email", "=", normalizedEmail)
+      .executeTakeFirst();
+
+    if (user) {
+      // Check if user is a member of the workspace
+      const isMember = await memberService.isMember(taskWithWorkspace.workspaceId, user.id);
+      if (isMember) {
+        // Assign directly
+        const result = await this.assign(taskId, user.id, notificationContext, auditContext);
+        if (result.success) {
+          return { success: true, type: "direct" };
+        }
+        return { success: false, type: "direct", error: result.error };
+      }
+    }
+
+    // User doesn't exist or isn't a member - create pending assignment
+    // Import pendingAssigneeService dynamically to avoid circular dependency
+    const { pendingAssigneeService } = await import("./pendingAssignee");
+    const result = await pendingAssigneeService.create(taskId, normalizedEmail, createdBy);
+
+    if (result.success) {
+      return { success: true, type: "pending" };
+    }
+    return { success: false, type: "pending", error: result.error };
   },
 };

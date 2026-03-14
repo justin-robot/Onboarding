@@ -55,7 +55,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/design/components/ui/select";
+import { Input } from "@repo/design/components/ui/input";
 import { Avatar, AvatarFallback } from "@repo/design/components/ui/avatar";
+import { Mail } from "lucide-react";
 import { cn } from "@repo/design/lib/utils";
 import { toast } from "sonner";
 import { CommentSection } from "./comment-section";
@@ -69,6 +71,14 @@ interface Assignee {
   userName?: string;
   userEmail?: string;
   status: string;
+}
+
+interface PendingAssignee {
+  id: string;
+  taskId: string;
+  email: string;
+  createdBy: string;
+  createdAt: string;
 }
 
 interface WorkspaceMember {
@@ -163,8 +173,11 @@ export function TaskDetailsPanel({
   const [prerequisitesDialogOpen, setPrerequisitesDialogOpen] = useState(false);
   const [fileInfo, setFileInfo] = useState<{ name: string; url?: string } | null>(null);
   const [assignees, setAssignees] = useState<Assignee[]>([]);
+  const [pendingAssignees, setPendingAssignees] = useState<PendingAssignee[]>([]);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [isAssigning, setIsAssigning] = useState(false);
+  const [emailToAssign, setEmailToAssign] = useState("");
+  const [isAssigningEmail, setIsAssigningEmail] = useState(false);
   // For viewing a specific assignee's form submission (admin only)
   const [viewingSubmissionUserId, setViewingSubmissionUserId] = useState<string | null>(null);
   // Blocking tasks (prerequisites that must be completed)
@@ -316,6 +329,7 @@ export function TaskDetailsPanel({
         if (assigneesRes.ok) {
           const data = await assigneesRes.json();
           setAssignees(data.assignees || []);
+          setPendingAssignees(data.pendingAssignees || []);
         }
 
         if (isAdmin) {
@@ -383,6 +397,73 @@ export function TaskDetailsPanel({
     } catch (err) {
       console.error("Unassign error:", err);
       toast.error(err instanceof Error ? err.message : "Failed to unassign user");
+    }
+  };
+
+  // Handle assigning by email
+  const handleAssignByEmail = async () => {
+    if (!emailToAssign.trim()) return;
+
+    setIsAssigningEmail(true);
+    try {
+      const response = await fetch(`/api/tasks/${task.id}/assignees`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailToAssign.trim() }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to assign email");
+      }
+
+      const data = await response.json();
+      if (data.type === "pending") {
+        // Add to pending assignees
+        setPendingAssignees(prev => [...prev, {
+          id: data.pendingAssignee?.id || crypto.randomUUID(),
+          taskId: task.id,
+          email: emailToAssign.trim().toLowerCase(),
+          createdBy: currentUserId,
+          createdAt: new Date().toISOString(),
+        }]);
+        toast.success("Email added - they'll be assigned when they join");
+      } else {
+        // Assigned directly, refresh assignees
+        const assigneesRes = await fetch(`/api/tasks/${task.id}/assignees`);
+        if (assigneesRes.ok) {
+          const assigneesData = await assigneesRes.json();
+          setAssignees(assigneesData.assignees || []);
+          setPendingAssignees(assigneesData.pendingAssignees || []);
+        }
+        toast.success("User assigned to task");
+      }
+
+      setEmailToAssign("");
+      onTaskComplete();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to assign email");
+    } finally {
+      setIsAssigningEmail(false);
+    }
+  };
+
+  // Handle removing a pending assignee
+  const handleRemovePendingAssignee = async (email: string) => {
+    try {
+      const response = await fetch(`/api/tasks/${task.id}/assignees/pending/${encodeURIComponent(email)}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to remove pending assignment");
+      }
+
+      setPendingAssignees(prev => prev.filter(p => p.email !== email));
+      toast.success("Pending assignment removed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to remove pending assignment");
     }
   };
 
@@ -519,7 +600,7 @@ export function TaskDetailsPanel({
         <div className="p-4">
 
           {/* Due Date Section */}
-          <div className="mb-4">
+          <div className="mb-6">
             <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
               Due Date
             </h4>
@@ -542,7 +623,7 @@ export function TaskDetailsPanel({
 
           {/* Form Response Section - compact clickable row */}
           {task.type === "form" && config && (task.isCompleted || currentUserCompleted || viewingSubmissionUserId) && (
-            <div className="mb-4">
+            <div className="mb-6">
               <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
                 Form Response
               </h4>
@@ -596,7 +677,7 @@ export function TaskDetailsPanel({
 
           {/* Uploaded Files Section - for file_upload tasks (consistent with Form Response) */}
           {task.type === "file_upload" && task.isCompleted && (
-            <div className="mb-4">
+            <div className="mb-6">
               <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground mb-2">
                 Uploaded Files
               </h4>
@@ -618,7 +699,7 @@ export function TaskDetailsPanel({
 
 
           {/* Progress Section */}
-          <div className="mb-4">
+          <div className="mb-6">
             <div className="flex items-center gap-3 mb-2">
               <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Progress
@@ -631,10 +712,11 @@ export function TaskDetailsPanel({
               </span>
             </div>
 
-            {assignees.length === 0 ? (
+            {assignees.length === 0 && pendingAssignees.length === 0 ? (
               <p className="text-sm text-muted-foreground">No one assigned</p>
             ) : (
               <div className="space-y-2">
+                {/* Regular assignees */}
                 {assignees.map((assignee, index) => (
                   <div
                     key={`${assignee.userId}-${index}`}
@@ -684,6 +766,38 @@ export function TaskDetailsPanel({
                     </div>
                   </div>
                 ))}
+
+                {/* Pending assignees (email-only) */}
+                {pendingAssignees.map((pending) => (
+                  <div
+                    key={pending.id}
+                    className="flex items-center justify-between gap-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="text-xs bg-yellow-50 text-yellow-700">
+                            <Mail className="h-4 w-4" />
+                          </AvatarFallback>
+                        </Avatar>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{pending.email}</p>
+                        <p className="text-xs text-yellow-600">Pending signup</p>
+                      </div>
+                    </div>
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0"
+                        onClick={() => handleRemovePendingAssignee(pending.email)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
 
@@ -695,7 +809,7 @@ export function TaskDetailsPanel({
                   disabled={isAssigning}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder={isAssigning ? "Assigning..." : "Add assignee..."} />
+                    <SelectValue placeholder={isAssigning ? "Assigning..." : "Add workspace member..."} />
                   </SelectTrigger>
                   <SelectContent>
                     {availableMembers.map((member) => (
@@ -710,12 +824,48 @@ export function TaskDetailsPanel({
                 </Select>
               </div>
             )}
+
+            {/* Assign by email (admin only) */}
+            {isAdmin && (
+              <div className="mt-2">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleAssignByEmail();
+                  }}
+                  className="flex gap-2"
+                >
+                  <Input
+                    type="email"
+                    placeholder="Assign by email..."
+                    value={emailToAssign}
+                    onChange={(e) => setEmailToAssign(e.target.value)}
+                    disabled={isAssigningEmail}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={!emailToAssign.trim() || isAssigningEmail}
+                  >
+                    {isAssigningEmail ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <UserPlus className="h-4 w-4" />
+                    )}
+                  </Button>
+                </form>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Assign to anyone - they'll be notified when they join
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Task action area - only show if not showing dedicated section above */}
           {!(task.type === "form" && config && (task.isCompleted || currentUserCompleted || viewingSubmissionUserId)) &&
            !(task.type === "file_upload" && task.isCompleted) && (
-            <div className="mb-4">
+            <div className="mb-6">
               {loading ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

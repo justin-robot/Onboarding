@@ -1,7 +1,10 @@
 import { database } from "@repo/database";
 import { memberService } from "./member";
+import { pendingAssigneeService } from "./pendingAssignee";
 import type { PendingInvitation, WorkspaceMember } from "@repo/database";
 import type { MemberRole } from "./member";
+import type { NotificationContext } from "./notificationContext";
+import type { AuditContext } from "./auditLog";
 import { randomBytes } from "crypto";
 
 // Result types
@@ -101,9 +104,14 @@ export const invitationService = {
   },
 
   /**
-   * Redeem an invitation - creates member and deletes invitation
+   * Redeem an invitation - creates member, converts pending assignments, and deletes invitation
    */
-  async redeem(token: string, userId: string): Promise<RedeemInvitationResult> {
+  async redeem(
+    token: string,
+    userId: string,
+    notificationContext?: NotificationContext,
+    auditContext?: AuditContext
+  ): Promise<RedeemInvitationResult> {
     // Find invitation
     const invitation = await this.getByToken(token);
 
@@ -126,6 +134,21 @@ export const invitationService = {
       })
       .returningAll()
       .executeTakeFirstOrThrow();
+
+    // Convert any pending task assignments for this email in this workspace
+    const result = await pendingAssigneeService.processForUser(
+      invitation.email,
+      userId,
+      invitation.workspaceId,
+      notificationContext,
+      auditContext
+    );
+
+    if (result.converted > 0) {
+      console.log(
+        `[invitation] Converted ${result.converted} pending assignments for ${invitation.email}`
+      );
+    }
 
     // Delete invitation
     await database

@@ -28,6 +28,11 @@ export type { MemberRole } from "./member";
 export { assigneeService } from "./assignee";
 export type { AssignResult } from "./assignee";
 
+export { pendingAssigneeService } from "./pendingAssignee";
+export type { PendingAssignResult, PendingAssigneeWithTask } from "./pendingAssignee";
+
+export { notificationGuard } from "./notificationGuard";
+
 export { invitationService } from "./invitation";
 export type { CreateInvitationResult, RedeemInvitationResult } from "./invitation";
 

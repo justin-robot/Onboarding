@@ -11,6 +11,7 @@ import {
   Mail,
   FileText,
   ChevronLeft,
+  LayoutTemplate,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -25,6 +26,7 @@ const navItems: NavItem[] = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { label: "Users", href: "/dashboard/users", icon: Users, resource: "users" },
   { label: "Workspaces", href: "/dashboard/workspaces", icon: Building2, resource: "workspaces" },
+  { label: "Templates", href: "/dashboard/templates", icon: LayoutTemplate, resource: "templates" },
   { label: "Tasks", href: "/dashboard/tasks", icon: CheckSquare, resource: "tasks" },
   { label: "Invitations", href: "/dashboard/invitations", icon: Mail, resource: "invitations" },
   { label: "Audit Logs", href: "/dashboard/audit-logs", icon: FileText, resource: "audit-logs" },

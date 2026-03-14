@@ -50,6 +50,7 @@ import {
   RotateCcw,
   AlertCircle,
   Copy,
+  LayoutTemplate,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DuplicateDialog } from "./duplicate-dialog";
@@ -78,6 +79,7 @@ export const WorkspaceList = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [saveAsTemplateDialogOpen, setSaveAsTemplateDialogOpen] = useState(false);
   const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -173,6 +175,32 @@ export const WorkspaceList = () => {
     } finally {
       setActionLoading(false);
       setRestoreDialogOpen(false);
+      setSelectedWorkspace(null);
+    }
+  };
+
+  const handleSaveAsTemplate = async () => {
+    if (!selectedWorkspace) return;
+    setActionLoading(true);
+    try {
+      const response = await fetch(`/api/admin/workspaces/${selectedWorkspace.id}/save-as-template`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || "Failed to save as template");
+      }
+
+      // Remove the workspace from the list (it's now a template)
+      setWorkspaces((prev) => prev.filter((w) => w.id !== selectedWorkspace.id));
+      toast.success("Workspace saved as template. You can find it in the Templates section.");
+    } catch (error) {
+      console.error("Error saving as template:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to save as template");
+    } finally {
+      setActionLoading(false);
+      setSaveAsTemplateDialogOpen(false);
       setSelectedWorkspace(null);
     }
   };
@@ -359,6 +387,16 @@ export const WorkspaceList = () => {
                                 <Copy className="mr-2 h-4 w-4" />
                                 Duplicate
                               </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedWorkspace(workspace);
+                                  setSaveAsTemplateDialogOpen(true);
+                                }}
+                                disabled={!!workspace.deletedAt}
+                              >
+                                <LayoutTemplate className="mr-2 h-4 w-4" />
+                                Save as Template
+                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               {workspace.deletedAt ? (
                                 <DropdownMenuItem
@@ -464,6 +502,33 @@ export const WorkspaceList = () => {
             .catch((err) => console.error("Error refreshing workspaces:", err));
         }}
       />
+
+      {/* Save as Template Confirmation Dialog */}
+      <AlertDialog open={saveAsTemplateDialogOpen} onOpenChange={setSaveAsTemplateDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Save as Template</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will convert &quot;{selectedWorkspace?.name}&quot; into a template. The workspace
+              will no longer appear in the Workspaces list but can be used to quickly create new
+              client workspaces from the Templates section.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={actionLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSaveAsTemplate} disabled={actionLoading}>
+              {actionLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save as Template"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -280,4 +280,56 @@ export const workspaceService = {
 
     return result ?? null;
   },
+
+  /**
+   * Publish a workspace (enables notifications)
+   */
+  async publish(id: string, auditContext?: AuditContext): Promise<Workspace | null> {
+    const result = await database
+      .updateTable("workspace")
+      .set({ isPublished: true, updatedAt: new Date() })
+      .where("id", "=", id)
+      .where("deletedAt", "is", null)
+      .returningAll()
+      .executeTakeFirst();
+
+    if (result && auditContext) {
+      await auditLogService.logEvent({
+        workspaceId: id,
+        eventType: "workspace.published",
+        actorId: auditContext.actorId,
+        source: auditContext.source,
+        ipAddress: auditContext.ipAddress,
+        metadata: { workspaceName: result.name },
+      });
+    }
+
+    return result ?? null;
+  },
+
+  /**
+   * Unpublish a workspace (disables notifications)
+   */
+  async unpublish(id: string, auditContext?: AuditContext): Promise<Workspace | null> {
+    const result = await database
+      .updateTable("workspace")
+      .set({ isPublished: false, updatedAt: new Date() })
+      .where("id", "=", id)
+      .where("deletedAt", "is", null)
+      .returningAll()
+      .executeTakeFirst();
+
+    if (result && auditContext) {
+      await auditLogService.logEvent({
+        workspaceId: id,
+        eventType: "workspace.unpublished",
+        actorId: auditContext.actorId,
+        source: auditContext.source,
+        ipAddress: auditContext.ipAddress,
+        metadata: { workspaceName: result.name },
+      });
+    }
+
+    return result ?? null;
+  },
 };

@@ -44,6 +44,9 @@ export interface Database {
   // Moxo audit log (separate from auth audit_log)
   moxo_audit_log_entry: MoxoAuditLogEntryTable;
 
+  // Pre-claim assignment table
+  pending_task_assignee: PendingTaskAssigneeTable;
+
   // Integrations
   workspace_integration: WorkspaceIntegrationTable;
 }
@@ -129,6 +132,8 @@ export interface WorkspaceTable {
   name: string;
   description: string | null;
   dueDate: Date | null;
+  isTemplate: Generated<boolean>;
+  isPublished: Generated<boolean>;
   deletedAt: Date | null;
   createdAt: Generated<Date>;
   updatedAt: Generated<Date>;
@@ -448,6 +453,18 @@ export interface ApproverTable {
 }
 
 // =====================
+// PENDING TASK ASSIGNEE TABLE
+// =====================
+
+export interface PendingTaskAssigneeTable {
+  id: Generated<string>;
+  taskId: string;
+  email: string;
+  createdBy: string;
+  createdAt: Generated<Date>;
+}
+
+// =====================
 // MOXO AUDIT LOG TABLE
 // =====================
 
@@ -623,3 +640,8 @@ export type NewMoxoAuditLogEntry = Insertable<MoxoAuditLogEntryTable>;
 export type WorkspaceIntegration = Selectable<WorkspaceIntegrationTable>;
 export type NewWorkspaceIntegration = Insertable<WorkspaceIntegrationTable>;
 export type WorkspaceIntegrationUpdate = Updateable<WorkspaceIntegrationTable>;
+
+// Pending task assignee types
+export type PendingTaskAssignee = Selectable<PendingTaskAssigneeTable>;
+export type NewPendingTaskAssignee = Insertable<PendingTaskAssigneeTable>;
+export type PendingTaskAssigneeUpdate = Updateable<PendingTaskAssigneeTable>;

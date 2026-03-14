@@ -1,6 +1,7 @@
 import { database } from "@repo/database";
 import type { Comment, NewComment } from "@repo/database";
 import type { NotificationContext } from "./notificationContext";
+import { notificationGuard } from "./notificationGuard";
 
 // Dynamically import ably to avoid bundling issues with Next.js
 const ABLY_PATH = "./ably";
@@ -87,36 +88,40 @@ export const commentService = {
     });
 
     // Trigger notifications for other task assignees (not the comment author)
+    // Only if workspace is published
     if (options.notificationContext) {
-      // Get all assignees for this task
-      const assignees = await database
-        .selectFrom("task_assignee")
-        .select(["userId"])
-        .where("taskId", "=", options.taskId)
-        .execute();
+      const shouldNotify = await notificationGuard.shouldNotify(taskWithWorkspace.workspaceId);
+      if (shouldNotify) {
+        // Get all assignees for this task
+        const assignees = await database
+          .selectFrom("task_assignee")
+          .select(["userId"])
+          .where("taskId", "=", options.taskId)
+          .execute();
 
-      // Notify each assignee except the comment author
-      const commentPreview = options.content.length > 100
-        ? options.content.substring(0, 100) + "..."
-        : options.content;
+        // Notify each assignee except the comment author
+        const commentPreview = options.content.length > 100
+          ? options.content.substring(0, 100) + "..."
+          : options.content;
 
-      for (const assignee of assignees) {
-        if (assignee.userId !== options.userId) {
-          options.notificationContext.triggerWorkflow({
-            workflowId: "comment-added",
-            recipientId: assignee.userId,
-            data: {
-              workspaceId: taskWithWorkspace.workspaceId,
-              workspaceName: taskWithWorkspace.workspaceName,
-              taskId: taskWithWorkspace.id,
-              taskTitle: taskWithWorkspace.title,
-              commentBy: commenter?.name || "Someone",
-              commentPreview,
-            },
-            tenant: taskWithWorkspace.workspaceId,
-          }).catch((err) => {
-            console.error("Failed to trigger comment notification:", err);
-          });
+        for (const assignee of assignees) {
+          if (assignee.userId !== options.userId) {
+            options.notificationContext.triggerWorkflow({
+              workflowId: "comment-added",
+              recipientId: assignee.userId,
+              data: {
+                workspaceId: taskWithWorkspace.workspaceId,
+                workspaceName: taskWithWorkspace.workspaceName,
+                taskId: taskWithWorkspace.id,
+                taskTitle: taskWithWorkspace.title,
+                commentBy: commenter?.name || "Someone",
+                commentPreview,
+              },
+              tenant: taskWithWorkspace.workspaceId,
+            }).catch((err) => {
+              console.error("Failed to trigger comment notification:", err);
+            });
+          }
         }
       }
     }

@@ -2,6 +2,7 @@ import { database } from "@repo/database";
 import { dependencyService } from "./dependency";
 import { cascadeService } from "./cascade";
 import { auditLogService } from "./auditLog";
+import { notificationGuard } from "./notificationGuard";
 import type { TaskAssignee, NewTaskAssignee } from "@repo/database";
 import type { NotificationContext } from "./notificationContext";
 
@@ -97,13 +98,16 @@ export const completionService = {
       // Cascade due dates to dependent tasks
       await cascadeService.onTaskCompleted(taskId);
 
-      // Trigger notifications for newly unlocked dependent tasks
+      // Trigger notifications for newly unlocked dependent tasks (only if published)
       if (notificationContext) {
-        await this.notifyNewlyUnlockedTasks(taskId, notificationContext);
+        const shouldNotify = await notificationGuard.shouldNotifyForTask(taskId);
+        if (shouldNotify) {
+          await this.notifyNewlyUnlockedTasks(taskId, notificationContext);
 
-        // If task had a due date, notify assignees that it was cleared (completed on time)
-        if (task.dueDateValue) {
-          await this.notifyDueDateCleared(taskId, task, notificationContext);
+          // If task had a due date, notify assignees that it was cleared (completed on time)
+          if (task.dueDateValue) {
+            await this.notifyDueDateCleared(taskId, task, notificationContext);
+          }
         }
       }
 
@@ -426,13 +430,16 @@ export const completionService = {
     // Cascade due dates to dependent tasks
     await cascadeService.onTaskCompleted(taskId);
 
-    // Trigger notifications for newly unlocked dependent tasks
+    // Trigger notifications for newly unlocked dependent tasks (only if published)
     if (notificationContext) {
-      await this.notifyNewlyUnlockedTasks(taskId, notificationContext);
+      const shouldNotify = await notificationGuard.shouldNotifyForTask(taskId);
+      if (shouldNotify) {
+        await this.notifyNewlyUnlockedTasks(taskId, notificationContext);
 
-      // If task had a due date, notify assignees that it was cleared (completed on time)
-      if (task.dueDateValue) {
-        await this.notifyDueDateCleared(taskId, task, notificationContext);
+        // If task had a due date, notify assignees that it was cleared (completed on time)
+        if (task.dueDateValue) {
+          await this.notifyDueDateCleared(taskId, task, notificationContext);
+        }
       }
     }
 
