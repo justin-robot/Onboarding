@@ -240,10 +240,10 @@ export const templateService = {
           placeholder: element.placeholder,
           helpText: element.helpText,
           required: element.required,
-          validation: element.validation,
-          options: element.options,
+          validation: element.validation ? JSON.stringify(element.validation) : null,
+          options: element.options ? JSON.stringify(element.options) : null,
           position: element.position,
-        })
+        } as any)
         .execute();
     }
 
