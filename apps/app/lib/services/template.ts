@@ -50,6 +50,7 @@ export const templateService = {
     options: DuplicateWorkspaceOptions,
     auditContext?: AuditContext
   ): Promise<DuplicateWorkspaceResult> {
+    try {
     // Get source workspace with all nested data
     const sourceWorkspace = await database
       .selectFrom("workspace")
@@ -393,6 +394,13 @@ export const templateService = {
       success: true,
       workspaceId: newWorkspace.id,
     };
+    } catch (error) {
+      console.error("Error duplicating workspace:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to duplicate workspace",
+      };
+    }
   },
 
   /**
