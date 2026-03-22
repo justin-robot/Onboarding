@@ -120,8 +120,27 @@ export async function POST(request: NextRequest, { params }: Params) {
       }
     }
 
-    // If replying to a message, we'll include the reply info from what we have
+    // Fetch reply-to message info if replying
     let replyToMessage = null;
+    if (replyToMessageId) {
+      const originalMessage = await chatService.getById(replyToMessageId);
+      if (originalMessage) {
+        // Get the sender info for the original message
+        const { database } = await import("@repo/database");
+        const sender = await database
+          .selectFrom("user")
+          .select(["name", "image"])
+          .where("id", "=", originalMessage.userId)
+          .executeTakeFirst();
+
+        replyToMessage = {
+          id: originalMessage.id,
+          content: originalMessage.content,
+          senderName: sender?.name || "Unknown",
+          senderAvatarUrl: sender?.image || undefined,
+        };
+      }
+    }
 
     // Prepare response payload
     const messagePayload = {

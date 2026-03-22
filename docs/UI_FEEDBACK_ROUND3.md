@@ -38,10 +38,10 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 
 | # | Task | Priority | Status | Screenshot Needed? | Notes |
 |---|------|----------|--------|-------------------|-------|
-| 10 | **Notifications rendering in wrong position** - Notifications appearing in unexpected location | H | [ ] | Yes | Need to see where they're appearing |
+| 10 | **Notifications rendering in wrong position** - Notifications appearing in unexpected location | H | [x] | No | Fixed: Added placement="bottom-end" prop, wrapped trigger in relative container, fixed z-index |
 | 11 | **Reply button in wrong place** - Reply button showing up in weird position in chat | M | [ ] | Yes | Need visual reference |
 | 12 | **Message failed to send** - Chat messages failing to send | H | [ ] | No | Bug - needs debugging |
-| 13 | **Sent message not showing "replied" state** - After sending, doesn't show that message was sent | M | [ ] | No | UI feedback issue |
+| 13 | **Sent message not showing "replied" state** - After sending, doesn't show that message was sent | M | [x] | No | Fixed: Fetch reply-to message info in POST /api/messages and include in response |
 
 ---
 
@@ -77,10 +77,10 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 ## Summary
 
 - **Total tasks:** 21
-- **Completed:** 6
-- **Remaining:** 15
-  - High priority: 3
-  - Medium priority: 8
+- **Completed:** 8
+- **Remaining:** 13
+  - High priority: 2
+  - Medium priority: 7
   - Low priority: 4
 
 ---
@@ -90,7 +90,6 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 | Task # | What to capture |
 |--------|-----------------|
 | 7 | Task config form centering issue |
-| 10 | Notifications rendering in wrong position |
 | 11 | Reply button placement in chat |
 | 16 | Draggable resize line and the gap it creates |
 | 17 | Create workspace button current placement |
