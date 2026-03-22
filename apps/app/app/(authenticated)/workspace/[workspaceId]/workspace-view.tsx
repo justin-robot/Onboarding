@@ -396,6 +396,8 @@ export function WorkspaceView({
     totalMembers: members.length,
     onMembersClick: handleMembersClick,
     onMoreClick: () => {
+      // Close right panel sheet first to prevent z-index overlap on mobile
+      setRightPanelOpen(false);
       setShowWorkspaceMenu(true);
     },
     actions: <NotificationsTrigger />,

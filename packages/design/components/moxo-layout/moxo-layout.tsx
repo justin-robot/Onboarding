@@ -464,7 +464,8 @@ export function MoxoLayout({
   // Expand right panel on desktop when rightPanelOpen becomes true
   React.useEffect(() => {
     if (isDesktop && rightPanelOpen && rightPanelCollapsed) {
-      rightPanelRef.current?.expand();
+      // Expand to default size, not minimum size
+      rightPanelRef.current?.expand(DEFAULT_SIZES.right);
     }
   }, [isDesktop, rightPanelOpen, rightPanelCollapsed]);
 
@@ -558,7 +559,7 @@ export function MoxoLayout({
               variant="ghost"
               size="icon"
               className="h-full w-8 rounded-none hover:bg-muted"
-              onClick={() => sidebarRef.current?.expand()}
+              onClick={() => sidebarRef.current?.expand(DEFAULT_SIZES.sidebar)}
               title="Expand sidebar"
             >
               <PanelLeftOpen className="h-4 w-4" />
@@ -648,7 +649,7 @@ export function MoxoLayout({
               variant="ghost"
               size="icon"
               className="h-full w-8 rounded-none hover:bg-muted"
-              onClick={() => rightPanelRef.current?.expand()}
+              onClick={() => rightPanelRef.current?.expand(DEFAULT_SIZES.right)}
               title="Expand panel"
             >
               <PanelRightOpen className="h-4 w-4" />
