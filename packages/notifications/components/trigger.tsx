@@ -39,7 +39,7 @@ export const NotificationsTrigger = () => {
   }
 
   return (
-    <>
+    <div className="relative">
       <button
         type="button"
         onClick={() => setIsVisible(!isVisible)}
@@ -58,7 +58,8 @@ export const NotificationsTrigger = () => {
         buttonRef={notifButtonRef as RefObject<HTMLElement>}
         isVisible={isVisible}
         onClose={handleClose}
+        placement="bottom-end"
       />
-    </>
+    </div>
   );
 };

@@ -7,3 +7,13 @@
 [class*="branding"] {
   display: none !important;
 }
+
+/* Fix notification popover positioning and z-index */
+.rnf-notification-feed-popover {
+  z-index: 9999 !important;
+}
+
+/* Ensure the popover container has proper stacking context */
+.rnf-notification-feed-container {
+  z-index: 9999 !important;
+}

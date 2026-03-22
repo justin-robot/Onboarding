@@ -580,13 +580,13 @@ export function MoxoLayout({
           onCollapse={() => setSidebarCollapsed(true)}
           onExpand={() => setSidebarCollapsed(false)}
         >
-          <div className="h-full overflow-x-hidden overflow-y-auto border-r border-border bg-muted/30">
+          <div className="h-full overflow-x-hidden overflow-y-auto bg-muted/30">
             {sidebar}
           </div>
         </Panel>
 
-        <PanelResizeHandle className="group relative w-0.5 bg-transparent hover:bg-primary/30 transition-colors cursor-col-resize data-[resize-handle-active]:bg-primary/50">
-          <div className="absolute inset-y-0 -left-1 -right-1 group-hover:bg-primary/10" />
+        <PanelResizeHandle className="group relative w-px bg-border hover:bg-primary/30 transition-colors cursor-col-resize data-[resize-handle-active]:bg-primary/50">
+          <div className="absolute inset-y-0 -left-1.5 -right-1.5 group-hover:bg-primary/10" />
         </PanelResizeHandle>
 
         {/* Main Content */}
@@ -611,8 +611,8 @@ export function MoxoLayout({
 
         {showRightPanel && (
           <>
-            <PanelResizeHandle className="group relative w-0.5 bg-transparent hover:bg-primary/30 transition-colors cursor-col-resize data-[resize-handle-active]:bg-primary/50">
-              <div className="absolute inset-y-0 -left-1 -right-1 group-hover:bg-primary/10" />
+            <PanelResizeHandle className="group relative w-px bg-border hover:bg-primary/30 transition-colors cursor-col-resize data-[resize-handle-active]:bg-primary/50">
+              <div className="absolute inset-y-0 -left-1.5 -right-1.5 group-hover:bg-primary/10" />
             </PanelResizeHandle>
 
             {/* Right Panel */}
@@ -635,7 +635,7 @@ export function MoxoLayout({
                 onRightPanelOpenChange?.(true);
               }}
             >
-              <div className="h-full overflow-x-hidden overflow-y-auto border-l border-border bg-muted/10">
+              <div className="h-full overflow-x-hidden overflow-y-auto bg-muted/10">
                 {rightPanel}
               </div>
             </Panel>

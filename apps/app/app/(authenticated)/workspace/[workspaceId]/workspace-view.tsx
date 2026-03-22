@@ -40,12 +40,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@repo/design/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@repo/design/components/ui/dialog";
+import { Input } from "@repo/design/components/ui/input";
 import { Switch } from "@repo/design/components/ui/switch";
 import { Label } from "@repo/design/components/ui/label";
 import {
   AlertCircle,
   Calendar,
   FolderPlus,
+  Loader2,
   Plus,
   Users,
 } from "lucide-react";
@@ -133,6 +143,12 @@ export function WorkspaceView({
     sectionId: string | null;
     sectionTitle: string;
   }>({ open: false, sectionId: null, sectionTitle: "" });
+  const [editSectionDialog, setEditSectionDialog] = useState<{
+    open: boolean;
+    sectionId: string | null;
+    sectionTitle: string;
+  }>({ open: false, sectionId: null, sectionTitle: "" });
+  const [editSectionLoading, setEditSectionLoading] = useState(false);
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [createWorkspaceDialogOpen, setCreateWorkspaceDialogOpen] = useState(false);
@@ -195,6 +211,43 @@ export function WorkspaceView({
     };
 
     fetchInitialMessages();
+  }, [currentWorkspaceId]);
+
+  // Fetch files on mount
+  useEffect(() => {
+    const fetchFiles = async () => {
+      try {
+        const response = await fetch(`/api/workspaces/${currentWorkspaceId}/files`);
+        if (response.ok) {
+          const data = await response.json();
+          const formattedFiles: FileItem[] = data.files.map((file: {
+            id: string;
+            name: string;
+            mimeType: string;
+            size?: number;
+            url?: string;
+            thumbnailUrl?: string;
+            uploadedBy?: string;
+            createdAt?: string;
+          }) => ({
+            id: file.id,
+            name: file.name,
+            type: file.mimeType === "application/x-folder" ? "folder" as const : "file" as const,
+            mimeType: file.mimeType,
+            size: file.size,
+            url: file.url,
+            thumbnailUrl: file.thumbnailUrl,
+            uploadedBy: file.uploadedBy,
+            uploadedAt: file.createdAt ? new Date(file.createdAt) : undefined,
+          }));
+          setWorkspaceFiles(formattedFiles);
+        }
+      } catch (error) {
+        console.error("Failed to fetch files:", error);
+      }
+    };
+
+    fetchFiles();
   }, [currentWorkspaceId]);
 
   // Scroll to newly created section
@@ -336,6 +389,44 @@ export function WorkspaceView({
     });
   };
 
+  // Handle section edit request (opens edit dialog)
+  const handleSectionEditRequest = (sectionId: string) => {
+    const section = workspace.sections?.find((s) => s.id === sectionId);
+    setEditSectionDialog({
+      open: true,
+      sectionId,
+      sectionTitle: section?.title || "",
+    });
+  };
+
+  // Handle section edit confirmation
+  const handleSectionEditConfirm = async () => {
+    const sectionId = editSectionDialog.sectionId;
+    const newTitle = editSectionDialog.sectionTitle.trim();
+    if (!sectionId || !newTitle) return;
+
+    setEditSectionLoading(true);
+    try {
+      const response = await fetch(`/api/sections/${sectionId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newTitle }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update section");
+      }
+
+      toast.success("Section updated successfully");
+      setEditSectionDialog({ open: false, sectionId: null, sectionTitle: "" });
+      router.refresh();
+    } catch (error) {
+      toast.error("Failed to update section");
+    } finally {
+      setEditSectionLoading(false);
+    }
+  };
+
   // Handle section delete confirmation
   const handleSectionDeleteConfirm = async () => {
     const sectionId = deleteSectionDialog.sectionId;
@@ -454,6 +545,7 @@ export function WorkspaceView({
           onTaskReorder={currentUserRole === "admin" ? handleTaskReorder : undefined}
           onSectionReorder={currentUserRole === "admin" ? handleSectionReorder : undefined}
           onSectionDelete={currentUserRole === "admin" ? handleSectionDeleteRequest : undefined}
+          onSectionEdit={currentUserRole === "admin" ? handleSectionEditRequest : undefined}
           enableDragAndDrop={currentUserRole === "admin"}
           showTimeline={true}
         />
@@ -478,6 +570,19 @@ export function WorkspaceView({
           }}
           onUpload={() => {
             setUploadDialogOpen(true);
+          }}
+          onFolderCreated={(folder) => {
+            // Add new folder to state without full page reload
+            setWorkspaceFiles((prev) => [{
+              id: folder.id,
+              name: folder.name,
+              type: "folder" as const,
+              mimeType: folder.mimeType,
+            }, ...prev]);
+          }}
+          onFileDeleted={(fileId) => {
+            // Remove file from state without full page reload
+            setWorkspaceFiles((prev) => prev.filter((f) => f.id !== fileId));
           }}
         />
       }
@@ -711,6 +816,67 @@ export function WorkspaceView({
         </div>
       </SheetContent>
     </Sheet>
+
+    {/* Edit Section Dialog */}
+    <Dialog
+      open={editSectionDialog.open}
+      onOpenChange={(open) =>
+        setEditSectionDialog((prev) => ({ ...prev, open }))
+      }
+    >
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle>Edit Section</DialogTitle>
+          <DialogDescription>
+            Change the name of this section
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <Label htmlFor="sectionTitle">Section Name</Label>
+          <Input
+            id="sectionTitle"
+            value={editSectionDialog.sectionTitle}
+            onChange={(e) =>
+              setEditSectionDialog((prev) => ({
+                ...prev,
+                sectionTitle: e.target.value,
+              }))
+            }
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && editSectionDialog.sectionTitle.trim()) {
+                e.preventDefault();
+                handleSectionEditConfirm();
+              }
+            }}
+            disabled={editSectionLoading}
+            className="mt-2"
+            autoFocus
+          />
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setEditSectionDialog({ open: false, sectionId: null, sectionTitle: "" })}
+            disabled={editSectionLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSectionEditConfirm}
+            disabled={editSectionLoading || !editSectionDialog.sectionTitle.trim()}
+          >
+            {editSectionLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save"
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     {/* Delete Section Confirmation Dialog */}
     <AlertDialog

@@ -11,7 +11,7 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 | 1 | **Right panel not expanding when collapsed** - Clicking members/tasks/meetings buttons doesn't expand collapsed right panel on desktop | H | [x] | No | Fixed: Added useEffect to expand panel + sync collapse state to parent via onRightPanelOpenChange callbacks |
 | 2 | **Inconsistent spacing on workspace page** - Workspace menu should extend further; spacing issues | M | [x] | No | Fixed: wider sheet (320-360px), extended menu items edge-to-edge, full-width dividers, taller buttons |
 | 3 | **Add Section should auto-scroll** - When clicking "Add Section", scroll to the newly added section at bottom | M | [x] | No | Fixed: Added data-section-id attribute and useEffect to scroll to new section after creation |
-| 4 | **No way to delete a section** - Missing section delete functionality | H | [ ] | No | Feature gap - needs implementation |
+| 4 | **No way to delete a section** - Missing section delete functionality | H | [x] | No | Fixed: Delete Section in dropdown menu with AlertDialog confirmation, calls DELETE /api/sections/[id] |
 | 5 | **Task click doesn't show side panel** - Side panel doesn't show up when clicking a task | H | [x] | No | Fixed: Same fix as #1 - right panel now expands when collapsed |
 | 6 | **Cannot edit task title in config** - Task configuration dialog doesn't allow changing the task title | H | [x] | No | Fixed: Replaced read-only title display with editable input, title saved via PUT /api/tasks/[id] |
 | 7 | **Task config form not centered** - Form/dialog is not centered properly | L | [ ] | Yes | Need to see which form specifically |
@@ -22,7 +22,7 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 
 | # | Task | Priority | Status | Screenshot Needed? | Notes |
 |---|------|----------|--------|-------------------|-------|
-| 8 | **Clarify days calculation** - Unclear if due date offsets are calendar days or business days; recommend making it business days or at least labeling | M | [ ] | No | UX clarification needed |
+| 8 | **Clarify days calculation** - Unclear if due date offsets are calendar days or business days; recommend making it business days or at least labeling | M | [x] | No | Fixed: Added "(calendar days)" label and "Includes weekends" hint in due-date-selector.tsx |
 
 ---
 
@@ -51,7 +51,7 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 |---|------|----------|--------|-------------------|-------|
 | 14 | **Calendar connection unclear** - Not clear which calendar the meetings are connected to | M | [ ] | No | Add indicator showing connected account |
 | 15 | **Add bottom border to meetings section** - Need a line at bottom for visual separation | L | [ ] | No | Styling fix |
-| 16 | **Draggable resize line causing gap** - The resize handle creates a visible gap; should be flush | M | [ ] | Yes | Need to see current implementation vs expected |
+| 16 | **Draggable resize line causing gap** - The resize handle creates a visible gap; should be flush | M | [x] | No | Fixed: Changed resize handle from w-0.5 transparent to w-px with border color, removed redundant border classes |
 
 ---
 
@@ -77,10 +77,10 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 ## Summary
 
 - **Total tasks:** 21
-- **Completed:** 8
-- **Remaining:** 13
-  - High priority: 2
-  - Medium priority: 7
+- **Completed:** 11
+- **Remaining:** 10
+  - High priority: 1
+  - Medium priority: 5
   - Low priority: 4
 
 ---
@@ -91,7 +91,6 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 |--------|-----------------|
 | 7 | Task config form centering issue |
 | 11 | Reply button placement in chat |
-| 16 | Draggable resize line and the gap it creates |
 | 17 | Create workspace button current placement |
 | 19 | Admin area that needs loading state |
 

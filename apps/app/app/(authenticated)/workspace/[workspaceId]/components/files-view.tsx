@@ -73,6 +73,8 @@ interface FilesViewProps {
   workspaceId: string;
   onFileClick?: (file: FileItem) => void;
   onUpload?: () => void;
+  onFolderCreated?: (folder: FileItem) => void;
+  onFileDeleted?: (fileId: string) => void;
 }
 
 export function FilesView({
@@ -80,6 +82,8 @@ export function FilesView({
   workspaceId,
   onFileClick,
   onUpload,
+  onFolderCreated,
+  onFileDeleted,
 }: FilesViewProps) {
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -114,11 +118,17 @@ export function FilesView({
         throw new Error("Failed to create folder");
       }
 
+      const folder = await response.json();
       toast.success("Folder created");
       setFolderDialogOpen(false);
       setFolderName("");
-      // Trigger refresh - parent component should handle this
-      window.location.reload();
+      // Notify parent to refresh without full page reload
+      onFolderCreated?.({
+        id: folder.id,
+        name: folder.name,
+        type: "folder",
+        mimeType: folder.mimeType,
+      });
     } catch (error) {
       toast.error("Failed to create folder");
     } finally {
@@ -141,11 +151,12 @@ export function FilesView({
         throw new Error("Failed to delete file");
       }
 
+      const deletedId = fileToDelete.id;
       toast.success("File deleted");
       setDeleteDialogOpen(false);
       setFileToDelete(null);
-      // Trigger refresh
-      window.location.reload();
+      // Notify parent to refresh without full page reload
+      onFileDeleted?.(deletedId);
     } catch (error) {
       toast.error("Failed to delete file");
     } finally {

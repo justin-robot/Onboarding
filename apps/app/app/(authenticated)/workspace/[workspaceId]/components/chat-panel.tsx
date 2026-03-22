@@ -643,35 +643,9 @@ function MessageBubble({
         )}
       </div>
 
-      {/* Hover actions */}
+      {/* Hover actions - positioned at top-right of message */}
       {isHovered && (
-        <div className="absolute -left-10 top-0 flex items-center gap-0.5">
-          {/* More menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-                <MoreHorizontal className="h-4 w-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {isOwn && onEdit && (
-                <DropdownMenuItem onClick={() => onEdit(message.id, message.content)}>
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Edit
-                </DropdownMenuItem>
-              )}
-              {isOwn && onDelete && (
-                <DropdownMenuItem
-                  onClick={() => onDelete(message.id)}
-                  className="text-destructive"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
+        <div className="absolute right-0 -top-2 flex items-center gap-0.5 bg-background border border-border rounded-md shadow-sm px-1 py-0.5">
           {/* Reply button */}
           <button
             className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
@@ -680,6 +654,34 @@ function MessageBubble({
           >
             <Reply className="h-4 w-4" />
           </button>
+
+          {/* More menu - only show if user has actions available */}
+          {isOwn && (onEdit || onDelete) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {onEdit && (
+                  <DropdownMenuItem onClick={() => onEdit(message.id, message.content)}>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit
+                  </DropdownMenuItem>
+                )}
+                {onDelete && (
+                  <DropdownMenuItem
+                    onClick={() => onDelete(message.id)}
+                    className="text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       )}
     </div>

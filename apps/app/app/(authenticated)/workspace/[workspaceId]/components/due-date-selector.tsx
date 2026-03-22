@@ -219,9 +219,9 @@ export function DueDateSelector({
       if (days === 0) {
         return `Same day as "${anchorTaskTitle}"`;
       } else if (days > 0) {
-        return `${days} day${days !== 1 ? "s" : ""} after "${anchorTaskTitle}"`;
+        return `${days}d after "${anchorTaskTitle}"`;
       } else {
-        return `${Math.abs(days)} day${Math.abs(days) !== 1 ? "s" : ""} before "${anchorTaskTitle}"`;
+        return `${Math.abs(days)}d before "${anchorTaskTitle}"`;
       }
     }
 
@@ -304,7 +304,7 @@ export function DueDateSelector({
 
             <TabsContent value="relative" className="p-3 pt-2 space-y-4">
               <div className="space-y-2">
-                <Label className="text-xs">Days offset</Label>
+                <Label className="text-xs">Days offset (calendar days)</Label>
                 <div className="flex items-center gap-2">
                   <Input
                     type="number"
@@ -314,11 +314,11 @@ export function DueDateSelector({
                     disabled={saving}
                   />
                   <span className="text-sm text-muted-foreground">
-                    {offsetDays >= 0 ? "days after" : "days before"}
+                    {offsetDays >= 0 ? "calendar days after" : "calendar days before"}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Use negative numbers for days before
+                  Use negative numbers for days before. Includes weekends.
                 </p>
               </div>
 
@@ -361,8 +361,8 @@ export function DueDateSelector({
                       {offsetDays === 0
                         ? "the same day"
                         : offsetDays > 0
-                        ? `${offsetDays} day${offsetDays !== 1 ? "s" : ""} after`
-                        : `${Math.abs(offsetDays)} day${Math.abs(offsetDays) !== 1 ? "s" : ""} before`}
+                        ? `${offsetDays} calendar day${offsetDays !== 1 ? "s" : ""} after`
+                        : `${Math.abs(offsetDays)} calendar day${Math.abs(offsetDays) !== 1 ? "s" : ""} before`}
                     </span>{" "}
                     the anchor task is completed.
                   </p>

@@ -170,6 +170,9 @@ export function TaskDetailsPanel({
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(task.title);
+  const [isSavingTitle, setIsSavingTitle] = useState(false);
   const [prerequisitesDialogOpen, setPrerequisitesDialogOpen] = useState(false);
   const [fileInfo, setFileInfo] = useState<{ name: string; url?: string } | null>(null);
   const [assignees, setAssignees] = useState<Assignee[]>([]);
@@ -230,6 +233,45 @@ export function TaskDetailsPanel({
       })
       .catch(console.error)
       .finally(() => setLoading(false));
+  };
+
+  // Handle saving edited title
+  const handleSaveTitle = async () => {
+    if (!editedTitle.trim()) {
+      toast.error("Task title cannot be empty");
+      return;
+    }
+
+    if (editedTitle.trim() === task.title) {
+      setIsEditingTitle(false);
+      return;
+    }
+
+    setIsSavingTitle(true);
+    try {
+      const response = await fetch(`/api/tasks/${task.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: editedTitle.trim() }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update task title");
+      }
+
+      toast.success("Task title updated");
+      setIsEditingTitle(false);
+      onTaskComplete(); // Refresh to get updated title
+    } catch (err) {
+      toast.error("Failed to update task title");
+    } finally {
+      setIsSavingTitle(false);
+    }
+  };
+
+  const handleCancelTitleEdit = () => {
+    setEditedTitle(task.title);
+    setIsEditingTitle(false);
   };
 
   const handleDelete = async () => {
@@ -294,10 +336,12 @@ export function TaskDetailsPanel({
     fetchTaskDetails();
   }, [task.id, task.type]);
 
-  // Reset viewing submission state when task changes
+  // Reset viewing submission state and editing state when task changes
   useEffect(() => {
     setViewingSubmissionUserId(null);
-  }, [task.id]);
+    setIsEditingTitle(false);
+    setEditedTitle(task.title);
+  }, [task.id, task.title]);
 
   // Fetch blocking tasks when task is locked
   useEffect(() => {
@@ -550,6 +594,13 @@ export function TaskDetailsPanel({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => {
+                    setEditedTitle(task.title);
+                    setIsEditingTitle(true);
+                  }}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Rename
+                  </DropdownMenuItem>
                   {isConfigurable() && (
                     <DropdownMenuItem onClick={() => setConfigDialogOpen(true)}>
                       <Settings className="h-4 w-4 mr-2" />
@@ -586,8 +637,45 @@ export function TaskDetailsPanel({
             <div className={cn("p-2 rounded-md bg-muted/50", iconColor)}>
               <Icon className="h-5 w-5" />
             </div>
-            <div>
-              <h3 className="font-semibold text-foreground">{task.title}</h3>
+            <div className="flex-1 min-w-0">
+              {isEditingTitle ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={editedTitle}
+                    onChange={(e) => setEditedTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSaveTitle();
+                      } else if (e.key === "Escape") {
+                        handleCancelTitleEdit();
+                      }
+                    }}
+                    disabled={isSavingTitle}
+                    className="h-8 text-sm font-semibold"
+                    autoFocus
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleSaveTitle}
+                    disabled={isSavingTitle || !editedTitle.trim()}
+                    className="h-8"
+                  >
+                    {isSavingTitle ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleCancelTitleEdit}
+                    disabled={isSavingTitle}
+                    className="h-8"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <h3 className="font-semibold text-foreground">{task.title}</h3>
+              )}
               <p className="text-xs text-muted-foreground capitalize">{task.type.replace("_", " ")}</p>
             </div>
           </div>
