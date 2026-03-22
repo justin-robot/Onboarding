@@ -30,6 +30,16 @@ import {
 import { Button } from "@repo/design/components/ui/button";
 import { Badge } from "@repo/design/components/ui/badge";
 import { Alert, AlertDescription } from "@repo/design/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@repo/design/components/ui/alert-dialog";
 import { Switch } from "@repo/design/components/ui/switch";
 import { Label } from "@repo/design/components/ui/label";
 import {
@@ -118,6 +128,11 @@ export function WorkspaceView({
   const [showMeetingsPanel, setShowMeetingsPanel] = useState(false);
   const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
   const [addSectionDialogOpen, setAddSectionDialogOpen] = useState(false);
+  const [deleteSectionDialog, setDeleteSectionDialog] = useState<{
+    open: boolean;
+    sectionId: string | null;
+    sectionTitle: string;
+  }>({ open: false, sectionId: null, sectionTitle: "" });
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [createWorkspaceDialogOpen, setCreateWorkspaceDialogOpen] = useState(false);
@@ -125,6 +140,8 @@ export function WorkspaceView({
   const [workspaceFiles, setWorkspaceFiles] = useState<FileItem[]>(files);
   // Track recently completed task for green border highlight
   const [recentlyCompletedTaskId, setRecentlyCompletedTaskId] = useState<string | null>(null);
+  // Track section to scroll to after creation
+  const [scrollToSectionId, setScrollToSectionId] = useState<string | null>(null);
   // Track workspace published state
   const [isPublished, setIsPublished] = useState(workspace.isPublished);
   const [publishToggleLoading, setPublishToggleLoading] = useState(false);
@@ -179,6 +196,21 @@ export function WorkspaceView({
 
     fetchInitialMessages();
   }, [currentWorkspaceId]);
+
+  // Scroll to newly created section
+  useEffect(() => {
+    if (scrollToSectionId) {
+      // Small delay to ensure DOM is updated after router.refresh()
+      const timeoutId = setTimeout(() => {
+        const sectionElement = document.querySelector(`[data-section-id="${scrollToSectionId}"]`);
+        if (sectionElement) {
+          sectionElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        setScrollToSectionId(null);
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [scrollToSectionId, workspace.sections]);
 
   // Transform workspace sections for FlowView
   const flowSections: FlowSection[] = (workspace.sections || []).map((section) => ({
@@ -294,6 +326,38 @@ export function WorkspaceView({
     }
   };
 
+  // Handle section delete request (opens confirmation dialog)
+  const handleSectionDeleteRequest = (sectionId: string) => {
+    const section = workspace.sections?.find((s) => s.id === sectionId);
+    setDeleteSectionDialog({
+      open: true,
+      sectionId,
+      sectionTitle: section?.title || "this section",
+    });
+  };
+
+  // Handle section delete confirmation
+  const handleSectionDeleteConfirm = async () => {
+    const sectionId = deleteSectionDialog.sectionId;
+    if (!sectionId) return;
+
+    try {
+      const response = await fetch(`/api/sections/${sectionId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete section");
+      }
+
+      toast.success("Section deleted successfully");
+      setDeleteSectionDialog({ open: false, sectionId: null, sectionTitle: "" });
+      router.refresh();
+    } catch (error) {
+      toast.error("Failed to delete section");
+    }
+  };
+
   // Handle publish/unpublish toggle
   const handlePublishToggle = async (publish: boolean) => {
     setPublishToggleLoading(true);
@@ -387,6 +451,7 @@ export function WorkspaceView({
           onAddTask={currentUserRole === "admin" ? handleAddTask : undefined}
           onTaskReorder={currentUserRole === "admin" ? handleTaskReorder : undefined}
           onSectionReorder={currentUserRole === "admin" ? handleSectionReorder : undefined}
+          onSectionDelete={currentUserRole === "admin" ? handleSectionDeleteRequest : undefined}
           enableDragAndDrop={currentUserRole === "admin"}
           showTimeline={true}
         />
@@ -504,8 +569,18 @@ export function WorkspaceView({
       open={addSectionDialogOpen}
       onOpenChange={setAddSectionDialogOpen}
       workspaceId={currentWorkspaceId}
-      currentSectionCount={(workspace.sections || []).length}
-      onSectionCreated={() => router.refresh()}
+      sections={(workspace.sections || []).map((s, index) => ({
+        id: s.id,
+        title: s.title,
+        position: index,
+        taskCount: s.tasks?.length || 0,
+      }))}
+      onSectionCreated={(sectionId) => {
+        if (sectionId) {
+          setScrollToSectionId(sectionId);
+        }
+        router.refresh();
+      }}
     />
 
     {/* Create Workspace Dialog */}
@@ -557,15 +632,15 @@ export function WorkspaceView({
 
     {/* Workspace Menu Sheet */}
     <Sheet open={showWorkspaceMenu} onOpenChange={setShowWorkspaceMenu}>
-      <SheetContent side="right" className="w-[300px]">
+      <SheetContent side="right" className="w-[320px] sm:w-[360px]">
         <SheetHeader>
           <SheetTitle>Workspace Menu</SheetTitle>
         </SheetHeader>
-        <div className="mt-6 space-y-2">
+        <div className="mt-4 space-y-1">
           {currentUserRole === "admin" && (
             <>
-              <div className="flex items-center justify-between py-2 px-2">
-                <Label htmlFor="publish-toggle" className="text-sm font-normal cursor-pointer">
+              <div className="flex items-center justify-between py-3 px-3 -mx-3 rounded-md hover:bg-muted/50">
+                <Label htmlFor="publish-toggle" className="text-sm font-medium cursor-pointer">
                   {isPublished ? "Published" : "Draft Mode"}
                 </Label>
                 <Switch
@@ -575,62 +650,92 @@ export function WorkspaceView({
                   disabled={publishToggleLoading}
                 />
               </div>
-              <p className="text-xs text-muted-foreground px-2 pb-2">
+              <p className="text-xs text-muted-foreground px-3 -mx-3 pb-3">
                 {isPublished
                   ? "Users will receive notifications"
                   : "Notifications paused while setting up"}
               </p>
-              <div className="my-2 border-t" />
-              <Button
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => {
-                  setShowWorkspaceMenu(false);
-                  setAddSectionDialogOpen(true);
-                }}
-              >
-                <FolderPlus className="mr-2 h-4 w-4" />
-                Add Section
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full justify-start"
-                onClick={() => {
-                  setShowWorkspaceMenu(false);
-                  handleAddTaskFromMenu();
-                }}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add New Action
-              </Button>
-              <div className="my-4 border-t" />
+              <div className="-mx-6 border-t" />
+              <div className="pt-2">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start h-11 px-3 -mx-3"
+                  onClick={() => {
+                    setShowWorkspaceMenu(false);
+                    setAddSectionDialogOpen(true);
+                  }}
+                >
+                  <FolderPlus className="mr-3 h-4 w-4" />
+                  Add Section
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start h-11 px-3 -mx-3"
+                  onClick={() => {
+                    setShowWorkspaceMenu(false);
+                    handleAddTaskFromMenu();
+                  }}
+                >
+                  <Plus className="mr-3 h-4 w-4" />
+                  Add New Action
+                </Button>
+              </div>
+              <div className="-mx-6 border-t" />
+              <div className="pt-2" />
             </>
           )}
           <Button
             variant="ghost"
-            className="w-full justify-start"
+            className="w-full justify-start h-11 px-3 -mx-3"
             onClick={() => {
               setShowWorkspaceMenu(false);
               handleMembersClick();
             }}
           >
-            <Users className="mr-2 h-4 w-4" />
+            <Users className="mr-3 h-4 w-4" />
             Members
           </Button>
           <Button
             variant="ghost"
-            className="w-full justify-start"
+            className="w-full justify-start h-11 px-3 -mx-3"
             onClick={() => {
               setShowWorkspaceMenu(false);
               handleMeetingsClick();
             }}
           >
-            <Calendar className="mr-2 h-4 w-4" />
+            <Calendar className="mr-3 h-4 w-4" />
             Meetings
           </Button>
         </div>
       </SheetContent>
     </Sheet>
+
+    {/* Delete Section Confirmation Dialog */}
+    <AlertDialog
+      open={deleteSectionDialog.open}
+      onOpenChange={(open) =>
+        setDeleteSectionDialog((prev) => ({ ...prev, open }))
+      }
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Section</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete &quot;{deleteSectionDialog.sectionTitle}&quot;?
+            This will also delete all tasks within this section. This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleSectionDeleteConfirm}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </>
   );
 }

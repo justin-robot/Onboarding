@@ -34,7 +34,7 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 | # | Task | Priority | Status | Notes |
 |---|------|----------|--------|-------|
 | 12 | **Fix meetings container scroll** - Unable to scroll within meetings container | H | [x] | Added min-h-0 to flex containers |
-| 13 | **Add spacing to meeting elements** - More spacing on top and bottom | L | [ ] | |
+| 13 | **Add spacing to meeting elements** - More spacing on top and bottom | L | [x] | Increased section margins from mb-4 to mb-6 |
 
 ---
 
@@ -53,7 +53,7 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 | # | Task | Priority | Status | Notes |
 |---|------|----------|--------|-------|
 | 17 | **Test invite flow thoroughly** - Verify invitation links work correctly | H | [ ] | |
-| 18 | **Add confirmation dialog for cancel invitation** - "Are you sure?" prompt | M | [ ] | |
+| 18 | **Add confirmation dialog for cancel invitation** - "Are you sure?" prompt | M | [x] | Added AlertDialog to both admin list and members panel |
 
 ---
 
@@ -74,7 +74,7 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 
 | # | Task | Priority | Status | Notes |
 |---|------|----------|--------|-------|
-| 25 | **Remove horizontal scroll** - Unexpected sideways scroll appearing | M | [ ] | |
+| 25 | **Remove horizontal scroll** - Unexpected sideways scroll appearing | M | [x] | Added overflow-x-hidden to body in global CSS |
 | 26 | **Published/Unpublished workspace state** - Don't notify users while workspace is being set up | H | [ ] | Prevents premature notifications during setup |
 | 27 | **Pre-claim user assignment** - Ability to assign tasks before user account is claimed | M | [ ] | Needs design consideration |
 
@@ -100,10 +100,10 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 ## Summary
 
 - **Total tasks:** 30
-- **Completed:** 14
-- **Remaining:** 16
+- **Completed:** 16
+- **Remaining:** 14
   - High priority: 5
-  - Medium priority: 6
+  - Medium priority: 4
   - Low priority: 5
 
 ### Items Needing Visual Reference

@@ -7,7 +7,14 @@ import { SectionHeader, SectionStatus } from "./section-header";
 import { TaskCard, TaskType, TimelineStatus } from "./task-card";
 import { useIsDesktop } from "./use-media-query";
 import { Button } from "../ui/button";
-import { Plus, GripVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { Plus, GripVertical, MoreHorizontal, Trash2, Pencil } from "lucide-react";
 import {
   DndContext,
   closestCenter,
@@ -69,6 +76,10 @@ interface FlowViewProps {
   onTaskReorder?: (sectionId: string, taskIds: string[]) => void;
   /** Callback when sections are reordered */
   onSectionReorder?: (sectionIds: string[]) => void;
+  /** Callback when section delete is requested */
+  onSectionDelete?: (sectionId: string) => void;
+  /** Callback when section edit is requested */
+  onSectionEdit?: (sectionId: string) => void;
   /** Whether drag and drop is enabled */
   enableDragAndDrop?: boolean;
   /** Whether to show inline timeline indicators */
@@ -167,6 +178,52 @@ function SortableTaskCard({
   );
 }
 
+// Section Menu Component
+function SectionMenu({
+  sectionId,
+  onEdit,
+  onDelete,
+}: {
+  sectionId: string;
+  onEdit?: (sectionId: string) => void;
+  onDelete?: (sectionId: string) => void;
+}) {
+  if (!onEdit && !onDelete) return null;
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {onEdit && (
+          <DropdownMenuItem onClick={() => onEdit(sectionId)}>
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit Section
+          </DropdownMenuItem>
+        )}
+        {onEdit && onDelete && <DropdownMenuSeparator />}
+        {onDelete && (
+          <DropdownMenuItem
+            onClick={() => onDelete(sectionId)}
+            className="text-destructive focus:text-destructive"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete Section
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 // Sortable Section Wrapper
 function SortableSection({
   section,
@@ -175,6 +232,8 @@ function SortableSection({
   isCollapsed,
   onToggleCollapse,
   onAddTask,
+  onSectionDelete,
+  onSectionEdit,
   isDragDisabled,
 }: {
   section: FlowSection;
@@ -183,6 +242,8 @@ function SortableSection({
   isCollapsed: boolean;
   onToggleCollapse: () => void;
   onAddTask?: (sectionId: string) => void;
+  onSectionDelete?: (sectionId: string) => void;
+  onSectionEdit?: (sectionId: string) => void;
   isDragDisabled?: boolean;
 }) {
   const {
@@ -201,7 +262,7 @@ function SortableSection({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="relative group/section">
+    <div ref={setNodeRef} style={style} className="relative group/section" data-section-id={section.id}>
       {!isDragDisabled && (
         <div
           {...attributes}
@@ -219,6 +280,13 @@ function SortableSection({
         totalCount={progress.totalCount}
         isCollapsed={isCollapsed}
         onToggleCollapse={onToggleCollapse}
+        menuSlot={
+          <SectionMenu
+            sectionId={section.id}
+            onEdit={onSectionEdit}
+            onDelete={onSectionDelete}
+          />
+        }
       >
         {children}
       </SectionHeader>
@@ -241,6 +309,8 @@ export function FlowView({
   onAddTask,
   onTaskReorder,
   onSectionReorder,
+  onSectionDelete,
+  onSectionEdit,
   enableDragAndDrop = false,
   showTimeline = true,
   className,
@@ -408,6 +478,8 @@ export function FlowView({
                 isCollapsed={isCollapsed}
                 onToggleCollapse={() => toggleSection(section.id)}
                 onAddTask={onAddTask}
+                onSectionDelete={onSectionDelete}
+                onSectionEdit={onSectionEdit}
                 isDragDisabled={!onSectionReorder}
               >
                 <div className="space-y-1">
@@ -454,8 +526,8 @@ export function FlowView({
           const tasks = section.tasks || [];
 
           return (
+            <div key={section.id} data-section-id={section.id}>
             <SectionHeader
-              key={section.id}
               title={section.title}
               description={section.description}
               status={section.status}
@@ -463,6 +535,13 @@ export function FlowView({
               totalCount={progress.totalCount}
               isCollapsed={isCollapsed}
               onToggleCollapse={() => toggleSection(section.id)}
+              menuSlot={
+                <SectionMenu
+                  sectionId={section.id}
+                  onEdit={onSectionEdit}
+                  onDelete={onSectionDelete}
+                />
+              }
             >
               <div className="space-y-1">
                 {tasks.map((task, index) => (
@@ -502,6 +581,7 @@ export function FlowView({
                 )}
               </div>
             </SectionHeader>
+            </div>
           );
         })
       )}

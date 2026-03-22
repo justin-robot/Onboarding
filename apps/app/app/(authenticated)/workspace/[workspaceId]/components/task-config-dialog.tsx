@@ -63,6 +63,9 @@ export function TaskConfigDialog({
   existingConfig,
   onConfigSaved,
 }: TaskConfigDialogProps) {
+  // Task title state
+  const [title, setTitle] = useState(taskTitle);
+
   // Form state for TIME_BOOKING
   const [bookingLink, setBookingLink] = useState(existingConfig?.bookingLink || "");
 
@@ -82,7 +85,30 @@ export function TaskConfigDialog({
     setSaving(true);
 
     try {
+      // Validate title
+      if (!title.trim()) {
+        toast.error("Please enter a task title");
+        setSaving(false);
+        return;
+      }
+
+      // Update title if changed
+      if (title.trim() !== taskTitle) {
+        const titleResponse = await fetch(`/api/tasks/${taskId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: title.trim() }),
+        });
+
+        if (!titleResponse.ok) {
+          const error = await titleResponse.json();
+          throw new Error(error.error || "Failed to update task title");
+        }
+      }
+
+      // Handle type-specific config
       let configBody: Record<string, unknown> = {};
+      let hasConfig = false;
 
       switch (taskType) {
         case "booking":
@@ -100,6 +126,7 @@ export function TaskConfigDialog({
             return;
           }
           configBody = { bookingLink: bookingLink.trim() };
+          hasConfig = true;
           break;
 
         case "esign":
@@ -114,27 +141,27 @@ export function TaskConfigDialog({
             return;
           }
           configBody = { fileId, signerEmail: signerEmail.trim() };
+          hasConfig = true;
           break;
 
         case "acknowledgement":
           configBody = { instructions: instructions.trim() || null };
+          hasConfig = true;
           break;
-
-        default:
-          toast.error("This task type does not require configuration");
-          setSaving(false);
-          return;
       }
 
-      const response = await fetch(`/api/tasks/${taskId}/config`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(configBody),
-      });
+      // Save type-specific config if applicable
+      if (hasConfig) {
+        const response = await fetch(`/api/tasks/${taskId}/config`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(configBody),
+        });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to save configuration");
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Failed to save configuration");
+        }
       }
 
       toast.success("Configuration saved");
@@ -219,6 +246,7 @@ export function TaskConfigDialog({
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       // Reset form state
+      setTitle(taskTitle);
       setBookingLink(existingConfig?.bookingLink || "");
       setSignerEmail(existingConfig?.signerEmail || "");
       setFileId(existingConfig?.fileId || "");
@@ -282,10 +310,16 @@ export function TaskConfigDialog({
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {/* Task title reference */}
-            <div className="rounded-md bg-muted px-3 py-2">
-              <p className="text-xs text-muted-foreground">Task</p>
-              <p className="font-medium text-sm">{taskTitle}</p>
+            {/* Editable task title */}
+            <div className="space-y-2">
+              <Label htmlFor="taskTitle">Task Title</Label>
+              <Input
+                id="taskTitle"
+                placeholder="Enter task title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                disabled={saving}
+              />
             </div>
 
             {/* TIME_BOOKING config */}

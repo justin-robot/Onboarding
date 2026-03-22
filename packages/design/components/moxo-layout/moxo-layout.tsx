@@ -461,6 +461,13 @@ export function MoxoLayout({
     setCurrentTab(activeTab);
   }, [activeTab]);
 
+  // Expand right panel on desktop when rightPanelOpen becomes true
+  React.useEffect(() => {
+    if (isDesktop && rightPanelOpen && rightPanelCollapsed) {
+      rightPanelRef.current?.expand();
+    }
+  }, [isDesktop, rightPanelOpen, rightPanelCollapsed]);
+
   const handleTabChange = (tab: MainTab) => {
     setCurrentTab(tab);
     onTabChange?.(tab);
@@ -616,8 +623,16 @@ export function MoxoLayout({
               maxSize={50}
               collapsible
               collapsedSize={0}
-              onCollapse={() => setRightPanelCollapsed(true)}
-              onExpand={() => setRightPanelCollapsed(false)}
+              onCollapse={() => {
+                setRightPanelCollapsed(true);
+                // Sync collapse state back to parent so buttons can re-open the panel
+                onRightPanelOpenChange?.(false);
+              }}
+              onExpand={() => {
+                setRightPanelCollapsed(false);
+                // Sync expand state back to parent
+                onRightPanelOpenChange?.(true);
+              }}
             >
               <div className="h-full overflow-x-hidden overflow-y-auto border-l border-border bg-muted/10">
                 {rightPanel}

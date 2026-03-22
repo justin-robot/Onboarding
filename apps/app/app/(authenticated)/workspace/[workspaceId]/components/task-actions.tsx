@@ -577,7 +577,9 @@ function FileUploadTaskAction({
       const s3Response = await fetch(uploadUrl, {
         method: "PUT",
         body: file,
-        mode: "cors",
+        headers: {
+          "Content-Type": file.type || "application/octet-stream",
+        },
       });
 
       if (!s3Response.ok) {

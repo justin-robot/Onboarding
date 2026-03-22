@@ -21,6 +21,17 @@ import {
 import { Badge } from "@repo/design/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/design/components/ui/avatar";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@repo/design/components/ui/alert-dialog";
+import {
   Users,
   Mail,
   X,
@@ -317,19 +328,40 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole }: MembersP
                             )}
                           </Button>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleCancelInvitation(invitation.id)}
-                          disabled={cancellingId === invitation.id}
-                        >
-                          {cancellingId === invitation.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              disabled={cancellingId === invitation.id}
+                            >
+                              {cancellingId === invitation.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Cancel invitation?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to cancel the invitation to{" "}
+                                <span className="font-medium">{invitation.email}</span>? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Keep invitation</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleCancelInvitation(invitation.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Cancel invitation
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
                   ))}

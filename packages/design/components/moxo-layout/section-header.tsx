@@ -29,10 +29,12 @@ interface SectionHeaderProps {
   className?: string;
   /** Children (tasks) */
   children?: React.ReactNode;
-  /** Callback when menu button clicked */
+  /** Callback when menu button clicked (deprecated, use menuSlot) */
   onMenuClick?: () => void;
-  /** Menu items for dropdown */
+  /** Menu items for dropdown (deprecated, use menuSlot) */
   menuItems?: Array<{ label: string; onClick: () => void }>;
+  /** Custom menu slot for rendering a dropdown menu */
+  menuSlot?: React.ReactNode;
 }
 
 // Status badge configuration
@@ -73,6 +75,7 @@ export function SectionHeader({
   className,
   children,
   onMenuClick,
+  menuSlot,
 }: SectionHeaderProps) {
   const config = statusConfig[status];
   const hasProgress = totalCount > 0;
@@ -117,8 +120,9 @@ export function SectionHeader({
           )}
         </div>
 
-        {/* Menu button */}
-        {onMenuClick && (
+        {/* Menu slot (new) or legacy menu button */}
+        {menuSlot}
+        {!menuSlot && onMenuClick && (
           <Button
             variant="ghost"
             size="icon"

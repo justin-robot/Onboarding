@@ -56,7 +56,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
 /**
  * POST /api/workspaces/[id]/messages - Send a message
- * Body: { content: string, type?: string }
+ * Body: { content: string, type?: string, fileId?: string, replyToMessageId?: string }
  */
 export async function POST(request: NextRequest, { params }: Params) {
   return withErrorHandler(async () => {
@@ -70,16 +70,28 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     const body = await request.json();
-    const { content, type = "text", replyToMessageId } = body;
+    const { content, type, fileId, replyToMessageId } = body;
 
-    // Validate content
-    if (!content || typeof content !== "string" || !content.trim()) {
-      return errorResponse("Message content is required", 400);
+    // Validate: either content or fileId must be present
+    const hasContent = content && typeof content === "string" && content.trim();
+    const hasFile = fileId && typeof fileId === "string";
+
+    if (!hasContent && !hasFile) {
+      return errorResponse("Message content or file attachment is required", 400);
+    }
+
+    // Determine message type
+    let messageType = type || "text";
+    if (hasFile && !hasContent) {
+      messageType = "file";
+    } else if (hasFile && hasContent) {
+      // If both file and content, treat as annotation
+      messageType = "annotation";
     }
 
     // Validate type
-    const validTypes = ["text", "annotation"];
-    if (!validTypes.includes(type)) {
+    const validTypes = ["text", "annotation", "file"];
+    if (!validTypes.includes(messageType)) {
       return errorResponse(`Type must be one of: ${validTypes.join(", ")}`, 400);
     }
 
@@ -87,10 +99,26 @@ export async function POST(request: NextRequest, { params }: Params) {
     const message = await chatService.sendMessage({
       workspaceId,
       userId: user.id,
-      content: content.trim(),
-      type,
+      content: hasContent ? content.trim() : "",
+      type: messageType,
+      attachmentIds: hasFile ? [fileId] : undefined,
       replyToMessageId: replyToMessageId || undefined,
     });
+
+    // Fetch file info if attached
+    let attachment = null;
+    if (hasFile) {
+      const { fileService } = await import("@/lib/services");
+      const file = await fileService.getByIdWithUrl(fileId);
+      if (file) {
+        attachment = {
+          name: file.name,
+          type: file.mimeType,
+          url: file.downloadUrl,
+          uploadedBy: user.name || user.email,
+        };
+      }
+    }
 
     // If replying to a message, we'll include the reply info from what we have
     let replyToMessage = null;
@@ -106,6 +134,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       createdAt: message.createdAt.toISOString(),
       replyToMessageId: message.replyToMessageId,
       replyToMessage,
+      attachment,
     };
 
     // Broadcast to real-time channel (non-blocking)

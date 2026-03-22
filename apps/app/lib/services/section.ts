@@ -49,9 +49,22 @@ export interface SectionWithStatus extends Section {
 
 export const sectionService = {
   /**
-   * Create a new section
+   * Create a new section with position insertion
+   * Shifts existing sections at or after the target position
    */
   async create(input: NewSection, auditContext?: AuditContext): Promise<Section> {
+    // Shift existing sections at or after the target position
+    await database
+      .updateTable("section")
+      .set((eb) => ({
+        position: eb("position", "+", 1),
+        updatedAt: new Date(),
+      }))
+      .where("workspaceId", "=", input.workspaceId)
+      .where("position", ">=", input.position)
+      .where("deletedAt", "is", null)
+      .execute();
+
     const section = await database
       .insertInto("section")
       .values(input)

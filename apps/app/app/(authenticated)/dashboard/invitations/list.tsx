@@ -13,6 +13,17 @@ import { Button } from "@repo/design/components/ui/button";
 import { Badge } from "@repo/design/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/design/components/ui/card";
 import { Input } from "@repo/design/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@repo/design/components/ui/alert-dialog";
 import { SearchIcon, Mail, Trash2, Copy, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -185,14 +196,35 @@ export const InvitationList = () => {
                               <Copy className="h-4 w-4" />
                             )}
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(invitation.id)}
-                            title="Delete invitation"
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Delete invitation"
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Cancel invitation?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to cancel the invitation to{" "}
+                                  <span className="font-medium">{invitation.email}</span>? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Keep invitation</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleDelete(invitation.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Cancel invitation
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </TableCell>
                     </TableRow>
