@@ -37,6 +37,8 @@ export interface ConfirmUploadOptions {
   size: number;
   sourceType: FileSourceType;
   sourceTaskId?: string | null;
+  /** Parent folder ID for nested file organization */
+  folderId?: string | null;
   /** If true, triggers async thumbnail generation for supported file types */
   generateThumbnail?: boolean;
 }
@@ -109,6 +111,7 @@ export const fileService = {
         thumbnailKey: null,
         sourceType: options.sourceType,
         sourceTaskId: options.sourceTaskId ?? null,
+        folderId: options.folderId ?? null,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -174,16 +177,62 @@ export const fileService = {
   },
 
   /**
-   * Get all files for a workspace
+   * Get all files for a workspace, optionally filtered by folder
+   * @param workspaceId - The workspace ID
+   * @param folderId - If provided, only return files in this folder. If null, return root-level files only.
+   * @param includeAll - If true, return all files regardless of folder (for backwards compatibility)
    */
-  async getByWorkspaceId(workspaceId: string): Promise<File[]> {
-    return database
+  async getByWorkspaceId(
+    workspaceId: string,
+    folderId?: string | null,
+    includeAll = false
+  ): Promise<File[]> {
+    let query = database
       .selectFrom("file")
       .selectAll()
       .where("workspaceId", "=", workspaceId)
+      .where("deletedAt", "is", null);
+
+    // Filter by folder if specified
+    if (!includeAll) {
+      if (folderId) {
+        query = query.where("folderId", "=", folderId);
+      } else {
+        // Root level - files with no folder
+        query = query.where("folderId", "is", null);
+      }
+    }
+
+    return query.orderBy("createdAt", "desc").execute();
+  },
+
+  /**
+   * Get a folder by ID (validates it's actually a folder)
+   */
+  async getFolderById(id: string): Promise<File | null> {
+    const file = await database
+      .selectFrom("file")
+      .selectAll()
+      .where("id", "=", id)
+      .where("mimeType", "=", "application/x-folder")
       .where("deletedAt", "is", null)
-      .orderBy("createdAt", "desc")
-      .execute();
+      .executeTakeFirst();
+
+    return file ?? null;
+  },
+
+  /**
+   * Count items in a folder
+   */
+  async countItemsInFolder(folderId: string): Promise<number> {
+    const result = await database
+      .selectFrom("file")
+      .select(database.fn.count("id").as("count"))
+      .where("folderId", "=", folderId)
+      .where("deletedAt", "is", null)
+      .executeTakeFirst();
+
+    return Number(result?.count ?? 0);
   },
 
   /**

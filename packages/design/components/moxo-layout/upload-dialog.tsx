@@ -17,6 +17,7 @@ interface UploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workspaceId: string;
+  folderId?: string | null; // Upload to specific folder
   onUploadComplete?: (files: UploadedFile[]) => void;
   multiple?: boolean;
   maxSize?: number; // in bytes
@@ -39,6 +40,7 @@ export function UploadDialog({
   open,
   onOpenChange,
   workspaceId,
+  folderId,
   onUploadComplete,
   multiple = false,
   maxSize,
@@ -206,6 +208,7 @@ export function UploadDialog({
               name: file.name,
               mimeType: file.type || "application/octet-stream",
               size: file.size,
+              folderId: folderId || null,
             }),
           }
         );

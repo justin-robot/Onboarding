@@ -151,6 +151,7 @@ export function WorkspaceView({
   const [editSectionLoading, setEditSectionLoading] = useState(false);
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [uploadFolderId, setUploadFolderId] = useState<string | null>(null);
   const [createWorkspaceDialogOpen, setCreateWorkspaceDialogOpen] = useState(false);
   const [previewFile, setPreviewFile] = useState<PreviewFile | null>(null);
   const [workspaceFiles, setWorkspaceFiles] = useState<FileItem[]>(files);
@@ -568,7 +569,8 @@ export function WorkspaceView({
               });
             }
           }}
-          onUpload={() => {
+          onUpload={(folderId) => {
+            setUploadFolderId(folderId);
             setUploadDialogOpen(true);
           }}
           onFolderCreated={(folder) => {
@@ -700,19 +702,25 @@ export function WorkspaceView({
     {/* Upload Dialog */}
     <UploadDialog
       open={uploadDialogOpen}
-      onOpenChange={setUploadDialogOpen}
+      onOpenChange={(open) => {
+        setUploadDialogOpen(open);
+        if (!open) setUploadFolderId(null);
+      }}
       workspaceId={currentWorkspaceId}
+      folderId={uploadFolderId}
       onUploadComplete={(uploadedFiles) => {
-        // Add newly uploaded files to the list
-        const newFiles: FileItem[] = uploadedFiles.map((f) => ({
-          id: f.id,
-          name: f.name,
-          type: "file" as const,
-          mimeType: f.mimeType,
-          size: f.size,
-          uploadedAt: new Date(),
-        }));
-        setWorkspaceFiles((prev) => [...newFiles, ...prev]);
+        // Only add to root file list if uploaded to root folder
+        if (!uploadFolderId) {
+          const newFiles: FileItem[] = uploadedFiles.map((f) => ({
+            id: f.id,
+            name: f.name,
+            type: "file" as const,
+            mimeType: f.mimeType,
+            size: f.size,
+            uploadedAt: new Date(),
+          }));
+          setWorkspaceFiles((prev) => [...newFiles, ...prev]);
+        }
         toast.success(`${uploadedFiles.length} file(s) uploaded successfully`);
       }}
       multiple

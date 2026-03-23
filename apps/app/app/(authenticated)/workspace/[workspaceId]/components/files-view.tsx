@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@repo/design/components/ui/button";
 import { Input } from "@repo/design/components/ui/input";
 import { Label } from "@repo/design/components/ui/label";
@@ -66,19 +66,26 @@ interface FileItem {
   uploadedBy?: string;
   uploadedAt?: Date;
   itemCount?: number; // For folders
+  folderId?: string | null; // Parent folder ID
 }
 
 interface FilesViewProps {
   files: FileItem[];
   workspaceId: string;
   onFileClick?: (file: FileItem) => void;
-  onUpload?: () => void;
+  onUpload?: (folderId: string | null) => void;
   onFolderCreated?: (folder: FileItem) => void;
   onFileDeleted?: (fileId: string) => void;
 }
 
+// Breadcrumb item with ID and name
+interface BreadcrumbItem {
+  id: string;
+  name: string;
+}
+
 export function FilesView({
-  files,
+  files: initialFiles,
   workspaceId,
   onFileClick,
   onUpload,
@@ -87,7 +94,21 @@ export function FilesView({
 }: FilesViewProps) {
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [currentPath, setCurrentPath] = useState<string[]>([]);
+  // Track folder navigation with IDs
+  const [folderStack, setFolderStack] = useState<BreadcrumbItem[]>([]);
+  const [files, setFiles] = useState<FileItem[]>(initialFiles);
+  const [loading, setLoading] = useState(false);
+
+  // Current folder ID (null = root)
+  const currentFolderId = folderStack.length > 0 ? folderStack[folderStack.length - 1].id : null;
+
+  // Sync files with initialFiles when at root level
+  // This allows parent component to add files after upload
+  useEffect(() => {
+    if (folderStack.length === 0) {
+      setFiles(initialFiles);
+    }
+  }, [initialFiles, folderStack.length]);
 
   // Folder creation state
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
@@ -98,6 +119,69 @@ export function FilesView({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [fileToDelete, setFileToDelete] = useState<FileItem | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Fetch files when folder changes
+  const fetchFiles = async (folderId: string | null) => {
+    setLoading(true);
+    try {
+      const url = folderId
+        ? `/api/workspaces/${workspaceId}/files?folderId=${folderId}`
+        : `/api/workspaces/${workspaceId}/files`;
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        setFiles(
+          data.files.map((f: {
+            id: string;
+            name: string;
+            mimeType: string;
+            size?: number;
+            storageKey?: string;
+            thumbnailKey?: string;
+            uploadedBy?: string;
+            createdAt?: string;
+            itemCount?: number;
+            folderId?: string | null;
+          }) => ({
+            id: f.id,
+            name: f.name,
+            type: f.mimeType === "application/x-folder" ? "folder" : "file",
+            mimeType: f.mimeType,
+            size: f.size,
+            url: f.storageKey ? `/api/files/${f.id}/download` : undefined,
+            thumbnailUrl: f.thumbnailKey ? `/api/files/${f.id}/thumbnail` : undefined,
+            uploadedBy: f.uploadedBy,
+            uploadedAt: f.createdAt ? new Date(f.createdAt) : undefined,
+            itemCount: f.itemCount,
+            folderId: f.folderId,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Failed to fetch files:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Navigate into a folder
+  const navigateToFolder = (folder: FileItem) => {
+    setFolderStack([...folderStack, { id: folder.id, name: folder.name }]);
+    fetchFiles(folder.id);
+  };
+
+  // Navigate to a specific breadcrumb level
+  const navigateToBreadcrumb = (index: number) => {
+    if (index < 0) {
+      // Go to root
+      setFolderStack([]);
+      fetchFiles(null);
+    } else {
+      const newStack = folderStack.slice(0, index + 1);
+      setFolderStack(newStack);
+      fetchFiles(newStack[newStack.length - 1].id);
+    }
+  };
 
   // Handle folder creation
   const handleCreateFolder = async () => {
@@ -111,7 +195,10 @@ export function FilesView({
       const response = await fetch(`/api/workspaces/${workspaceId}/files`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: folderName.trim() }),
+        body: JSON.stringify({
+          name: folderName.trim(),
+          folderId: currentFolderId, // Create in current folder
+        }),
       });
 
       if (!response.ok) {
@@ -122,7 +209,18 @@ export function FilesView({
       toast.success("Folder created");
       setFolderDialogOpen(false);
       setFolderName("");
-      // Notify parent to refresh without full page reload
+
+      // Add new folder to current file list
+      setFiles(prev => [{
+        id: folder.id,
+        name: folder.name,
+        type: "folder",
+        mimeType: folder.mimeType,
+        itemCount: 0,
+        folderId: currentFolderId,
+      }, ...prev]);
+
+      // Notify parent if needed
       onFolderCreated?.({
         id: folder.id,
         name: folder.name,
@@ -157,6 +255,9 @@ export function FilesView({
       setFileToDelete(null);
       // Notify parent to refresh without full page reload
       onFileDeleted?.(deletedId);
+
+      // Remove from local state
+      setFiles(prev => prev.filter(f => f.id !== deletedId));
     } catch (error) {
       toast.error("Failed to delete file");
     } finally {
@@ -170,6 +271,7 @@ export function FilesView({
     setDeleteDialogOpen(true);
   };
 
+  // Filter files by search term
   const filteredFiles = files.filter((file) =>
     file.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -222,7 +324,7 @@ export function FilesView({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onUpload}>
+              <DropdownMenuItem onClick={() => onUpload?.(currentFolderId)}>
                 <Upload className="mr-2 h-4 w-4" />
                 Upload File
               </DropdownMenuItem>
@@ -236,26 +338,26 @@ export function FilesView({
       </div>
 
       {/* Breadcrumb */}
-      {currentPath.length > 0 && (
-        <div className="flex items-center gap-1 border-b border-border px-4 py-2 text-sm">
+      {folderStack.length > 0 && (
+        <div className="flex items-center gap-1 border-b border-border px-4 py-2 text-sm overflow-x-auto">
           <button
-            onClick={() => setCurrentPath([])}
-            className="text-muted-foreground hover:text-foreground"
+            onClick={() => navigateToBreadcrumb(-1)}
+            className="text-muted-foreground hover:text-foreground shrink-0"
           >
             Files
           </button>
-          {currentPath.map((segment, index) => (
-            <span key={index} className="flex items-center gap-1">
+          {folderStack.map((folder, index) => (
+            <span key={folder.id} className="flex items-center gap-1 shrink-0">
               <span className="text-muted-foreground">/</span>
               <button
-                onClick={() => setCurrentPath(currentPath.slice(0, index + 1))}
+                onClick={() => navigateToBreadcrumb(index)}
                 className={cn(
-                  index === currentPath.length - 1
+                  index === folderStack.length - 1
                     ? "text-foreground font-medium"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                {segment}
+                {folder.name}
               </button>
             </span>
           ))}
@@ -267,8 +369,12 @@ export function FilesView({
         {filteredFiles.length === 0 ? (
           <EmptyState
             hasFiles={files.length > 0}
-            onUpload={onUpload}
+            onUpload={onUpload ? () => onUpload(currentFolderId) : undefined}
           />
+        ) : loading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
         ) : viewMode === "grid" ? (
           <div className="space-y-6">
             {/* Folders */}
@@ -282,10 +388,7 @@ export function FilesView({
                     <FolderCard
                       key={folder.id}
                       folder={folder}
-                      onClick={() => {
-                        setCurrentPath([...currentPath, folder.name]);
-                        onFileClick?.(folder);
-                      }}
+                      onClick={() => navigateToFolder(folder)}
                     />
                   ))}
                 </div>
@@ -319,9 +422,10 @@ export function FilesView({
                 item={item}
                 onClick={() => {
                   if (item.type === "folder") {
-                    setCurrentPath([...currentPath, item.name]);
+                    navigateToFolder(item);
+                  } else {
+                    onFileClick?.(item);
                   }
-                  onFileClick?.(item);
                 }}
                 onDelete={(e) => openDeleteDialog(item, e)}
               />

@@ -29,7 +29,7 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { key, name, mimeType, size } = body;
+    const { key, name, mimeType, size, folderId } = body;
 
     // Validate required fields
     if (!key || typeof key !== "string") {
@@ -45,6 +45,17 @@ export async function POST(
       return errorResponse("size must be a positive number", 400);
     }
 
+    // If uploading to a folder, verify it exists
+    if (folderId) {
+      const folder = await fileService.getFolderById(folderId);
+      if (!folder) {
+        return errorResponse("Folder not found", 404);
+      }
+      if (folder.workspaceId !== workspaceId) {
+        return errorResponse("Folder does not belong to this workspace", 403);
+      }
+    }
+
     // Confirm the upload and create file record
     const file = await fileService.confirmUpload({
       key,
@@ -54,6 +65,7 @@ export async function POST(
       mimeType,
       size,
       sourceType: "upload",
+      folderId: folderId || null,
       generateThumbnail: true,
     });
 

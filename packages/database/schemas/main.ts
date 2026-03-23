@@ -244,6 +244,7 @@ export interface FileTable {
   sourceType: FileSourceType;
   sourceTaskId: string | null;
   previousVersionId: string | null;
+  folderId: string | null;
   deletedAt: Date | null;
   createdAt: Generated<Date>;
   updatedAt: Generated<Date>;
@@ -495,6 +496,7 @@ export interface WorkspaceIntegrationTable {
   refreshToken: string | null; // Encrypted
   tokenExpiresAt: Date | null;
   scope: string | null;
+  accountEmail: string | null; // Email of the connected account (e.g., Google account email)
   connectedBy: string; // User who connected the integration
   createdAt: Generated<Date>;
   updatedAt: Generated<Date>;
