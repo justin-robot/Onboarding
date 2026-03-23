@@ -396,20 +396,22 @@ export const WorkspaceList = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="cursor-pointer"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              window.location.href = `/workspace/${workspace.id}`;
-                            }}
-                            title="View Workspace"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          {!workspace.deletedAt && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="cursor-pointer"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                window.location.href = `/workspace/${workspace.id}`;
+                              }}
+                              title="View Workspace"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          )}
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
