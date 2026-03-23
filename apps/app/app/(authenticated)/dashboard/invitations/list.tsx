@@ -11,7 +11,7 @@ import {
 } from "@repo/design/components/ui/table";
 import { Button } from "@repo/design/components/ui/button";
 import { Badge } from "@repo/design/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/design/components/ui/card";
+import { Card, CardContent, CardHeader } from "@repo/design/components/ui/card";
 import { Input } from "@repo/design/components/ui/input";
 import { Label } from "@repo/design/components/ui/label";
 import {
@@ -40,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/design/components/ui/select";
-import { SearchIcon, Mail, Trash2, Copy, Check, Loader2, Plus } from "lucide-react";
+import { SearchIcon, Trash2, Copy, Check, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 interface Invitation {

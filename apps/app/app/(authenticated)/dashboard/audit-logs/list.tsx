@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@repo/design/components/ui/table";
 import { Badge } from "@repo/design/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/design/components/ui/card";
+import { Card, CardContent, CardHeader } from "@repo/design/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/design/components/ui/select";
-import { FileText, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface AuditLog {

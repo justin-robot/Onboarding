@@ -12,7 +12,7 @@ import {
 } from "@repo/design/components/ui/table";
 import { Button } from "@repo/design/components/ui/button";
 import { Badge } from "@repo/design/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/design/components/ui/card";
+import { Card, CardContent, CardHeader } from "@repo/design/components/ui/card";
 import { Input } from "@repo/design/components/ui/input";
 import { Progress } from "@repo/design/components/ui/progress";
 import { PlusIcon, SearchIcon, Loader2, AlertCircle, ChevronDown, ChevronRight, Check, ChevronsUpDown } from "lucide-react";

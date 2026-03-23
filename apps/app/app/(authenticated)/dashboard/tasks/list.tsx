@@ -12,7 +12,7 @@ import {
 } from "@repo/design/components/ui/table";
 import { Button } from "@repo/design/components/ui/button";
 import { Badge } from "@repo/design/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/design/components/ui/card";
+import { Card, CardContent, CardHeader } from "@repo/design/components/ui/card";
 import { Input } from "@repo/design/components/ui/input";
 import {
   Select,
@@ -38,7 +38,7 @@ import {
 } from "@repo/design/components/ui/dialog";
 import { Checkbox } from "@repo/design/components/ui/checkbox";
 import { Label } from "@repo/design/components/ui/label";
-import { Eye, SearchIcon, CheckSquare, Loader2, MoreHorizontal, CheckCircle, Pencil, ChevronDown, ChevronRight, User, Clock } from "lucide-react";
+import { Eye, SearchIcon, Loader2, MoreHorizontal, CheckCircle, Pencil, ChevronDown, ChevronRight, User, Clock } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,

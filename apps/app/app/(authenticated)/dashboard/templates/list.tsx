@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@repo/design/components/ui/table";
 import { Button } from "@repo/design/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/design/components/ui/card";
+import { Card, CardContent, CardHeader } from "@repo/design/components/ui/card";
 import { Input } from "@repo/design/components/ui/input";
 import {
   DropdownMenu,
