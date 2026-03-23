@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { cn } from "@repo/design/lib/utils";
 import { CreateWorkspaceDialog } from "./create-workspace-dialog";
+import { PendingInvitations, type PendingInvitationData } from "./pending-invitations";
 import { formatDistanceToNow } from "date-fns";
 import { UserMenu } from "../components/user-menu";
 
@@ -46,10 +47,12 @@ interface WorkspaceData {
 interface WorkspaceListProps {
   workspaces: WorkspaceData[];
   userId: string;
+  userEmail?: string;
   userRole?: string | null;
+  pendingInvitations?: PendingInvitationData[];
 }
 
-export function WorkspaceList({ workspaces, userId, userRole }: WorkspaceListProps) {
+export function WorkspaceList({ workspaces, userId, userEmail, userRole, pendingInvitations = [] }: WorkspaceListProps) {
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -63,6 +66,11 @@ export function WorkspaceList({ workspaces, userId, userRole }: WorkspaceListPro
 
   return (
     <div className="mx-auto max-w-7xl py-8 px-4 sm:px-6 lg:px-8">
+      {/* Pending Invitations */}
+      {pendingInvitations.length > 0 && (
+        <PendingInvitations invitations={pendingInvitations} />
+      )}
+
       {/* Header - Title left, buttons right */}
       <div className="mb-8 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-left">
@@ -145,6 +153,7 @@ export function WorkspaceList({ workspaces, userId, userRole }: WorkspaceListPro
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         userId={userId}
+        userEmail={userEmail}
       />
     </div>
   );

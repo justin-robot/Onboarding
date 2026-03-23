@@ -191,7 +191,6 @@ export const UserEdit = ({ userId }: UserEditProps) => {
           userId: user.id,
           data: {
             name: data.name,
-            email: data.email,
             role: data.role,
             ...(data.password ? { password: data.password } : {}),
           },
@@ -292,8 +291,11 @@ export const UserEdit = ({ userId }: UserEditProps) => {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" {...field} />
+                        <Input type="email" {...field} disabled className="bg-muted" />
                       </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        Email cannot be changed as it is used for authentication
+                      </p>
                       <FormMessage />
                     </FormItem>
                   )}

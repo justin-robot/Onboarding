@@ -209,25 +209,49 @@ export default function InvitePage() {
 
         <CardFooter className="flex flex-col gap-2">
           {session?.user ? (
-            <>
-              <Button
-                className="w-full"
-                onClick={handleAccept}
-                disabled={accepting}
-              >
-                {accepting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Joining...
-                  </>
-                ) : (
-                  "Accept Invitation"
-                )}
-              </Button>
-              <p className="text-xs text-muted-foreground text-center">
-                Signed in as {session.user.email}
-              </p>
-            </>
+            // Check if logged-in email matches invitation email
+            session.user.email?.toLowerCase() === invitation?.email?.toLowerCase() ? (
+              <>
+                <Button
+                  className="w-full"
+                  onClick={handleAccept}
+                  disabled={accepting}
+                >
+                  {accepting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Joining...
+                    </>
+                  ) : (
+                    "Accept Invitation"
+                  )}
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  Signed in as {session.user.email}
+                </p>
+              </>
+            ) : (
+              // Email mismatch warning
+              <>
+                <Alert className="bg-amber-50 border-amber-200">
+                  <AlertDescription className="text-amber-800 text-sm">
+                    <strong>Email mismatch:</strong> This invitation was sent to{" "}
+                    <strong>{invitation?.email}</strong>, but you're signed in as{" "}
+                    <strong>{session.user.email}</strong>.
+                    <br />
+                    <br />
+                    Please sign out and sign in with the correct email to accept this invitation.
+                  </AlertDescription>
+                </Alert>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => router.push("/sign-in")}
+                >
+                  Sign in with different account
+                </Button>
+              </>
+            )
           ) : (
             <>
               <Button className="w-full" onClick={handleSignIn}>

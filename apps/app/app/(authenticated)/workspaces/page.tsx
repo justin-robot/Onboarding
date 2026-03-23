@@ -1,9 +1,11 @@
 import { auth } from "@repo/auth/server";
-import { memberService, workspaceService } from "@/lib/services";
+import { memberService, workspaceService, invitationService } from "@/lib/services";
+import { database } from "@repo/database";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { WorkspaceList } from "./workspace-list";
+import { PendingInvitations, type PendingInvitationData } from "./pending-invitations";
 
 export const metadata: Metadata = {
   title: "Workspaces",
@@ -60,12 +62,51 @@ export default async function WorkspacesPage() {
     .filter((w): w is NonNullable<typeof w> => w !== null)
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
+  // Fetch pending invitations for the current user
+  const rawInvitations = await invitationService.getByEmail(session.user.email);
+
+  // Filter out expired invitations and enrich with workspace/inviter info
+  const now = new Date();
+  const pendingInvitations: PendingInvitationData[] = await Promise.all(
+    rawInvitations
+      .filter((inv) => new Date(inv.expiresAt) > now)
+      .map(async (inv) => {
+        // Get workspace name
+        const workspace = await database
+          .selectFrom("workspace")
+          .select(["name"])
+          .where("id", "=", inv.workspaceId)
+          .executeTakeFirst();
+
+        // Get inviter name
+        const inviter = await database
+          .selectFrom("user")
+          .select(["name", "email"])
+          .where("id", "=", inv.invitedBy)
+          .executeTakeFirst();
+
+        return {
+          id: inv.id,
+          token: inv.token,
+          email: inv.email,
+          role: inv.role,
+          workspaceId: inv.workspaceId,
+          workspaceName: workspace?.name || "Unknown Workspace",
+          inviterName: inviter?.name || inviter?.email || "Someone",
+          expiresAt: inv.expiresAt.toISOString(),
+          createdAt: inv.createdAt.toISOString(),
+        };
+      })
+  );
+
   return (
     <div className="h-full overflow-y-auto bg-slate-50 dark:bg-slate-950">
       <WorkspaceList
         workspaces={validWorkspaces}
         userId={session.user.id}
+        userEmail={session.user.email}
         userRole={session.user.role}
+        pendingInvitations={pendingInvitations}
       />
     </div>
   );
