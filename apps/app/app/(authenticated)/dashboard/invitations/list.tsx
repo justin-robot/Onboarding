@@ -210,10 +210,7 @@ export const InvitationList = () => {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              <CardTitle>Pending Invitations</CardTitle>
-            </div>
+            <div />
             <Button onClick={handleOpenCreateDialog}>
               <Plus className="h-4 w-4 mr-2" />
               Create Invitation

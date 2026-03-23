@@ -122,13 +122,7 @@ export const TemplateList = () => {
       </div>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <LayoutTemplate className="h-5 w-5" />
-              <CardTitle>Templates</CardTitle>
-            </div>
-          </div>
-          <div className="mt-4">
+          <div>
             <div className="relative">
               <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input

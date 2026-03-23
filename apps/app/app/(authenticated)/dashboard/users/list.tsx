@@ -175,7 +175,7 @@ export const UserList = ({ isPlatformAdmin = false }: UserListProps) => {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Users</CardTitle>
+            <div />
             <Button
               type="button"
               className="cursor-pointer"

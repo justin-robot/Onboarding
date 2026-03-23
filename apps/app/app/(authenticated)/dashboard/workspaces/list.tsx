@@ -301,13 +301,7 @@ export const WorkspaceList = () => {
       </div>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              <CardTitle>Workspaces</CardTitle>
-            </div>
-          </div>
-          <div className="mt-4 flex gap-4">
+          <div className="flex gap-4">
             <div className="relative flex-1">
               <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input

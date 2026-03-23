@@ -103,13 +103,7 @@ export const AuditLogList = () => {
       </div>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              <CardTitle>Audit Logs</CardTitle>
-            </div>
-          </div>
-          <div className="mt-4 flex gap-4">
+          <div className="flex gap-4">
             <Select value={eventTypeFilter || "all"} onValueChange={(v) => setEventTypeFilter(v === "all" ? "" : v)}>
               <SelectTrigger className="w-60">
                 <SelectValue placeholder="All event types" />
