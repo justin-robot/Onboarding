@@ -13,6 +13,15 @@ import { Button } from "@repo/design/components/ui/button";
 import { Badge } from "@repo/design/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/design/components/ui/card";
 import { Input } from "@repo/design/components/ui/input";
+import { Label } from "@repo/design/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@repo/design/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,7 +33,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@repo/design/components/ui/alert-dialog";
-import { SearchIcon, Mail, Trash2, Copy, Check, Loader2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/design/components/ui/select";
+import { SearchIcon, Mail, Trash2, Copy, Check, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 interface Invitation {
@@ -41,6 +57,11 @@ interface Invitation {
   isExpired: boolean;
 }
 
+interface Workspace {
+  id: string;
+  name: string;
+}
+
 const roleVariants: Record<string, "default" | "secondary" | "outline"> = {
   admin: "default",
   user: "outline",
@@ -51,6 +72,15 @@ export const InvitationList = () => {
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Create invitation dialog state
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [workspacesLoading, setWorkspacesLoading] = useState(false);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"admin" | "user">("user");
+  const [creating, setCreating] = useState(false);
 
   const fetchInvitations = async () => {
     try {
@@ -71,6 +101,72 @@ export const InvitationList = () => {
   useEffect(() => {
     fetchInvitations();
   }, []);
+
+  const fetchWorkspaces = async () => {
+    setWorkspacesLoading(true);
+    try {
+      const response = await fetch("/api/admin/workspaces?limit=100", {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch workspaces");
+      const result = await response.json();
+      setWorkspaces(result.data || []);
+    } catch (error) {
+      console.error("Error fetching workspaces:", error);
+      toast.error("Failed to load workspaces");
+    } finally {
+      setWorkspacesLoading(false);
+    }
+  };
+
+  const handleOpenCreateDialog = () => {
+    setCreateDialogOpen(true);
+    fetchWorkspaces();
+  };
+
+  const handleCloseCreateDialog = () => {
+    setCreateDialogOpen(false);
+    setSelectedWorkspaceId("");
+    setInviteEmail("");
+    setInviteRole("user");
+  };
+
+  const handleCreateInvitation = async () => {
+    if (!selectedWorkspaceId) {
+      toast.error("Please select a workspace");
+      return;
+    }
+    if (!inviteEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const response = await fetch(`/api/workspaces/${selectedWorkspaceId}/invitations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          email: inviteEmail,
+          role: inviteRole,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create invitation");
+      }
+
+      toast.success("Invitation sent successfully");
+      handleCloseCreateDialog();
+      fetchInvitations(); // Refresh the list
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to create invitation");
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const filteredData = searchValue
     ? invitations.filter(
@@ -118,6 +214,10 @@ export const InvitationList = () => {
               <Mail className="h-5 w-5" />
               <CardTitle>Pending Invitations</CardTitle>
             </div>
+            <Button onClick={handleOpenCreateDialog}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Invitation
+            </Button>
           </div>
           <div className="mt-4">
             <div className="relative">
@@ -235,6 +335,81 @@ export const InvitationList = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Create Invitation Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create Invitation</DialogTitle>
+            <DialogDescription>
+              Send an invitation to join a workspace. The recipient will receive an email with a link to accept.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="workspace">Workspace</Label>
+              <Select
+                value={selectedWorkspaceId}
+                onValueChange={setSelectedWorkspaceId}
+                disabled={workspacesLoading}
+              >
+                <SelectTrigger id="workspace">
+                  <SelectValue placeholder={workspacesLoading ? "Loading..." : "Select a workspace"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {workspaces.map((workspace) => (
+                    <SelectItem key={workspace.id} value={workspace.id}>
+                      {workspace.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="user@example.com"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                disabled={creating}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="role">Role</Label>
+              <Select
+                value={inviteRole}
+                onValueChange={(value: "admin" | "user") => setInviteRole(value)}
+                disabled={creating}
+              >
+                <SelectTrigger id="role">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseCreateDialog} disabled={creating}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateInvitation} disabled={creating || !selectedWorkspaceId || !inviteEmail}>
+              {creating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                "Send Invitation"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import { database } from "@repo/database";
 import { sql } from "kysely";
 import { json, requireAdminAuth, withErrorHandler } from "../../_lib/api-utils";
+import { workspaceService } from "@/lib/services";
 import type { NextRequest } from "next/server";
 
 // Check if isTemplate column exists (cached for performance)
@@ -49,6 +50,7 @@ export async function GET(request: NextRequest) {
         "workspace.name",
         "workspace.description",
         "workspace.dueDate",
+        "workspace.isPublished",
         "workspace.createdAt",
         "workspace.updatedAt",
         "workspace.deletedAt",
@@ -151,13 +153,27 @@ export async function GET(request: NextRequest) {
     const totalResult = await countQueryWithFilters.executeTakeFirst();
     const total = Number(totalResult?.total || 0);
 
-    // Apply sorting
+    // Apply sorting (push deleted items to bottom when including deleted)
     const validSortColumns = ["name", "createdAt", "updatedAt", "dueDate"];
     const sortColumn = validSortColumns.includes(sortBy) ? sortBy : "createdAt";
-    query = query.orderBy(
-      `workspace.${sortColumn}` as any,
-      sortDirection === "asc" ? "asc" : "desc"
-    );
+
+    if (includeDeleted) {
+      // Sort: non-deleted first, then deleted at bottom
+      query = query
+        .orderBy(
+          sql`CASE WHEN "workspace"."deletedAt" IS NULL THEN 0 ELSE 1 END`,
+          "asc"
+        )
+        .orderBy(
+          `workspace.${sortColumn}` as any,
+          sortDirection === "asc" ? "asc" : "desc"
+        );
+    } else {
+      query = query.orderBy(
+        `workspace.${sortColumn}` as any,
+        sortDirection === "asc" ? "asc" : "desc"
+      );
+    }
 
     // Apply pagination
     query = query.limit(limit).offset(offset);
@@ -179,6 +195,9 @@ export async function GET(request: NextRequest) {
           progress,
           isOverdue: !!isOverdue,
           lastActivityAt: w.lastActivityAt || null,
+          daysUntilHardDelete: w.deletedAt
+            ? workspaceService.calculateDaysUntilHardDelete(new Date(w.deletedAt as unknown as string))
+            : null,
         };
       }),
       total,

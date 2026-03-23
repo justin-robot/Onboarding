@@ -60,6 +60,7 @@ interface Workspace {
   name: string;
   description: string | null;
   dueDate: string | null;
+  isPublished: boolean;
   memberCount: number;
   taskCount: number;
   completedTaskCount: number;
@@ -68,6 +69,7 @@ interface Workspace {
   lastActivityAt: string | null;
   createdAt: string;
   deletedAt: string | null;
+  daysUntilHardDelete: number | null;
 }
 
 export const WorkspaceList = () => {
@@ -77,6 +79,7 @@ export const WorkspaceList = () => {
   const [searchValue, setSearchValue] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [hardDeleteDialogOpen, setHardDeleteDialogOpen] = useState(false);
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [saveAsTemplateDialogOpen, setSaveAsTemplateDialogOpen] = useState(false);
@@ -117,7 +120,8 @@ export const WorkspaceList = () => {
   // Apply status filter
   if (statusFilter) {
     filteredData = filteredData.filter((workspace) => {
-      if (statusFilter === "active") return !workspace.deletedAt && !workspace.isOverdue;
+      if (statusFilter === "draft") return !workspace.deletedAt && !workspace.isPublished;
+      if (statusFilter === "active") return !workspace.deletedAt && workspace.isPublished && !workspace.isOverdue && workspace.progress < 100;
       if (statusFilter === "overdue") return !workspace.deletedAt && workspace.isOverdue;
       if (statusFilter === "completed") return !workspace.deletedAt && workspace.progress === 100;
       if (statusFilter === "deleted") return !!workspace.deletedAt;
@@ -194,13 +198,46 @@ export const WorkspaceList = () => {
 
       // Remove the workspace from the list (it's now a template)
       setWorkspaces((prev) => prev.filter((w) => w.id !== selectedWorkspace.id));
-      toast.success("Workspace saved as template. You can find it in the Templates section.");
+      toast.success("Workspace saved as template! Redirecting to Templates...");
+
+      // Redirect to templates page after a brief delay
+      setTimeout(() => {
+        router.push("/dashboard/templates");
+      }, 1000);
     } catch (error) {
       console.error("Error saving as template:", error);
       toast.error(error instanceof Error ? error.message : "Failed to save as template");
     } finally {
       setActionLoading(false);
       setSaveAsTemplateDialogOpen(false);
+      setSelectedWorkspace(null);
+    }
+  };
+
+  const handleHardDelete = async () => {
+    if (!selectedWorkspace) return;
+    setActionLoading(true);
+    try {
+      const response = await fetch(`/api/admin/workspaces/${selectedWorkspace.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ action: "hardDelete" }),
+      });
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || "Failed to delete workspace permanently");
+      }
+
+      // Remove from local state
+      setWorkspaces((prev) => prev.filter((w) => w.id !== selectedWorkspace.id));
+      toast.success("Workspace permanently deleted");
+    } catch (error) {
+      console.error("Error hard deleting workspace:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to delete workspace");
+    } finally {
+      setActionLoading(false);
+      setHardDeleteDialogOpen(false);
       setSelectedWorkspace(null);
     }
   };
@@ -221,7 +258,21 @@ export const WorkspaceList = () => {
 
   const getStatusBadge = (workspace: Workspace) => {
     if (workspace.deletedAt) {
-      return <Badge variant="destructive">Deleted</Badge>;
+      const days = workspace.daysUntilHardDelete;
+      return (
+        <div className="flex flex-col gap-1">
+          <Badge variant="destructive">Deleted</Badge>
+          {days !== null && (
+            <span className="text-xs text-muted-foreground">
+              {days === 0
+                ? "Deletes today"
+                : days === 1
+                  ? "1 day left"
+                  : `${days} days left`}
+            </span>
+          )}
+        </div>
+      );
     }
     if (workspace.progress === 100) {
       return <Badge variant="default">Completed</Badge>;
@@ -233,6 +284,9 @@ export const WorkspaceList = () => {
           Overdue
         </Badge>
       );
+    }
+    if (!workspace.isPublished) {
+      return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Draft</Badge>;
     }
     return <Badge variant="secondary">Active</Badge>;
   };
@@ -269,6 +323,7 @@ export const WorkspaceList = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="overdue">Overdue</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
@@ -399,15 +454,27 @@ export const WorkspaceList = () => {
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               {workspace.deletedAt ? (
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setSelectedWorkspace(workspace);
-                                    setRestoreDialogOpen(true);
-                                  }}
-                                >
-                                  <RotateCcw className="mr-2 h-4 w-4" />
-                                  Restore
-                                </DropdownMenuItem>
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedWorkspace(workspace);
+                                      setRestoreDialogOpen(true);
+                                    }}
+                                  >
+                                    <RotateCcw className="mr-2 h-4 w-4" />
+                                    Restore
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedWorkspace(workspace);
+                                      setHardDeleteDialogOpen(true);
+                                    }}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete Permanently
+                                  </DropdownMenuItem>
+                                </>
                               ) : (
                                 <DropdownMenuItem
                                   onClick={() => {
@@ -433,14 +500,15 @@ export const WorkspaceList = () => {
         </CardContent>
       </Card>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Confirmation Dialog (Soft Delete) */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Workspace</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{selectedWorkspace?.name}&quot;? This workspace
-              will be soft-deleted and can be restored later.
+            <AlertDialogDescription className="space-y-2">
+              <span>Are you sure you want to delete &quot;{selectedWorkspace?.name}&quot;?</span>
+              <br /><br />
+              <span>The workspace will be moved to trash and automatically deleted after 30 days. You can restore it anytime before then.</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -457,6 +525,55 @@ export const WorkspaceList = () => {
                 </>
               ) : (
                 "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Hard Delete Confirmation Dialog */}
+      <AlertDialog open={hardDeleteDialogOpen} onOpenChange={setHardDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              Permanently Delete Workspace
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>
+                  Are you sure you want to permanently delete &quot;{selectedWorkspace?.name}&quot;?
+                </p>
+                <p className="font-semibold text-destructive">
+                  This action cannot be undone. All data including:
+                </p>
+                <ul className="list-disc list-inside text-sm space-y-1">
+                  <li>Sections and tasks</li>
+                  <li>Form submissions and responses</li>
+                  <li>Files and attachments</li>
+                  <li>Messages and comments</li>
+                  <li>All member associations</li>
+                </ul>
+                <p className="font-semibold text-destructive">
+                  will be permanently deleted.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={actionLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleHardDelete}
+              disabled={actionLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {actionLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Permanently"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

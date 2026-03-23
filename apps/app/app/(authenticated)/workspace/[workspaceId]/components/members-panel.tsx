@@ -32,6 +32,14 @@ import {
   AlertDialogTrigger,
 } from "@repo/design/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@repo/design/components/ui/dialog";
+import {
   Users,
   Mail,
   X,
@@ -42,6 +50,7 @@ import {
   Trash2,
   Copy,
   Check,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -109,7 +118,16 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole }: MembersP
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Member details dialog state
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [showMemberDialog, setShowMemberDialog] = useState(false);
+  const [editingRole, setEditingRole] = useState<string>("");
+  const [savingRole, setSavingRole] = useState(false);
+  const [removingMember, setRemovingMember] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
+
   const canInvite = currentUserRole === "admin";
+  const isAdmin = currentUserRole === "admin";
 
   // Copy invitation link to clipboard
   const handleCopyLink = async (invitation: Invitation) => {
@@ -210,6 +228,83 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole }: MembersP
       toast.error("Failed to cancel invitation");
     } finally {
       setCancellingId(null);
+    }
+  };
+
+  // Open member details dialog
+  const handleMemberClick = (member: Member) => {
+    setSelectedMember(member);
+    setEditingRole(member.role);
+    setShowMemberDialog(true);
+  };
+
+  // Close member details dialog
+  const handleCloseMemberDialog = () => {
+    setShowMemberDialog(false);
+    setSelectedMember(null);
+    setEditingRole("");
+    setShowRemoveConfirm(false);
+  };
+
+  // Update member role
+  const handleUpdateRole = async () => {
+    if (!selectedMember || editingRole === selectedMember.role) return;
+
+    setSavingRole(true);
+    try {
+      const response = await fetch(
+        `/api/workspaces/${workspaceId}/members/${selectedMember.userId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ role: editingRole }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update role");
+      }
+
+      // Update local state
+      setMembers((prev) =>
+        prev.map((m) =>
+          m.id === selectedMember.id ? { ...m, role: editingRole } : m
+        )
+      );
+      setSelectedMember({ ...selectedMember, role: editingRole });
+      toast.success(`Role updated to ${formatRole(editingRole)}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update role");
+    } finally {
+      setSavingRole(false);
+    }
+  };
+
+  // Remove member from workspace
+  const handleRemoveMember = async () => {
+    if (!selectedMember) return;
+
+    setRemovingMember(true);
+    try {
+      const response = await fetch(
+        `/api/workspaces/${workspaceId}/members/${selectedMember.userId}`,
+        { method: "DELETE" }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to remove member");
+      }
+
+      // Update local state
+      setMembers((prev) => prev.filter((m) => m.id !== selectedMember.id));
+      handleCloseMemberDialog();
+      toast.success(`${selectedMember.name || selectedMember.email} removed from workspace`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to remove member");
+    } finally {
+      setRemovingMember(false);
     }
   };
 
@@ -376,9 +471,11 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole }: MembersP
               </h3>
               <div className="space-y-2">
                 {members.map((member) => (
-                  <div
+                  <button
                     key={member.id}
-                    className="flex items-center justify-between rounded-lg border p-3"
+                    type="button"
+                    onClick={() => handleMemberClick(member)}
+                    className="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   >
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
@@ -398,16 +495,145 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole }: MembersP
                         )}
                       </div>
                     </div>
-                    <Badge variant={getRoleBadgeVariant(member.role)}>
-                      {formatRole(member.role)}
-                    </Badge>
-                  </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={getRoleBadgeVariant(member.role)}>
+                        {formatRole(member.role)}
+                      </Badge>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  </button>
                 ))}
               </div>
             </div>
           </>
         )}
       </div>
+
+      {/* Member Details Dialog */}
+      <Dialog open={showMemberDialog} onOpenChange={setShowMemberDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Member Details</DialogTitle>
+            <DialogDescription>
+              View and manage member information
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedMember && (
+            <div className="space-y-6">
+              {/* Member info */}
+              <div className="flex items-center gap-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={selectedMember.image} />
+                  <AvatarFallback className="text-lg">
+                    {getInitials(selectedMember.name || selectedMember.email)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="font-semibold text-lg">
+                    {selectedMember.name || "No name"}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedMember.email}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Joined {new Date(selectedMember.createdAt).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+
+              {/* Role management (admin only) */}
+              {isAdmin && (
+                <div className="space-y-3">
+                  <Label>Role</Label>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={editingRole}
+                      onValueChange={setEditingRole}
+                      disabled={savingRole}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">User</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {editingRole !== selectedMember.role && (
+                      <Button
+                        onClick={handleUpdateRole}
+                        disabled={savingRole}
+                        size="sm"
+                      >
+                        {savingRole ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Save"
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Non-admin view of role */}
+              {!isAdmin && (
+                <div className="space-y-2">
+                  <Label>Role</Label>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={getRoleBadgeVariant(selectedMember.role)}>
+                      {formatRole(selectedMember.role)}
+                    </Badge>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={handleCloseMemberDialog}>
+              Close
+            </Button>
+            {isAdmin && selectedMember && (
+              <>
+                {!showRemoveConfirm ? (
+                  <Button
+                    variant="destructive"
+                    onClick={() => setShowRemoveConfirm(true)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Remove from Workspace
+                  </Button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Are you sure?</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowRemoveConfirm(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleRemoveMember}
+                      disabled={removingMember}
+                    >
+                      {removingMember ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Remove"
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

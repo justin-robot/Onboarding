@@ -92,7 +92,7 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
 }
 
 /**
- * PATCH /api/admin/workspaces/[id] - Restore workspace
+ * PATCH /api/admin/workspaces/[id] - Restore or hard delete workspace
  */
 export async function PATCH(request: NextRequest, { params }: Params) {
   return withErrorHandler(async () => {
@@ -114,6 +114,30 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       }
 
       return json({ data: workspace });
+    }
+
+    if (body.action === "hardDelete") {
+      const result = await workspaceService.hardDelete(id);
+
+      if (!result.success) {
+        return errorResponse(result.error || "Failed to hard delete", 400);
+      }
+
+      // Clean up S3 files asynchronously (fire and forget)
+      if (result.deletedFileKeys && result.deletedFileKeys.length > 0) {
+        import("@repo/storage").then(({ deleteFile, getStorageConfig }) => {
+          const config = getStorageConfig();
+          Promise.all(
+            result.deletedFileKeys!.map((key) =>
+              deleteFile(config, key).catch((err) =>
+                console.error(`Failed to delete file ${key}:`, err)
+              )
+            )
+          );
+        }).catch((err) => console.error("Failed to load storage module:", err));
+      }
+
+      return json({ success: true, message: "Workspace permanently deleted" });
     }
 
     return errorResponse("Invalid action", 400);
