@@ -7,6 +7,7 @@ import type { WorkspaceIntegration } from "@repo/database";
 const SCOPES = [
   "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/calendar.readonly",
+  "https://www.googleapis.com/auth/userinfo.email", // To get the connected account email
 ];
 
 // Encryption key for tokens (32 bytes for AES-256)
@@ -129,6 +130,17 @@ export const googleCalendarService = {
       throw new Error("No access token received from Google");
     }
 
+    // Fetch the user's email from Google
+    let accountEmail: string | null = null;
+    try {
+      oauth2Client.setCredentials(tokens);
+      const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
+      const userInfo = await oauth2.userinfo.get();
+      accountEmail = userInfo.data.email || null;
+    } catch (error) {
+      console.error("Failed to fetch Google account email:", error);
+    }
+
     // Encrypt tokens before storing
     const encryptedAccessToken = encryptToken(tokens.access_token);
     const encryptedRefreshToken = tokens.refresh_token
@@ -156,6 +168,7 @@ export const googleCalendarService = {
           refreshToken: encryptedRefreshToken || existing.refreshToken, // Keep old refresh token if new one not provided
           tokenExpiresAt,
           scope: tokens.scope || existing.scope,
+          accountEmail: accountEmail || existing.accountEmail,
           connectedBy: userId,
           updatedAt: new Date(),
         })
@@ -174,6 +187,7 @@ export const googleCalendarService = {
         refreshToken: encryptedRefreshToken,
         tokenExpiresAt,
         scope: tokens.scope || SCOPES.join(" "),
+        accountEmail,
         connectedBy: userId,
       })
       .returningAll()

@@ -331,6 +331,7 @@ export function MeetingsPanel({ workspaceId, onClose, hideHeader = false }: Meet
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
+  const [connectedAccountEmail, setConnectedAccountEmail] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const fetchMeetings = useCallback(async () => {
@@ -350,6 +351,7 @@ export function MeetingsPanel({ workspaceId, onClose, hideHeader = false }: Meet
       const integrations = await integrationsResponse.json();
       const calendarConnected = integrations.google_calendar?.connected;
       setIsConnected(calendarConnected);
+      setConnectedAccountEmail(integrations.google_calendar?.accountEmail || null);
 
       if (!calendarConnected) {
         setIsLoading(false);
@@ -477,17 +479,27 @@ export function MeetingsPanel({ workspaceId, onClose, hideHeader = false }: Meet
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {!hideHeader && (
-        <div className="flex-shrink-0 flex items-center justify-between border-b px-4 py-3">
-          <h2 className="text-lg font-semibold">Meetings</h2>
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="ghost" onClick={fetchMeetings}>
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            <CreateMeetingDialog
-              workspaceId={workspaceId}
-              onMeetingCreated={fetchMeetings}
-            />
+        <div className="flex-shrink-0 border-b">
+          <div className="flex items-center justify-between px-4 py-3">
+            <h2 className="text-lg font-semibold">Meetings</h2>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="ghost" onClick={fetchMeetings}>
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+              <CreateMeetingDialog
+                workspaceId={workspaceId}
+                onMeetingCreated={fetchMeetings}
+              />
+            </div>
           </div>
+          {connectedAccountEmail && (
+            <div className="px-4 pb-3 -mt-1">
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Calendar className="h-3 w-3" />
+                Connected to {connectedAccountEmail}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -507,16 +519,24 @@ export function MeetingsPanel({ workspaceId, onClose, hideHeader = false }: Meet
             </div>
           ) : (
             <div className="space-y-6">
-              {/* Action buttons when header is hidden */}
+              {/* Action buttons and connected account info when header is hidden */}
               {hideHeader && (
-                <div className="flex items-center justify-end gap-2">
-                  <Button size="sm" variant="ghost" onClick={fetchMeetings}>
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
-                  <CreateMeetingDialog
-                    workspaceId={workspaceId}
-                    onMeetingCreated={fetchMeetings}
-                  />
+                <div className="space-y-2">
+                  {connectedAccountEmail && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                      <Calendar className="h-3 w-3" />
+                      Connected to {connectedAccountEmail}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-end gap-2">
+                    <Button size="sm" variant="ghost" onClick={fetchMeetings}>
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                    <CreateMeetingDialog
+                      workspaceId={workspaceId}
+                      onMeetingCreated={fetchMeetings}
+                    />
+                  </div>
                 </div>
               )}
               {Array.from(groupedMeetings.entries()).map(([dateLabel, dateMeetings]) => (

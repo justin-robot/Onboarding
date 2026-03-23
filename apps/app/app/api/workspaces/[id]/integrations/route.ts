@@ -29,6 +29,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
         connected: !!(googleIntegration && googleIntegration.accessToken),
         connectedAt: googleIntegration?.createdAt?.toISOString() || undefined,
         connectedBy: googleIntegration?.connectedBy || undefined,
+        accountEmail: googleIntegration?.accountEmail || undefined,
       },
       signnow: {
         configured: signNowConfigured,
