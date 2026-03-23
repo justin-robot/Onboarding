@@ -67,7 +67,7 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 
 | # | Task | Priority | Status | Screenshot Needed? | Notes |
 |---|------|----------|--------|-------------------|-------|
-| 18 | **Admin cards should be clickable** - Dashboard cards should route to their respective pages when clicked | M | [ ] | No | UX improvement |
+| 18 | **Admin cards should be clickable** - Dashboard cards should route to their respective pages when clicked | M | [x] | No | Fixed: Wrapped stat cards in Link components with hover styles, routes to respective admin pages |
 | 19 | **Missing loading state in admin** - Add loading indicators | M | [ ] | Yes | Need to see which area needs loading state |
 | 20 | **Admin sidebar state persistence** - Remember collapsed/expanded state of admin sidebar | L | [ ] | No | Store in localStorage |
 | 21 | **Admin table pagination** - Ensure pagination is working on admin tables | M | [ ] | No | Verify implementation |
@@ -77,10 +77,10 @@ Extracted from video review transcript. Priority: High (H), Medium (M), Low (L)
 ## Summary
 
 - **Total tasks:** 21
-- **Completed:** 11
-- **Remaining:** 10
+- **Completed:** 12
+- **Remaining:** 9
   - High priority: 1
-  - Medium priority: 5
+  - Medium priority: 4
   - Low priority: 4
 
 ---

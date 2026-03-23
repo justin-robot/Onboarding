@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/design/components/ui/card";
 import { Skeleton } from "@repo/design/components/ui/skeleton";
 import {
@@ -96,24 +97,28 @@ export function DashboardOverview() {
       value: stats?.users.total || 0,
       icon: Users,
       color: "text-blue-600",
+      href: "/dashboard/users",
     },
     {
       title: "Workspaces",
       value: stats?.workspaces.total || 0,
       icon: Building2,
       color: "text-purple-600",
+      href: "/dashboard/workspaces",
     },
     {
       title: "Total Tasks",
       value: stats?.tasks.total || 0,
       icon: CheckSquare,
       color: "text-green-600",
+      href: "/dashboard/tasks",
     },
     {
       title: "Workspace Members",
       value: stats?.members.total || 0,
       icon: UserPlus,
       color: "text-orange-600",
+      href: "/dashboard/members",
     },
     {
       title: "Not Started",
@@ -121,6 +126,7 @@ export function DashboardOverview() {
       icon: Clock,
       color: "text-gray-500",
       description: "Tasks",
+      href: "/dashboard/tasks?status=not_started",
     },
     {
       title: "In Progress",
@@ -128,6 +134,7 @@ export function DashboardOverview() {
       icon: AlertCircle,
       color: "text-yellow-600",
       description: "Tasks",
+      href: "/dashboard/tasks?status=in_progress",
     },
     {
       title: "Completed",
@@ -135,12 +142,14 @@ export function DashboardOverview() {
       icon: CheckCircle2,
       color: "text-green-600",
       description: "Tasks",
+      href: "/dashboard/tasks?status=completed",
     },
     {
       title: "Pending Invitations",
       value: stats?.invitations.pending || 0,
       icon: Mail,
       color: "text-blue-500",
+      href: "/dashboard/invitations",
     },
   ];
 
@@ -157,22 +166,24 @@ export function DashboardOverview() {
         {statCards.map((stat) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.title}
-                </CardTitle>
-                <Icon className={`h-4 w-4 ${stat.color}`} />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value.toLocaleString()}</div>
-                {stat.description && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {stat.description}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+            <Link key={stat.title} href={stat.href}>
+              <Card className="cursor-pointer transition-all hover:shadow-md hover:border-primary/50">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {stat.title}
+                  </CardTitle>
+                  <Icon className={`h-4 w-4 ${stat.color}`} />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stat.value.toLocaleString()}</div>
+                  {stat.description && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {stat.description}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </Link>
           );
         })}
       </div>
