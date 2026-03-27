@@ -1,4 +1,5 @@
-import { test, expect } from "@playwright/test";
+import { test as baseTest, expect } from "@playwright/test";
+import { test, testUsers } from "./fixtures/auth";
 
 /**
  * E2E tests for Workspace Management
@@ -9,106 +10,102 @@ import { test, expect } from "@playwright/test";
  * - Publish/unpublish workspace (draft mode)
  * - Workspace search functionality
  *
- * Note: UI tests that require authentication are skipped because
- * better-auth's server-side session validation cannot be mocked
- * with client-side route interception. These tests require:
- * 1. A seeded test user in the database
- * 2. Pre-authenticated session via storageState
+ * UI tests use the adminPage fixture which requires:
+ * 1. A seeded test user in the database (pnpm db:seed)
+ * 2. Auth state created by global-setup.ts
  */
 
 test.describe("Workspace Management", () => {
-  // Skip UI tests that require authenticated navigation
-  // Server-side auth redirects happen before client-side mocking can take effect
-  test.describe.skip("Create Workspace (requires auth setup)", () => {
-    test("displays create workspace button", async ({ page }) => {
-      await page.goto("/workspaces");
-      const createButton = page.getByRole("button", { name: /create workspace/i });
+  test.describe("Create Workspace", () => {
+    test("displays create workspace button", async ({ adminPage }) => {
+      await adminPage.goto("/workspaces");
+      const createButton = adminPage.getByRole("button", { name: /create workspace/i });
       await expect(createButton).toBeVisible();
     });
 
-    test("opens create workspace dialog", async ({ page }) => {
-      await page.goto("/workspaces");
-      await page.getByRole("button", { name: /create workspace/i }).click();
-      await expect(page.getByRole("dialog")).toBeVisible();
-      await expect(page.getByRole("heading", { name: "Create Workspace" })).toBeVisible();
+    test("opens create workspace dialog", async ({ adminPage }) => {
+      await adminPage.goto("/workspaces");
+      await adminPage.getByRole("button", { name: /create workspace/i }).click();
+      await expect(adminPage.getByRole("dialog")).toBeVisible();
+      await expect(adminPage.getByRole("heading", { name: "Create Workspace" })).toBeVisible();
     });
 
-    test("create workspace dialog has all required fields", async ({ page }) => {
-      await page.goto("/workspaces");
-      await page.getByRole("button", { name: /create workspace/i }).click();
-      await expect(page.getByLabel("Name")).toBeVisible();
-      await expect(page.getByLabel(/description/i)).toBeVisible();
-      await expect(page.getByLabel(/due date/i)).toBeVisible();
-      await expect(page.getByText(/invite members/i)).toBeVisible();
+    test("create workspace dialog has all required fields", async ({ adminPage }) => {
+      await adminPage.goto("/workspaces");
+      await adminPage.getByRole("button", { name: /create workspace/i }).click();
+      await expect(adminPage.getByLabel("Name")).toBeVisible();
+      await expect(adminPage.getByLabel(/description/i)).toBeVisible();
+      await expect(adminPage.getByLabel(/due date/i)).toBeVisible();
+      await expect(adminPage.getByText(/invite members/i)).toBeVisible();
     });
 
-    test("shows validation error for empty name", async ({ page }) => {
-      await page.goto("/workspaces");
-      await page.getByRole("button", { name: /create workspace/i }).click();
-      await page.getByRole("button", { name: "Create Workspace" }).click();
-      await expect(page.getByText(/name is required/i)).toBeVisible();
+    test("shows validation error for empty name", async ({ adminPage }) => {
+      await adminPage.goto("/workspaces");
+      await adminPage.getByRole("button", { name: /create workspace/i }).click();
+      await adminPage.getByRole("button", { name: "Create Workspace" }).click();
+      await expect(adminPage.getByText(/name is required/i)).toBeVisible();
     });
 
-    test("can add email invitations", async ({ page }) => {
-      await page.goto("/workspaces");
-      await page.getByRole("button", { name: /create workspace/i }).click();
-      const emailInput = page.getByPlaceholder(/colleague@example.com/i);
+    test("can add email invitations", async ({ adminPage }) => {
+      await adminPage.goto("/workspaces");
+      await adminPage.getByRole("button", { name: /create workspace/i }).click();
+      const emailInput = adminPage.getByPlaceholder(/colleague@example.com/i);
       await emailInput.fill("test@example.com");
-      await page.keyboard.press("Enter");
-      await expect(page.getByText("test@example.com")).toBeVisible();
+      await adminPage.keyboard.press("Enter");
+      await expect(adminPage.getByText("test@example.com")).toBeVisible();
     });
 
-    test("validates email format", async ({ page }) => {
-      await page.goto("/workspaces");
-      await page.getByRole("button", { name: /create workspace/i }).click();
-      const emailInput = page.getByPlaceholder(/colleague@example.com/i);
+    test("validates email format", async ({ adminPage }) => {
+      await adminPage.goto("/workspaces");
+      await adminPage.getByRole("button", { name: /create workspace/i }).click();
+      const emailInput = adminPage.getByPlaceholder(/colleague@example.com/i);
       await emailInput.fill("invalid-email");
-      await page.keyboard.press("Enter");
-      await expect(page.getByText(/valid email/i)).toBeVisible();
+      await adminPage.keyboard.press("Enter");
+      await expect(adminPage.getByText(/valid email/i)).toBeVisible();
     });
 
-    test("prevents self-invitation", async ({ page }) => {
-      await page.goto("/workspaces");
-      await page.getByRole("button", { name: /create workspace/i }).click();
-      const emailInput = page.getByPlaceholder(/colleague@example.com/i);
-      await emailInput.fill("admin@example.com");
-      await page.keyboard.press("Enter");
-      await expect(page.getByText(/cannot invite yourself/i)).toBeVisible();
+    test("prevents self-invitation", async ({ adminPage }) => {
+      await adminPage.goto("/workspaces");
+      await adminPage.getByRole("button", { name: /create workspace/i }).click();
+      const emailInput = adminPage.getByPlaceholder(/colleague@example.com/i);
+      await emailInput.fill(testUsers.admin.email);
+      await adminPage.keyboard.press("Enter");
+      await expect(adminPage.getByText(/cannot invite yourself/i)).toBeVisible();
     });
 
-    test("can remove email from invitation list", async ({ page }) => {
-      await page.goto("/workspaces");
-      await page.getByRole("button", { name: /create workspace/i }).click();
-      const emailInput = page.getByPlaceholder(/colleague@example.com/i);
+    test("can remove email from invitation list", async ({ adminPage }) => {
+      await adminPage.goto("/workspaces");
+      await adminPage.getByRole("button", { name: /create workspace/i }).click();
+      const emailInput = adminPage.getByPlaceholder(/colleague@example.com/i);
       await emailInput.fill("test@example.com");
-      await page.keyboard.press("Enter");
-      const badge = page.getByText("test@example.com");
+      await adminPage.keyboard.press("Enter");
+      const badge = adminPage.getByText("test@example.com");
       await expect(badge).toBeVisible();
       await badge.locator("..").getByRole("button").click();
       await expect(badge).not.toBeVisible();
     });
   });
 
-  test.describe.skip("Workspace List (requires auth setup)", () => {
-    test("displays workspaces in grid view by default", async ({ page }) => {
-      await page.goto("/workspaces");
-      const gridButton = page.locator('button[aria-label="Grid view"]').first();
-      const listButton = page.locator('button[aria-label="List view"]').first();
+  test.describe("Workspace List", () => {
+    test("displays workspaces in grid view by default", async ({ adminPage }) => {
+      await adminPage.goto("/workspaces");
+      const gridButton = adminPage.locator('button[aria-label="Grid view"]').first();
+      const listButton = adminPage.locator('button[aria-label="List view"]').first();
       await expect(gridButton).toBeVisible();
       await expect(listButton).toBeVisible();
     });
 
-    test("can toggle between grid and list view", async ({ page }) => {
-      await page.goto("/workspaces");
-      const listButton = page.locator('button[aria-label="List view"]').first();
+    test("can toggle between grid and list view", async ({ adminPage }) => {
+      await adminPage.goto("/workspaces");
+      const listButton = adminPage.locator('button[aria-label="List view"]').first();
       await listButton.click();
-      const gridButton = page.locator('button[aria-label="Grid view"]').first();
+      const gridButton = adminPage.locator('button[aria-label="Grid view"]').first();
       await gridButton.click();
     });
 
-    test("can search workspaces", async ({ page }) => {
-      await page.goto("/workspaces");
-      const searchInput = page.getByPlaceholder(/search workspaces/i);
+    test("can search workspaces", async ({ adminPage }) => {
+      await adminPage.goto("/workspaces");
+      const searchInput = adminPage.getByPlaceholder(/search workspaces/i);
       await expect(searchInput).toBeVisible();
       await searchInput.fill("Test");
     });

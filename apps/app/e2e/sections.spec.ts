@@ -1,4 +1,5 @@
-import { test, expect } from "@playwright/test";
+import { test as baseTest, expect } from "@playwright/test";
+import { test } from "./fixtures/auth";
 
 /**
  * E2E tests for Section Management
@@ -9,29 +10,15 @@ import { test, expect } from "@playwright/test";
  * - Delete section
  * - Reorder sections (drag and drop)
  * - Section collapse/expand
+ *
+ * UI tests use the adminPage fixture which requires:
+ * 1. A seeded test user in the database (pnpm db:seed)
+ * 2. Auth state created by global-setup.ts
  */
 
 test.describe("Section Management", () => {
-  // Helper to mock authentication
-  async function mockAuth(page: typeof test.prototype.page) {
-    await page.route("**/api/auth/session", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          user: {
-            id: "user-1",
-            email: "admin@example.com",
-            name: "Admin User",
-            role: "admin",
-          },
-        }),
-      });
-    });
-  }
-
-  // Mock workspace with sections
-  async function mockWorkspaceWithSections(page: typeof test.prototype.page) {
+  // Mock workspace with sections (can still mock API data, just not auth)
+  async function mockWorkspaceWithSections(page: typeof baseTest.prototype.page) {
     await page.route("**/api/workspaces/*", async (route) => {
       if (route.request().method() === "GET" && !route.request().url().includes("/members")) {
         await route.fulfill({
@@ -87,12 +74,11 @@ test.describe("Section Management", () => {
   }
 
   test.describe("Section Creation", () => {
-    test("can create a new section", async ({ page }) => {
-      await mockAuth(page);
-      await mockWorkspaceWithSections(page);
+    test("can create a new section", async ({ adminPage }) => {
+      await mockWorkspaceWithSections(adminPage);
 
       // Mock section creation endpoint
-      await page.route("**/api/workspaces/*/sections", async (route) => {
+      await adminPage.route("**/api/workspaces/*/sections", async (route) => {
         if (route.request().method() === "POST") {
           const body = route.request().postDataJSON();
           await route.fulfill({
@@ -111,27 +97,25 @@ test.describe("Section Management", () => {
       });
 
       // Navigate to workspace
-      await page.goto("/workspace/ws-1");
-      await page.waitForLoadState("domcontentloaded");
+      await adminPage.goto("/workspace/ws-1");
+      await adminPage.waitForLoadState("domcontentloaded");
 
       // Look for add section button
-      const addSectionButton = page.getByRole("button", { name: /add section/i });
+      const addSectionButton = adminPage.getByRole("button", { name: /add section/i });
       // Button may or may not be visible depending on user role
     });
 
-    test("new section appears at the end of the list", async ({ page }) => {
-      await mockAuth(page);
+    test("new section appears at the end of the list", async ({ adminPage }) => {
       // Test would verify section order after creation
     });
   });
 
   test.describe("Section Renaming", () => {
-    test("can rename a section", async ({ page }) => {
-      await mockAuth(page);
-      await mockWorkspaceWithSections(page);
+    test("can rename a section", async ({ adminPage }) => {
+      await mockWorkspaceWithSections(adminPage);
 
       // Mock section update endpoint
-      await page.route("**/api/sections/*", async (route) => {
+      await adminPage.route("**/api/sections/*", async (route) => {
         if (route.request().method() === "PATCH" || route.request().method() === "PUT") {
           const body = route.request().postDataJSON();
           await route.fulfill({
@@ -148,30 +132,27 @@ test.describe("Section Management", () => {
         }
       });
 
-      await page.goto("/workspace/ws-1");
-      await page.waitForLoadState("domcontentloaded");
+      await adminPage.goto("/workspace/ws-1");
+      await adminPage.waitForLoadState("domcontentloaded");
 
       // Test would click section name to edit
     });
 
-    test("section name updates in real-time", async ({ page }) => {
-      await mockAuth(page);
+    test("section name updates in real-time", async ({ adminPage }) => {
       // Test would verify immediate UI update
     });
 
-    test("empty section name is rejected", async ({ page }) => {
-      await mockAuth(page);
+    test("empty section name is rejected", async ({ adminPage }) => {
       // Test would verify validation
     });
   });
 
   test.describe("Section Deletion", () => {
-    test("can delete an empty section", async ({ page }) => {
-      await mockAuth(page);
-      await mockWorkspaceWithSections(page);
+    test("can delete an empty section", async ({ adminPage }) => {
+      await mockWorkspaceWithSections(adminPage);
 
       // Mock section delete endpoint
-      await page.route("**/api/sections/*", async (route) => {
+      await adminPage.route("**/api/sections/*", async (route) => {
         if (route.request().method() === "DELETE") {
           await route.fulfill({
             status: 200,
@@ -183,30 +164,27 @@ test.describe("Section Management", () => {
         }
       });
 
-      await page.goto("/workspace/ws-1");
-      await page.waitForLoadState("domcontentloaded");
+      await adminPage.goto("/workspace/ws-1");
+      await adminPage.waitForLoadState("domcontentloaded");
 
       // Test would click delete on section-3 (empty)
     });
 
-    test("shows confirmation when deleting section with tasks", async ({ page }) => {
-      await mockAuth(page);
+    test("shows confirmation when deleting section with tasks", async ({ adminPage }) => {
       // Test would verify confirmation dialog
     });
 
-    test("section with tasks shows warning about task deletion", async ({ page }) => {
-      await mockAuth(page);
+    test("section with tasks shows warning about task deletion", async ({ adminPage }) => {
       // Test would verify warning message
     });
   });
 
   test.describe("Section Reordering", () => {
-    test("can reorder sections via drag and drop", async ({ page }) => {
-      await mockAuth(page);
-      await mockWorkspaceWithSections(page);
+    test("can reorder sections via drag and drop", async ({ adminPage }) => {
+      await mockWorkspaceWithSections(adminPage);
 
       // Mock section reorder endpoint
-      await page.route("**/api/workspaces/*/sections/reorder", async (route) => {
+      await adminPage.route("**/api/workspaces/*/sections/reorder", async (route) => {
         await route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -214,61 +192,54 @@ test.describe("Section Management", () => {
         });
       });
 
-      await page.goto("/workspace/ws-1");
-      await page.waitForLoadState("domcontentloaded");
+      await adminPage.goto("/workspace/ws-1");
+      await adminPage.waitForLoadState("domcontentloaded");
 
       // Drag and drop test
       // This requires finding drag handles and performing drag action
     });
 
-    test("section order persists after page refresh", async ({ page }) => {
-      await mockAuth(page);
+    test("section order persists after page refresh", async ({ adminPage }) => {
       // Test would verify persistence
     });
   });
 
   test.describe("Section Collapse/Expand", () => {
-    test("can collapse a section", async ({ page }) => {
-      await mockAuth(page);
-      await mockWorkspaceWithSections(page);
+    test("can collapse a section", async ({ adminPage }) => {
+      await mockWorkspaceWithSections(adminPage);
 
-      await page.goto("/workspace/ws-1");
-      await page.waitForLoadState("domcontentloaded");
+      await adminPage.goto("/workspace/ws-1");
+      await adminPage.waitForLoadState("domcontentloaded");
 
       // Look for collapse button/chevron
       // Click to collapse section
     });
 
-    test("collapsed section hides tasks", async ({ page }) => {
-      await mockAuth(page);
+    test("collapsed section hides tasks", async ({ adminPage }) => {
       // Test would verify tasks are hidden
     });
 
-    test("can expand a collapsed section", async ({ page }) => {
-      await mockAuth(page);
+    test("can expand a collapsed section", async ({ adminPage }) => {
       // Test would expand and verify tasks visible
     });
 
-    test("collapse state persists in session", async ({ page }) => {
-      await mockAuth(page);
+    test("collapse state persists in session", async ({ adminPage }) => {
       // Test would verify collapse state persistence
     });
   });
 
   test.describe("Section Task Count", () => {
-    test("shows task count in section header", async ({ page }) => {
-      await mockAuth(page);
-      await mockWorkspaceWithSections(page);
+    test("shows task count in section header", async ({ adminPage }) => {
+      await mockWorkspaceWithSections(adminPage);
 
-      await page.goto("/workspace/ws-1");
-      await page.waitForLoadState("domcontentloaded");
+      await adminPage.goto("/workspace/ws-1");
+      await adminPage.waitForLoadState("domcontentloaded");
 
       // Look for task count indicators
       // Section 1 should show 1 task, Section 2 should show 1 task, Section 3 should show 0
     });
 
-    test("shows completed task count", async ({ page }) => {
-      await mockAuth(page);
+    test("shows completed task count", async ({ adminPage }) => {
       // Test would verify completed/total display
     });
   });
