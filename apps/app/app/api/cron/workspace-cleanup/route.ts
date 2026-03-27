@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { workspaceService } from "@/lib/services";
+import { workspaceService } from "@/lib/services/workspace";
 import { deleteFile, getStorageConfig } from "@repo/storage";
 import { verifyCronSecret } from "../../_lib/cron-auth";
 

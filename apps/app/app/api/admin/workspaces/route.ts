@@ -1,7 +1,7 @@
 import { database } from "@repo/database";
 import { sql } from "kysely";
 import { json, requireAdminAuth, withErrorHandler } from "../../_lib/api-utils";
-import { workspaceService } from "@/lib/services";
+import { workspaceService } from "@/lib/services/workspace";
 import type { NextRequest } from "next/server";
 
 // Check if isTemplate column exists (cached for performance)

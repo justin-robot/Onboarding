@@ -1,4 +1,4 @@
-import { workspaceService } from "@/lib/services";
+import { workspaceService } from "@/lib/services/workspace";
 import { json, errorResponse, requireAdminAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
