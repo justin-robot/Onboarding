@@ -278,7 +278,7 @@ export const UserEdit = ({ userId }: UserEditProps) => {
                     <FormItem>
                       <FormLabel>Name</FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input {...field} data-testid="user-name-input" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -291,7 +291,7 @@ export const UserEdit = ({ userId }: UserEditProps) => {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" {...field} disabled className="bg-muted" />
+                        <Input type="email" {...field} disabled className="bg-muted" data-testid="user-email-input" />
                       </FormControl>
                       <p className="text-xs text-muted-foreground">
                         Email cannot be changed as it is used for authentication
@@ -307,7 +307,7 @@ export const UserEdit = ({ userId }: UserEditProps) => {
                     <FormItem>
                       <FormLabel>Password (leave blank to keep current)</FormLabel>
                       <FormControl>
-                        <Input type="password" {...field} />
+                        <Input type="password" {...field} data-testid="user-password-input" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -324,7 +324,7 @@ export const UserEdit = ({ userId }: UserEditProps) => {
                         onValueChange={(value) => field.onChange(value || null)}
                       >
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger data-testid="user-role-selector">
                             <SelectValue placeholder="Select a role" />
                           </SelectTrigger>
                         </FormControl>
@@ -338,7 +338,7 @@ export const UserEdit = ({ userId }: UserEditProps) => {
                   )}
                 />
                 <div className="flex gap-2">
-                  <Button type="submit" disabled={saving}>
+                  <Button type="submit" disabled={saving} data-testid="save-user-btn">
                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Save Changes
                   </Button>
@@ -347,6 +347,7 @@ export const UserEdit = ({ userId }: UserEditProps) => {
                     variant="outline"
                     onClick={() => router.push("/dashboard/users")}
                     disabled={saving}
+                    data-testid="cancel-user-btn"
                   >
                     Cancel
                   </Button>

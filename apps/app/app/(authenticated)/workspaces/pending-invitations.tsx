@@ -71,7 +71,7 @@ export function PendingInvitations({ invitations: initialInvitations }: PendingI
   const handleDecline = async (invitation: PendingInvitationData) => {
     setProcessingId(invitation.id);
     try {
-      const response = await fetch(`/api/invitations/${invitation.id}/decline`, {
+      const response = await fetch(`/api/invitations/${invitation.token}/decline`, {
         method: "POST",
       });
 

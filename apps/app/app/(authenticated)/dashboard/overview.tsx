@@ -98,6 +98,7 @@ export function DashboardOverview() {
       icon: Users,
       color: "text-blue-600",
       href: "/dashboard/users",
+      testId: "stat-card-users",
     },
     {
       title: "Workspaces",
@@ -105,6 +106,7 @@ export function DashboardOverview() {
       icon: Building2,
       color: "text-purple-600",
       href: "/dashboard/workspaces",
+      testId: "stat-card-workspaces",
     },
     {
       title: "Total Tasks",
@@ -112,6 +114,7 @@ export function DashboardOverview() {
       icon: CheckSquare,
       color: "text-green-600",
       href: "/dashboard/tasks",
+      testId: "stat-card-tasks",
     },
     {
       title: "Workspace Members",
@@ -119,6 +122,7 @@ export function DashboardOverview() {
       icon: UserPlus,
       color: "text-orange-600",
       href: "/dashboard/members",
+      testId: "stat-card-members",
     },
     {
       title: "Not Started",
@@ -127,6 +131,7 @@ export function DashboardOverview() {
       color: "text-gray-500",
       description: "Tasks",
       href: "/dashboard/tasks?status=not_started",
+      testId: "stat-card-not-started",
     },
     {
       title: "In Progress",
@@ -135,6 +140,7 @@ export function DashboardOverview() {
       color: "text-yellow-600",
       description: "Tasks",
       href: "/dashboard/tasks?status=in_progress",
+      testId: "stat-card-in-progress",
     },
     {
       title: "Completed",
@@ -143,6 +149,7 @@ export function DashboardOverview() {
       color: "text-green-600",
       description: "Tasks",
       href: "/dashboard/tasks?status=completed",
+      testId: "stat-card-completed",
     },
     {
       title: "Pending Invitations",
@@ -150,6 +157,7 @@ export function DashboardOverview() {
       icon: Mail,
       color: "text-blue-500",
       href: "/dashboard/invitations",
+      testId: "stat-card-invitations",
     },
   ];
 
@@ -166,7 +174,7 @@ export function DashboardOverview() {
         {statCards.map((stat) => {
           const Icon = stat.icon;
           return (
-            <Link key={stat.title} href={stat.href}>
+            <Link key={stat.title} href={stat.href} data-testid={stat.testId}>
               <Card className="cursor-pointer transition-all hover:shadow-md hover:border-primary/50">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">

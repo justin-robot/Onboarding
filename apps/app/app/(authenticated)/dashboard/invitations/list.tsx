@@ -211,7 +211,7 @@ export const InvitationList = () => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div />
-            <Button onClick={handleOpenCreateDialog}>
+            <Button onClick={handleOpenCreateDialog} data-testid="create-invitation-btn">
               <Plus className="h-4 w-4 mr-2" />
               Create Invitation
             </Button>
@@ -335,7 +335,7 @@ export const InvitationList = () => {
 
       {/* Create Invitation Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px]" data-testid="create-invitation-dialog">
           <DialogHeader>
             <DialogTitle>Create Invitation</DialogTitle>
             <DialogDescription>
@@ -350,7 +350,7 @@ export const InvitationList = () => {
                 onValueChange={setSelectedWorkspaceId}
                 disabled={workspacesLoading}
               >
-                <SelectTrigger id="workspace">
+                <SelectTrigger id="workspace" data-testid="workspace-selector">
                   <SelectValue placeholder={workspacesLoading ? "Loading..." : "Select a workspace"} />
                 </SelectTrigger>
                 <SelectContent>
@@ -371,6 +371,7 @@ export const InvitationList = () => {
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 disabled={creating}
+                data-testid="invite-email-input"
               />
             </div>
             <div className="space-y-2">
@@ -380,7 +381,7 @@ export const InvitationList = () => {
                 onValueChange={(value: "admin" | "user") => setInviteRole(value)}
                 disabled={creating}
               >
-                <SelectTrigger id="role">
+                <SelectTrigger id="role" data-testid="role-selector">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -394,7 +395,11 @@ export const InvitationList = () => {
             <Button variant="outline" onClick={handleCloseCreateDialog} disabled={creating}>
               Cancel
             </Button>
-            <Button onClick={handleCreateInvitation} disabled={creating || !selectedWorkspaceId || !inviteEmail}>
+            <Button
+              onClick={handleCreateInvitation}
+              disabled={creating || !selectedWorkspaceId || !inviteEmail}
+              data-testid="send-invitation-btn"
+            >
               {creating ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

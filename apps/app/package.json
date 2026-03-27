@@ -9,9 +9,11 @@
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false",
     "e2e": "playwright test",
+    "e2e:auth": "playwright test e2e/authenticated/",
     "e2e:ui": "playwright test --ui",
     "e2e:debug": "playwright test --debug",
-    "e2e:report": "playwright show-report"
+    "e2e:report": "playwright show-report",
+    "e2e:reset-auth": "rm -rf e2e/.auth && echo 'Auth state cleared. Run e2e tests to re-authenticate.'"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
