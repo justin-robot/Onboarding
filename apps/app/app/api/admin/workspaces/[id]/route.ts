@@ -1,4 +1,4 @@
-import { workspaceService } from "@/lib/services";
+import { workspaceService } from "@/lib/services/workspace";
 import { json, errorResponse, requireAdminAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
@@ -114,6 +114,32 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       }
 
       return json({ data: workspace });
+    }
+
+    if (body.action === "hardDelete") {
+      const result = await workspaceService.hardDelete(id);
+
+      if (!result.success) {
+        return errorResponse(result.error || "Failed to delete workspace", 400);
+      }
+
+      // Async S3 cleanup (fire and forget) - lazy load storage to avoid cold start issues
+      if (result.deletedFileKeys && result.deletedFileKeys.length > 0) {
+        import("@repo/storage").then(({ deleteFile, getStorageConfig }) => {
+          const config = getStorageConfig();
+          Promise.all(
+            result.deletedFileKeys!.map((key) =>
+              deleteFile(config, key).catch((err: Error) => {
+                console.error(`Failed to delete S3 file ${key}:`, err);
+              })
+            )
+          );
+        }).catch((err: Error) => {
+          console.error("Failed to load storage module:", err);
+        });
+      }
+
+      return json({ success: true });
     }
 
     return errorResponse("Invalid action", 400);
