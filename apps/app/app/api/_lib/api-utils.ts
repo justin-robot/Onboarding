@@ -1,6 +1,6 @@
 import { currentUser } from "@repo/auth/server";
 import { NextResponse } from "next/server";
-import { adminAccessService } from "@/lib/services/adminAccess";
+import { adminAccessService } from "@/lib/services";
 
 /**
  * Standard JSON response helper

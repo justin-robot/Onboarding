@@ -1,4 +1,4 @@
-import { workspaceService, memberService, invitationService } from "@/lib/services";
+import { workspaceService, memberService } from "@/lib/services";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
@@ -15,8 +15,6 @@ export async function GET() {
 
 /**
  * POST /api/workspaces - Create a new workspace
- *
- * Body: { name: string, description?: string, dueDate?: string, inviteEmails?: string[] }
  */
 export async function POST(request: NextRequest) {
   return withErrorHandler(async () => {
@@ -40,57 +38,6 @@ export async function POST(request: NextRequest) {
       role: "admin",
     });
 
-    // Handle email invitations if provided
-    // Note: Emails are NOT sent here because new workspaces start in draft mode.
-    // Invitation emails will be sent when the workspace is published.
-    let invitationResults: { created: number; failed: number; errors: string[] } | undefined;
-
-    if (body.inviteEmails && Array.isArray(body.inviteEmails) && body.inviteEmails.length > 0) {
-      invitationResults = { created: 0, failed: 0, errors: [] };
-
-      for (const email of body.inviteEmails) {
-        if (typeof email !== "string" || !email.trim()) continue;
-
-        const trimmedEmail = email.trim().toLowerCase();
-
-        // Skip self-invites
-        if (trimmedEmail === user.email?.toLowerCase()) {
-          invitationResults.failed++;
-          invitationResults.errors.push(`${trimmedEmail}: Cannot invite yourself`);
-          continue;
-        }
-
-        try {
-          // Create invitation (no email sent - workspace is in draft mode)
-          const result = await invitationService.create({
-            workspaceId: workspace.id,
-            email: trimmedEmail,
-            role: "user",
-            invitedBy: user.id,
-          });
-
-          if (!result.success) {
-            invitationResults.failed++;
-            if (result.error === "ALREADY_MEMBER") {
-              invitationResults.errors.push(`${trimmedEmail}: Already a member`);
-            } else if (result.error === "ALREADY_INVITED") {
-              invitationResults.errors.push(`${trimmedEmail}: Already invited`);
-            }
-            continue;
-          }
-
-          invitationResults.created++;
-        } catch (error) {
-          invitationResults.failed++;
-          invitationResults.errors.push(`${trimmedEmail}: Failed to create invitation`);
-          console.error(`Failed to create invitation for ${trimmedEmail}:`, error);
-        }
-      }
-    }
-
-    return json({
-      workspace,
-      invitationResults,
-    }, 201);
+    return json(workspace, 201);
   });
 }

@@ -3,23 +3,23 @@ import { database } from "@repo/database";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
-type Params = { params: Promise<{ id: string }> };
+type Params = { params: Promise<{ token: string }> };
 
 /**
- * POST /api/invitations/[id]/decline - Decline an invitation
+ * POST /api/invitations/[token]/decline - Decline an invitation
  *
  * Only the invited user can decline their own invitation
  */
 export async function POST(_request: NextRequest, { params }: Params) {
   return withErrorHandler(async () => {
     const user = await requireAuth();
-    const { id: invitationId } = await params;
+    const { token } = await params;
 
-    // Get the invitation
+    // Get the invitation by token
     const invitation = await database
       .selectFrom("pending_invitation")
       .selectAll()
-      .where("id", "=", invitationId)
+      .where("token", "=", token)
       .executeTakeFirst();
 
     if (!invitation) {
@@ -32,7 +32,7 @@ export async function POST(_request: NextRequest, { params }: Params) {
     }
 
     // Delete the invitation
-    const deleted = await invitationService.cancel(invitationId);
+    const deleted = await invitationService.cancel(invitation.id);
 
     if (!deleted) {
       return errorResponse("Failed to decline invitation", 500);

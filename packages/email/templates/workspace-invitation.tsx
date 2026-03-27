@@ -24,12 +24,7 @@ export const WorkspaceInvitation = ({
   role,
   inviteUrl,
   expiresAt,
-}: WorkspaceInvitationProps) => {
-  // Derive sign-up URL from invite URL
-  const baseUrl = inviteUrl.split('/invite/')[0] || 'https://app.n2o.com';
-  const signUpUrl = `${baseUrl}/sign-up`;
-
-  return (
+}: WorkspaceInvitationProps) => (
   <Html>
     <Head />
     <Preview>You've been invited to join {workspaceName}</Preview>
@@ -48,13 +43,6 @@ export const WorkspaceInvitation = ({
           <Text style={text}>
             Click the button below to accept the invitation and get started.
           </Text>
-          <Section style={noteBox}>
-            <Text style={noteText}>
-              <strong>Note:</strong> If you don't have an account yet, please{" "}
-              <a href={signUpUrl} style={link}>create one first</a>{" "}
-              before accepting this invitation.
-            </Text>
-          </Section>
         </Section>
         <Section style={buttonContainer}>
           <Button style={button} href={inviteUrl}>
@@ -70,8 +58,7 @@ export const WorkspaceInvitation = ({
       </Container>
     </Body>
   </Html>
-  );
-};
+);
 
 function formatRole(role: string): string {
   switch (role) {
@@ -171,26 +158,4 @@ const footer = {
   margin: "0",
   padding: "0",
   textAlign: "center" as const,
-};
-
-const noteBox = {
-  backgroundColor: "#fef3c7",
-  border: "1px solid #f59e0b",
-  borderRadius: "8px",
-  padding: "16px",
-  marginTop: "8px",
-};
-
-const noteText = {
-  color: "#92400e",
-  fontSize: "14px",
-  lineHeight: "22px",
-  margin: "0",
-  padding: "0",
-};
-
-const link = {
-  color: "#1a1a1a",
-  textDecoration: "underline",
-  fontWeight: "600" as const,
 };
