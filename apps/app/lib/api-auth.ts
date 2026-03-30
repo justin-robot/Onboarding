@@ -192,7 +192,20 @@ export async function requireRole(
 }
 
 /**
- * Require admin role for an API route
+ * Require manager role for an API route
+ */
+export async function requireManager(
+  workspaceId: string
+): Promise<
+  | { success: true; user: AuthenticatedUser; role: MemberRole; auditContext: AuditContext }
+  | { success: false; response: NextResponse }
+> {
+  return requireRole(workspaceId, "manager");
+}
+
+/**
+ * Require manager role for an API route
+ * @deprecated Use requireManager instead
  */
 export async function requireAdmin(
   workspaceId: string
@@ -200,20 +213,7 @@ export async function requireAdmin(
   | { success: true; user: AuthenticatedUser; role: MemberRole; auditContext: AuditContext }
   | { success: false; response: NextResponse }
 > {
-  return requireRole(workspaceId, "admin");
-}
-
-/**
- * Require admin role for an API route (previously account manager or admin)
- * @deprecated Use requireAdmin instead - this function name is misleading now that account_manager role is removed
- */
-export async function requireAccountManager(
-  workspaceId: string
-): Promise<
-  | { success: true; user: AuthenticatedUser; role: MemberRole; auditContext: AuditContext }
-  | { success: false; response: NextResponse }
-> {
-  return requireRole(workspaceId, "admin");
+  return requireRole(workspaceId, "manager");
 }
 
 /**
@@ -262,15 +262,15 @@ export function withWorkspaceAccess<T>(
 }
 
 /**
- * Wrapper for API route handlers that require admin access
+ * Wrapper for API route handlers that require manager access
  */
-export function withAdminAccess<T>(
+export function withManagerAccess<T>(
   getWorkspaceId: () => string | Promise<string>,
   handler: (context: WorkspaceApiContext) => Promise<T>
 ): () => Promise<T | NextResponse> {
   return async () => {
     const workspaceId = await getWorkspaceId();
-    const accessResult = await requireAdmin(workspaceId);
+    const accessResult = await requireManager(workspaceId);
 
     if (!accessResult.success) {
       return accessResult.response;
