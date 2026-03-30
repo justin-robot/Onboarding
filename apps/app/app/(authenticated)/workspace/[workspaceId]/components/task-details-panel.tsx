@@ -89,6 +89,12 @@ interface WorkspaceMember {
   role: string;
 }
 
+interface PendingInvitation {
+  id: string;
+  email: string;
+  role: string;
+}
+
 interface Task {
   id: string;
   title: string;
@@ -178,6 +184,7 @@ export function TaskDetailsPanel({
   const [assignees, setAssignees] = useState<Assignee[]>([]);
   const [pendingAssignees, setPendingAssignees] = useState<PendingAssignee[]>([]);
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
   const [isAssigning, setIsAssigning] = useState(false);
   const [emailToAssign, setEmailToAssign] = useState("");
   const [isAssigningEmail, setIsAssigningEmail] = useState(false);
@@ -382,6 +389,13 @@ export function TaskDetailsPanel({
             const data = await membersRes.json();
             setMembers(Array.isArray(data) ? data : (data.members || []));
           }
+
+          // Also fetch pending invitations so we can assign tasks to them
+          const invitationsRes = await fetch(`/api/workspaces/${workspaceId}/invitations`);
+          if (invitationsRes.ok) {
+            const data = await invitationsRes.json();
+            setPendingInvitations(Array.isArray(data) ? data : []);
+          }
         }
       } catch (err) {
         console.error("Error fetching assignees/members:", err);
@@ -515,6 +529,45 @@ export function TaskDetailsPanel({
   const availableMembers = members.filter(
     m => !assignees.some(a => a.userId === m.userId)
   );
+
+  // Get pending invitees not yet assigned (as pending assignees)
+  const availableInvitees = pendingInvitations.filter(
+    inv => !pendingAssignees.some(pa => pa.email.toLowerCase() === inv.email.toLowerCase()) &&
+           !assignees.some(a => a.userEmail?.toLowerCase() === inv.email.toLowerCase())
+  );
+
+  // Handle assigning a pending invitee by email
+  const handleAssignInvitee = async (email: string) => {
+    setIsAssigning(true);
+    try {
+      const response = await fetch(`/api/tasks/${task.id}/assignees`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to assign invitee");
+      }
+
+      // Add to pending assignees
+      setPendingAssignees(prev => [...prev, {
+        id: crypto.randomUUID(),
+        taskId: task.id,
+        email: email.toLowerCase(),
+        createdBy: currentUserId,
+        createdAt: new Date().toISOString(),
+      }]);
+
+      toast.success("Invitee assigned - they'll see this task when they join");
+      onTaskComplete();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to assign invitee");
+    } finally {
+      setIsAssigning(false);
+    }
+  };
 
   // Extract config-specific props based on task type
   const getConfigProps = () => {
@@ -889,25 +942,57 @@ export function TaskDetailsPanel({
               </div>
             )}
 
-            {/* Add assignee dropdown (admin only) */}
-            {isAdmin && availableMembers.length > 0 && (
+            {/* Add assignee dropdown (admin only) - shows members AND pending invitees */}
+            {isAdmin && (availableMembers.length > 0 || availableInvitees.length > 0) && (
               <div className="mt-2">
                 <Select
-                  onValueChange={handleAssign}
+                  onValueChange={(value) => {
+                    // Check if it's an invitee (prefixed with "invite:")
+                    if (value.startsWith("invite:")) {
+                      handleAssignInvitee(value.replace("invite:", ""));
+                    } else {
+                      handleAssign(value);
+                    }
+                  }}
                   disabled={isAssigning}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder={isAssigning ? "Assigning..." : "Add workspace member..."} />
+                    <SelectValue placeholder={isAssigning ? "Assigning..." : "Assign someone..."} />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableMembers.map((member) => (
-                      <SelectItem key={member.userId} value={member.userId}>
-                        <div className="flex items-center gap-2">
-                          <UserPlus className="h-3 w-3" />
-                          <span>{member.name || member.email}</span>
+                    {availableMembers.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                          Workspace Members
                         </div>
-                      </SelectItem>
-                    ))}
+                        {availableMembers.map((member) => (
+                          <SelectItem key={member.userId} value={member.userId}>
+                            <div className="flex items-center gap-2">
+                              <UserPlus className="h-3 w-3" />
+                              <span>{member.name || member.email}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                    {availableInvitees.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                          Pending Invitations
+                        </div>
+                        {availableInvitees.map((invitee) => (
+                          <SelectItem key={invitee.id} value={`invite:${invitee.email}`}>
+                            <div className="flex items-center gap-2">
+                              <Mail className="h-3 w-3 text-yellow-600" />
+                              <span>{invitee.email}</span>
+                              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
+                                Invited
+                              </Badge>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>

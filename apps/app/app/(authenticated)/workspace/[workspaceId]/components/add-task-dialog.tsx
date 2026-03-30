@@ -118,11 +118,18 @@ interface Member {
   role: string;
 }
 
+interface PendingInvitation {
+  id: string;
+  email: string;
+  role: string;
+}
+
 interface AddTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   sections: Section[];
   members: Member[];
+  pendingInvitations?: PendingInvitation[];
   onTaskCreated: () => void;
   workspaceId: string;
 }
@@ -134,6 +141,7 @@ export function AddTaskDialog({
   onOpenChange,
   sections,
   members,
+  pendingInvitations = [],
   onTaskCreated,
   workspaceId,
 }: AddTaskDialogProps) {
@@ -148,6 +156,7 @@ export function AddTaskDialog({
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([]);
+  const [selectedInviteeEmails, setSelectedInviteeEmails] = useState<string[]>([]);
 
   const handleTypeSelect = (type: TaskType) => {
     setSelectedType(type);
@@ -188,6 +197,7 @@ export function AddTaskDialog({
           type: selectedType,
           position: selectedPosition,
           assigneeIds: selectedAssignees,
+          assigneeEmails: selectedInviteeEmails,
           dueDateType: dueDate ? "absolute" : undefined,
           dueDateValue: dueDate ? dueDate.toISOString() : undefined,
         }),
@@ -217,6 +227,7 @@ export function AddTaskDialog({
     setDescription("");
     setDueDate(undefined);
     setSelectedAssignees([]);
+    setSelectedInviteeEmails([]);
     onOpenChange(false);
   };
 
@@ -279,7 +290,10 @@ export function AddTaskDialog({
             setDueDate={setDueDate}
             selectedAssignees={selectedAssignees}
             setSelectedAssignees={setSelectedAssignees}
+            selectedInviteeEmails={selectedInviteeEmails}
+            setSelectedInviteeEmails={setSelectedInviteeEmails}
             members={members}
+            pendingInvitations={pendingInvitations}
             creating={creating}
             onSubmit={handleSubmit}
             onCancel={handleClose}
@@ -396,7 +410,10 @@ function DetailsStep({
   setDueDate,
   selectedAssignees,
   setSelectedAssignees,
+  selectedInviteeEmails,
+  setSelectedInviteeEmails,
   members,
+  pendingInvitations,
   creating,
   onSubmit,
   onCancel,
@@ -409,7 +426,10 @@ function DetailsStep({
   setDueDate: (value: Date | undefined) => void;
   selectedAssignees: string[];
   setSelectedAssignees: (value: string[]) => void;
+  selectedInviteeEmails: string[];
+  setSelectedInviteeEmails: (value: string[]) => void;
   members: Member[];
+  pendingInvitations: PendingInvitation[];
   creating: boolean;
   onSubmit: () => void;
   onCancel: () => void;
@@ -498,7 +518,7 @@ function DetailsStep({
               Assignees
             </div>
           </Label>
-          {selectedAssignees.length > 0 && (
+          {(selectedAssignees.length > 0 || selectedInviteeEmails.length > 0) && (
             <div className="flex flex-wrap gap-1 mb-2">
               {selectedAssignees.map((userId) => {
                 const member = members.find((m) => m.userId === userId);
@@ -524,45 +544,115 @@ function DetailsStep({
                   </Badge>
                 );
               })}
+              {selectedInviteeEmails.map((email) => (
+                <Badge
+                  key={email}
+                  variant="outline"
+                  className="flex items-center gap-1 border-yellow-500 text-yellow-700"
+                >
+                  {email}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedInviteeEmails(
+                        selectedInviteeEmails.filter((e) => e !== email)
+                      )
+                    }
+                    className="ml-1 hover:text-destructive"
+                    disabled={creating}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
             </div>
           )}
-          <ScrollArea className="h-[120px] rounded-md border p-2">
+          <ScrollArea className="h-[160px] rounded-md border p-2">
             <div className="space-y-2">
-              {members.length === 0 ? (
+              {members.length === 0 && pendingInvitations.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-2">
-                  No members available
+                  No members or invitees available
                 </p>
               ) : (
-                members.map((member) => (
-                  <div
-                    key={member.userId}
-                    className="flex items-center space-x-2"
-                  >
-                    <Checkbox
-                      id={`assignee-${member.userId}`}
-                      checked={selectedAssignees.includes(member.userId)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedAssignees([...selectedAssignees, member.userId]);
-                        } else {
-                          setSelectedAssignees(
-                            selectedAssignees.filter((id) => id !== member.userId)
-                          );
-                        }
-                      }}
-                      disabled={creating}
-                    />
-                    <label
-                      htmlFor={`assignee-${member.userId}`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
-                    >
-                      <span>{member.name}</span>
-                      <span className="text-muted-foreground ml-2 text-xs">
-                        {member.email}
-                      </span>
-                    </label>
-                  </div>
-                ))
+                <>
+                  {/* Workspace Members */}
+                  {members.length > 0 && (
+                    <>
+                      <div className="text-xs font-medium text-muted-foreground px-1 pt-1">
+                        Workspace Members
+                      </div>
+                      {members.map((member) => (
+                        <div
+                          key={member.userId}
+                          className="flex items-center space-x-2"
+                        >
+                          <Checkbox
+                            id={`assignee-${member.userId}`}
+                            checked={selectedAssignees.includes(member.userId)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedAssignees([...selectedAssignees, member.userId]);
+                              } else {
+                                setSelectedAssignees(
+                                  selectedAssignees.filter((id) => id !== member.userId)
+                                );
+                              }
+                            }}
+                            disabled={creating}
+                          />
+                          <label
+                            htmlFor={`assignee-${member.userId}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
+                          >
+                            <span>{member.name}</span>
+                            <span className="text-muted-foreground ml-2 text-xs">
+                              {member.email}
+                            </span>
+                          </label>
+                        </div>
+                      ))}
+                    </>
+                  )}
+
+                  {/* Pending Invitations */}
+                  {pendingInvitations.length > 0 && (
+                    <>
+                      <div className="text-xs font-medium text-muted-foreground px-1 pt-2">
+                        Pending Invitations
+                      </div>
+                      {pendingInvitations.map((invitee) => (
+                        <div
+                          key={invitee.id}
+                          className="flex items-center space-x-2"
+                        >
+                          <Checkbox
+                            id={`invitee-${invitee.id}`}
+                            checked={selectedInviteeEmails.includes(invitee.email)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedInviteeEmails([...selectedInviteeEmails, invitee.email]);
+                              } else {
+                                setSelectedInviteeEmails(
+                                  selectedInviteeEmails.filter((e) => e !== invitee.email)
+                                );
+                              }
+                            }}
+                            disabled={creating}
+                          />
+                          <label
+                            htmlFor={`invitee-${invitee.id}`}
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1 flex items-center gap-2"
+                          >
+                            <span>{invitee.email}</span>
+                            <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-yellow-500 text-yellow-700">
+                              Invited
+                            </Badge>
+                          </label>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </>
               )}
             </div>
           </ScrollArea>

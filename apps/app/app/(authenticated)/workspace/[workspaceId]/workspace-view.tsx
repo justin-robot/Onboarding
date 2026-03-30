@@ -110,9 +110,16 @@ interface SidebarWorkspace {
   isCompleted: boolean;
 }
 
+interface PendingInvitation {
+  id: string;
+  email: string;
+  role: string;
+}
+
 interface WorkspaceViewProps {
   workspace: WorkspaceData;
   members: Member[];
+  pendingInvitations?: PendingInvitation[];
   sidebarWorkspaces: SidebarWorkspace[];
   currentWorkspaceId: string;
   currentUserId: string;
@@ -123,6 +130,7 @@ interface WorkspaceViewProps {
 export function WorkspaceView({
   workspace,
   members,
+  pendingInvitations = [],
   sidebarWorkspaces,
   currentWorkspaceId,
   currentUserId,
@@ -672,6 +680,7 @@ export function WorkspaceView({
         })),
       }))}
       members={members}
+      pendingInvitations={pendingInvitations}
       onTaskCreated={() => router.refresh()}
       workspaceId={currentWorkspaceId}
     />

@@ -1,5 +1,5 @@
 import { auth } from "@repo/auth/server";
-import { workspaceService, memberService, assigneeService, dependencyService } from "@/lib/services";
+import { workspaceService, memberService, assigneeService, dependencyService, invitationService } from "@/lib/services";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
@@ -175,11 +175,20 @@ export default async function WorkspacePage({ params }: PageProps) {
     role: m.role,
   }));
 
+  // Fetch pending invitations (for admins to assign tasks to invitees)
+  const pendingInvitationsRaw = await invitationService.getByWorkspaceId(workspaceId);
+  const pendingInvitations = pendingInvitationsRaw.map((inv) => ({
+    id: inv.id,
+    email: inv.email,
+    role: inv.role,
+  }));
+
   return (
     <div className="h-full">
       <WorkspaceView
         workspace={workspaceData}
         members={members}
+        pendingInvitations={pendingInvitations}
         sidebarWorkspaces={validSidebarWorkspaces}
         currentWorkspaceId={workspaceId}
         currentUserId={session.user.id}

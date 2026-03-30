@@ -1,4 +1,4 @@
-import { taskService, configService, sectionService, assigneeService } from "@/lib/services";
+import { taskService, configService, sectionService, assigneeService, pendingAssigneeService } from "@/lib/services";
 import { ablyService, WORKSPACE_EVENTS } from "@/lib/services/ably";
 import { notificationService } from "@repo/notifications";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
@@ -64,6 +64,16 @@ export async function POST(request: NextRequest, { params }: Params) {
             actorId: user.id,
             source: "web",
           });
+        }
+      }
+    }
+
+    // Create pending assignments for invitee emails
+    const assigneeEmails = body.assigneeEmails;
+    if (Array.isArray(assigneeEmails) && assigneeEmails.length > 0) {
+      for (const email of assigneeEmails) {
+        if (typeof email === "string" && email.trim()) {
+          await pendingAssigneeService.create(task.id, email.trim(), user.id);
         }
       }
     }
