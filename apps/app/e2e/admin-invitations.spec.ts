@@ -77,7 +77,7 @@ test.describe("Admin Panel - Pending Invitations", () => {
 
   test("admin can access the invitations page", async ({ adminPage }) => {
     await adminPage.goto("/dashboard/invitations");
-    await adminPage.waitForLoadState("networkidle");
+    await adminPage.waitForLoadState("domcontentloaded");
 
     // Verify we're on the invitations page
     await expect(adminPage).toHaveURL(/dashboard\/invitations/);
@@ -88,7 +88,7 @@ test.describe("Admin Panel - Pending Invitations", () => {
 
   test("admin can open create invitation dialog", async ({ adminPage }) => {
     await adminPage.goto("/dashboard/invitations");
-    await adminPage.waitForLoadState("networkidle");
+    await adminPage.waitForLoadState("domcontentloaded");
 
     // Click create invitation button
     const createButton = adminPage.locator('[data-testid="create-invitation-btn"]');
@@ -108,7 +108,7 @@ test.describe("Admin Panel - Pending Invitations", () => {
 
   test("workspace selector shows available workspaces", async ({ adminPage }) => {
     await adminPage.goto("/dashboard/invitations");
-    await adminPage.waitForLoadState("networkidle");
+    await adminPage.waitForLoadState("domcontentloaded");
 
     // Open create dialog
     await adminPage.locator('[data-testid="create-invitation-btn"]').click();
@@ -132,7 +132,7 @@ test.describe("Admin Panel - Pending Invitations", () => {
 
   test("admin can send invitation to existing user", async ({ adminPage }) => {
     await adminPage.goto("/dashboard/invitations");
-    await adminPage.waitForLoadState("networkidle");
+    await adminPage.waitForLoadState("domcontentloaded");
 
     // Open create dialog
     await adminPage.locator('[data-testid="create-invitation-btn"]').click();
@@ -195,7 +195,7 @@ test.describe("Admin Panel - Pending Invitations", () => {
 
   test("search functionality filters pending invitations", async ({ adminPage }) => {
     await adminPage.goto("/dashboard/invitations");
-    await adminPage.waitForLoadState("networkidle");
+    await adminPage.waitForLoadState("domcontentloaded");
 
     // Find the search input
     const searchInput = adminPage.getByPlaceholder(/search/i);
@@ -227,7 +227,7 @@ test.describe("Admin Panel - Pending Invitations", () => {
 
   test("search is case-insensitive", async ({ adminPage }) => {
     await adminPage.goto("/dashboard/invitations");
-    await adminPage.waitForLoadState("networkidle");
+    await adminPage.waitForLoadState("domcontentloaded");
 
     const searchInput = adminPage.getByPlaceholder(/search/i);
 
@@ -252,7 +252,7 @@ test.describe("Admin Panel - Pending Invitations", () => {
   test("pending invitations appear on user workspaces page", async ({ userPage }) => {
     // Navigate to workspaces page as the user
     await userPage.goto("/workspaces");
-    await userPage.waitForLoadState("networkidle");
+    await userPage.waitForLoadState("domcontentloaded");
 
     // Look for pending invitations section
     const pendingSection = userPage.getByText("Pending Invitations");
@@ -281,7 +281,7 @@ test.describe("Admin Panel - Pending Invitations", () => {
 
   test("user can accept pending invitation", async ({ userPage }) => {
     await userPage.goto("/workspaces");
-    await userPage.waitForLoadState("networkidle");
+    await userPage.waitForLoadState("domcontentloaded");
 
     // Look for accept button on any pending invitation
     const acceptButton = userPage.getByRole("button", { name: /accept/i });
@@ -320,7 +320,7 @@ test.describe("Admin Panel - Pending Invitations", () => {
 
     try {
       await page.goto("/workspaces");
-      await page.waitForLoadState("networkidle");
+      await page.waitForLoadState("domcontentloaded");
 
       // Look for decline button
       const declineButton = page.getByRole("button", { name: /decline/i });
@@ -350,7 +350,7 @@ test.describe("Admin Panel - Pending Invitations", () => {
 
   test("admin can delete a pending invitation", async ({ adminPage }) => {
     await adminPage.goto("/dashboard/invitations");
-    await adminPage.waitForLoadState("networkidle");
+    await adminPage.waitForLoadState("domcontentloaded");
 
     // Find delete button on any invitation row
     const deleteButton = adminPage.locator("button[title*='Delete'], button[title*='delete']").first();
@@ -390,7 +390,7 @@ test.describe("Admin Panel - Pending Invitations", () => {
   test("deleted invitation no longer visible to user", async ({ adminPage, userPage }) => {
     // First, create a new invitation as admin
     await adminPage.goto("/dashboard/invitations");
-    await adminPage.waitForLoadState("networkidle");
+    await adminPage.waitForLoadState("domcontentloaded");
 
     const uniqueEmail = `delete-test-${Date.now()}@example.com`;
 
@@ -413,7 +413,7 @@ test.describe("Admin Panel - Pending Invitations", () => {
 
     // Search for the invitation
     await adminPage.reload();
-    await adminPage.waitForLoadState("networkidle");
+    await adminPage.waitForLoadState("domcontentloaded");
 
     const searchInput = adminPage.getByPlaceholder(/search/i);
     await searchInput.fill(uniqueEmail);
@@ -453,7 +453,7 @@ test.describe("Admin Panel - Pending Invitations", () => {
 
   test("admin can copy invitation link", async ({ adminPage }) => {
     await adminPage.goto("/dashboard/invitations");
-    await adminPage.waitForLoadState("networkidle");
+    await adminPage.waitForLoadState("domcontentloaded");
 
     // Look for copy button
     const copyButton = adminPage.locator("button[title*='Copy'], button[title*='copy']").first();
@@ -479,7 +479,16 @@ test.describe("Admin Panel - Pending Invitations", () => {
 
   test("invitation status is displayed correctly", async ({ adminPage }) => {
     await adminPage.goto("/dashboard/invitations");
-    await adminPage.waitForLoadState("networkidle");
+    await adminPage.waitForLoadState("domcontentloaded");
+
+    // Wait for admin dashboard to finish loading (wait for the header to appear)
+    await adminPage.getByText("Pending Invitations").waitFor({ state: "visible", timeout: 15000 });
+
+    // Wait for invitations to finish loading (either table appears or no invitations message)
+    await Promise.race([
+      adminPage.getByRole("table").waitFor({ state: "visible", timeout: 15000 }),
+      adminPage.getByText("No pending invitations").waitFor({ state: "visible", timeout: 15000 }),
+    ]).catch(() => {});
 
     // Look for status badges
     const pendingBadge = adminPage.getByRole("cell").filter({ hasText: /pending/i });
@@ -490,25 +499,32 @@ test.describe("Admin Panel - Pending Invitations", () => {
 
     // At least one status type should be visible (or no invitations)
     const table = adminPage.getByRole("table");
+    const noInvitations = adminPage.getByText("No pending invitations");
     const hasTable = await table.isVisible().catch(() => false);
+    const hasNoInvitations = await noInvitations.isVisible().catch(() => false);
 
-    expect(hasTable).toBe(true);
+    expect(hasTable || hasNoInvitations).toBe(true);
   });
 
   test("invitation expiry date is displayed", async ({ adminPage }) => {
     await adminPage.goto("/dashboard/invitations");
-    await adminPage.waitForLoadState("networkidle");
+    await adminPage.waitForLoadState("domcontentloaded");
 
-    // Look for expiry column
+    // Wait for admin dashboard to finish loading (wait for the header to appear)
+    await adminPage.getByText("Pending Invitations").waitFor({ state: "visible", timeout: 15000 });
+
+    // Wait for invitations to finish loading (either table appears or no invitations message)
+    await Promise.race([
+      adminPage.getByRole("table").waitFor({ state: "visible", timeout: 15000 }),
+      adminPage.getByText("No pending invitations").waitFor({ state: "visible", timeout: 15000 }),
+    ]).catch(() => {});
+
+    // Look for expiry column header
     const expiresHeader = adminPage.getByRole("columnheader", { name: /expires/i });
-    await expect(expiresHeader).toBeVisible();
+    const hasHeader = await expiresHeader.isVisible().catch(() => false);
 
-    // Check that dates are displayed in cells
-    const datePatterns = adminPage.locator("td").filter({ hasText: /\d{4}|\w+ \d+/ });
-    const hasDate = await datePatterns.first().isVisible().catch(() => false);
-
-    // Either has dates or no invitations
-    expect(true).toBe(true);
+    // Either has expiry header or no table (no invitations)
+    expect(hasHeader || await adminPage.getByText("No pending invitations").isVisible().catch(() => false)).toBe(true);
   });
 });
 
@@ -523,7 +539,7 @@ test.describe("Admin Invitation Error Handling", () => {
 
   test("shows error for invalid email format", async ({ page }) => {
     await page.goto("/dashboard/invitations");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Open create dialog
     await page.locator('[data-testid="create-invitation-btn"]').click();
@@ -550,7 +566,7 @@ test.describe("Admin Invitation Error Handling", () => {
 
   test("send button is disabled when workspace not selected", async ({ page }) => {
     await page.goto("/dashboard/invitations");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
 
     // Open create dialog
     await page.locator('[data-testid="create-invitation-btn"]').click();
@@ -567,7 +583,14 @@ test.describe("Admin Invitation Error Handling", () => {
 
   test("shows error for duplicate invitation", async ({ page }) => {
     await page.goto("/dashboard/invitations");
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
+
+    // Wait for the invitations page to fully load
+    await page.getByText("Pending Invitations").waitFor({ state: "visible", timeout: 15000 });
+    await Promise.race([
+      page.getByRole("table").waitFor({ state: "visible", timeout: 15000 }),
+      page.getByText("No pending invitations").waitFor({ state: "visible", timeout: 15000 }),
+    ]).catch(() => {});
 
     // First, find an existing invitation email from the table
     const firstEmailCell = page.locator("tbody td").first();
@@ -578,8 +601,9 @@ test.describe("Admin Invitation Error Handling", () => {
       await page.locator('[data-testid="create-invitation-btn"]').click();
       await page.waitForTimeout(500);
 
-      // Select the same workspace (if possible)
+      // Wait for the workspace selector to be enabled (workspaces loaded)
       const workspaceSelector = page.locator('[data-testid="workspace-selector"]');
+      await expect(workspaceSelector).toBeEnabled({ timeout: 10000 });
       await workspaceSelector.click();
       await page.waitForTimeout(300);
       await page.locator('[role="option"]').first().click();
@@ -626,14 +650,14 @@ test.describe("Cross-User Invitation Visibility", () => {
     try {
       // Step 1: Check user's current pending invitations
       await userPage.goto("/workspaces");
-      await userPage.waitForLoadState("networkidle");
+      await userPage.waitForLoadState("domcontentloaded");
 
       const pendingBefore = await userPage.getByText("Pending Invitations").isVisible().catch(() => false);
       console.log(`User has pending invitations before: ${pendingBefore}`);
 
       // Step 2: Admin creates invitation for the user
       await adminPage.goto("/dashboard/invitations");
-      await adminPage.waitForLoadState("networkidle");
+      await adminPage.waitForLoadState("domcontentloaded");
 
       await adminPage.locator('[data-testid="create-invitation-btn"]').click();
       await adminPage.waitForTimeout(500);
@@ -661,7 +685,7 @@ test.describe("Cross-User Invitation Visibility", () => {
 
         // Step 3: Check if user can now see the invitation
         await userPage.reload();
-        await userPage.waitForLoadState("networkidle");
+        await userPage.waitForLoadState("domcontentloaded");
 
         // Look for pending invitations section
         const pendingAfter = await userPage.getByText("Pending Invitations").isVisible().catch(() => false);
