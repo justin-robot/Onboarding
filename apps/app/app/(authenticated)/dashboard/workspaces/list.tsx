@@ -40,7 +40,6 @@ import {
   AlertDialogTitle,
 } from "@repo/design/components/ui/alert-dialog";
 import {
-  Eye,
   SearchIcon,
   Loader2,
   MoreHorizontal,
@@ -335,13 +334,13 @@ export const WorkspaceList = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[25%]">Name</TableHead>
+                  <TableHead className="w-[28%]">Name</TableHead>
                   <TableHead className="w-[10%]">Members</TableHead>
                   <TableHead className="w-[18%]">Progress</TableHead>
                   <TableHead className="w-[12%]">Due Date</TableHead>
                   <TableHead className="w-[10%]">Status</TableHead>
                   <TableHead className="w-[12%]">Last Activity</TableHead>
-                  <TableHead className="w-[13%]">Actions</TableHead>
+                  <TableHead className="w-[10%]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -353,7 +352,15 @@ export const WorkspaceList = () => {
                   </TableRow>
                 ) : (
                   filteredData.map((workspace) => (
-                    <TableRow key={workspace.id} className={workspace.deletedAt ? "opacity-50" : ""}>
+                    <TableRow
+                      key={workspace.id}
+                      className={`${workspace.deletedAt ? "opacity-50" : "cursor-pointer hover:bg-muted/50"}`}
+                      onClick={() => {
+                        if (!workspace.deletedAt) {
+                          router.push(`/workspace/${workspace.id}`);
+                        }
+                      }}
+                    >
                       <TableCell>
                         <div>
                           <div className="font-medium">{workspace.name}</div>
@@ -393,25 +400,8 @@ export const WorkspaceList = () => {
                       <TableCell className="text-muted-foreground text-sm">
                         {formatLastActivity(workspace.lastActivityAt)}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          {!workspace.deletedAt && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="cursor-pointer"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                window.location.href = `/workspace/${workspace.id}`;
-                              }}
-                              title="View Workspace"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          )}
-                          <DropdownMenu>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
                                 <MoreHorizontal className="h-4 w-4" />
@@ -484,7 +474,6 @@ export const WorkspaceList = () => {
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </div>
                       </TableCell>
                     </TableRow>
                   ))
