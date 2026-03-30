@@ -38,7 +38,7 @@ import {
 } from "@repo/design/components/ui/dialog";
 import { Checkbox } from "@repo/design/components/ui/checkbox";
 import { Label } from "@repo/design/components/ui/label";
-import { Eye, SearchIcon, Loader2, MoreHorizontal, CheckCircle, Pencil, ChevronDown, ChevronRight, User, Clock } from "lucide-react";
+import { SearchIcon, Loader2, MoreHorizontal, CheckCircle, Pencil, ChevronDown, ChevronRight, User, Clock } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -310,14 +310,14 @@ export const TaskList = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[20%]">Title</TableHead>
+                  <TableHead className="w-[22%]">Title</TableHead>
                   <TableHead className="w-[10%]">Type</TableHead>
                   <TableHead className="w-[10%]">Status</TableHead>
                   <TableHead className="w-[18%]">Workspace</TableHead>
                   <TableHead className="w-[15%]">Section</TableHead>
                   <TableHead className="w-[8%]">Assignees</TableHead>
                   <TableHead className="w-[10%]">Due Date</TableHead>
-                  <TableHead className="w-[9%]">Actions</TableHead>
+                  <TableHead className="w-[7%]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -337,11 +337,19 @@ export const TaskList = () => {
                     return (
                       <Collapsible key={task.id} open={isExpanded} onOpenChange={() => toggleTaskExpanded(task.id)} asChild>
                         <>
-                          <TableRow className={isExpanded ? "border-b-0" : ""}>
+                          <TableRow
+                            className={`cursor-pointer hover:bg-muted/50 ${isExpanded ? "border-b-0" : ""}`}
+                            onClick={() => router.push(`/workspace/${task.workspaceId}?task=${task.id}`)}
+                          >
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <CollapsibleTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 shrink-0"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
                                     {isExpanded ? (
                                       <ChevronDown className="h-4 w-4" />
                                     ) : (
@@ -364,7 +372,7 @@ export const TaskList = () => {
                             </TableCell>
                             <TableCell className="max-w-xs truncate">{task.workspaceName}</TableCell>
                             <TableCell className="max-w-xs truncate">{task.sectionTitle}</TableCell>
-                            <TableCell>
+                            <TableCell onClick={(e) => e.stopPropagation()}>
                               <CollapsibleTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-auto py-1 px-2 text-sm hover:bg-muted">
                                   {task.assigneeCount}
@@ -379,48 +387,32 @@ export const TaskList = () => {
                                   })
                                 : "—"}
                             </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="cursor-pointer"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    window.location.href = `/workspace/${task.workspaceId}`;
-                                  }}
-                                  title="View Workspace"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem
-                                      onClick={() => {
-                                        window.location.href = `/dashboard/tasks/${task.id}`;
-                                      }}
-                                    >
-                                      <Pencil className="mr-2 h-4 w-4" />
-                                      Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={() => openCompleteDialog(task)}
-                                      disabled={task.status === "completed"}
-                                    >
-                                      <CheckCircle className="mr-2 h-4 w-4" />
-                                      Complete Task
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      window.location.href = `/dashboard/tasks/${task.id}`;
+                                    }}
+                                  >
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => openCompleteDialog(task)}
+                                    disabled={task.status === "completed"}
+                                  >
+                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    Complete Task
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </TableCell>
                           </TableRow>
                           <CollapsibleContent asChild>
