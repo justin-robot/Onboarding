@@ -38,7 +38,24 @@ import {
   TableHeader,
   TableRow,
 } from "@repo/design/components/ui/table";
-import { ArrowLeftIcon, Loader2, CheckCircle2, Clock, Circle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@repo/design/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@repo/design/components/ui/dropdown-menu";
+import { Progress } from "@repo/design/components/ui/progress";
+import { ArrowLeftIcon, Loader2, CheckCircle2, Clock, Circle, ExternalLink, Check, ChevronsUpDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 const userSchema = z.object({
@@ -69,6 +86,14 @@ interface UserTask {
   sectionTitle: string;
   workspaceId: string;
   workspaceName: string;
+}
+
+interface WorkspaceDetail {
+  workspaceId: string;
+  workspaceName: string;
+  role: string;
+  totalTasks: number;
+  completedTasks: number;
 }
 
 interface UserEditProps {
@@ -116,9 +141,14 @@ export const UserEdit = ({ userId }: UserEditProps) => {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [tasks, setTasks] = useState<UserTask[]>([]);
+  const [workspaces, setWorkspaces] = useState<WorkspaceDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [tasksLoading, setTasksLoading] = useState(true);
+  const [workspacesLoading, setWorkspacesLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [updatingRole, setUpdatingRole] = useState<Record<string, boolean>>({});
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
@@ -174,8 +204,25 @@ export const UserEdit = ({ userId }: UserEditProps) => {
       }
     };
 
+    const fetchWorkspaces = async () => {
+      try {
+        const response = await fetch(`/api/admin/users/${userId}/workspaces`, {
+          credentials: "include",
+        });
+        if (!response.ok) throw new Error("Failed to fetch workspaces");
+
+        const data = await response.json();
+        setWorkspaces(data.data || []);
+      } catch (error) {
+        console.error("Error fetching workspaces:", error);
+      } finally {
+        setWorkspacesLoading(false);
+      }
+    };
+
     fetchUser();
     fetchTasks();
+    fetchWorkspaces();
   }, [userId, form]);
 
   const onSubmit = async (data: UserFormValues) => {
@@ -209,6 +256,70 @@ export const UserEdit = ({ userId }: UserEditProps) => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!user?.id) return;
+
+    setDeleting(true);
+    try {
+      const response = await fetch("/api/auth/admin/remove-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ userId: user.id }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || "Failed to delete user");
+      }
+
+      toast.success("User deleted successfully");
+      router.push("/dashboard/users");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete user");
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+    }
+  };
+
+  const updateMemberRole = async (workspaceId: string, newRole: string) => {
+    setUpdatingRole((prev) => ({ ...prev, [workspaceId]: true }));
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/workspaces/${workspaceId}/role`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ role: newRole }),
+      });
+
+      if (response.ok) {
+        setWorkspaces((prev) =>
+          prev.map((ws) =>
+            ws.workspaceId === workspaceId ? { ...ws, role: newRole } : ws
+          )
+        );
+        toast.success("Role updated successfully");
+      } else {
+        const error = await response.json();
+        toast.error(error.error || "Failed to update role");
+      }
+    } catch (error) {
+      console.error("Error updating role:", error);
+      toast.error("Failed to update role");
+    } finally {
+      setUpdatingRole((prev) => ({ ...prev, [workspaceId]: false }));
+    }
+  };
+
+  const handleTaskClick = (workspaceId: string) => {
+    router.push(`/workspace/${workspaceId}`);
+  };
+
+  const handleWorkspaceClick = (workspaceId: string) => {
+    router.push(`/workspace/${workspaceId}`);
   };
 
   if (loading) {
@@ -351,6 +462,16 @@ export const UserEdit = ({ userId }: UserEditProps) => {
                   >
                     Cancel
                   </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => setDeleteDialogOpen(true)}
+                    disabled={saving || deleting}
+                    data-testid="delete-user-btn"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete User
+                  </Button>
                 </div>
               </form>
             </Form>
@@ -393,8 +514,17 @@ export const UserEdit = ({ userId }: UserEditProps) => {
                 </TableHeader>
                 <TableBody>
                   {tasks.map((task) => (
-                    <TableRow key={task.taskId}>
-                      <TableCell className="font-medium">{task.title}</TableCell>
+                    <TableRow
+                      key={task.taskId}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleTaskClick(task.workspaceId)}
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {task.title}
+                          <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline">{formatTaskType(task.type)}</Badge>
                       </TableCell>
@@ -415,7 +545,131 @@ export const UserEdit = ({ userId }: UserEditProps) => {
             )}
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Workspaces</CardTitle>
+            <CardDescription>
+              {workspaces.length} workspace{workspaces.length !== 1 ? "s" : ""} assigned
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {workspacesLoading ? (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-muted-foreground">Loading workspaces...</span>
+              </div>
+            ) : workspaces.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                No workspaces assigned to this user
+              </p>
+            ) : (
+              <div className="grid gap-3">
+                {workspaces.map((ws) => {
+                  const isUpdating = updatingRole[ws.workspaceId];
+                  const progressValue = ws.totalTasks > 0
+                    ? (ws.completedTasks / ws.totalTasks) * 100
+                    : 0;
+                  return (
+                    <div
+                      key={ws.workspaceId}
+                      className="flex items-center justify-between bg-muted/50 rounded-md px-4 py-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          className="text-sm font-medium hover:underline flex items-center gap-1"
+                          onClick={() => handleWorkspaceClick(ws.workspaceId)}
+                        >
+                          {ws.workspaceName}
+                          <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 gap-1"
+                              disabled={isUpdating}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Badge
+                                variant={ws.role === "admin" ? "default" : "outline"}
+                                className="text-xs pointer-events-none"
+                              >
+                                {ws.role}
+                              </Badge>
+                              {isUpdating ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
+                              )}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateMemberRole(ws.workspaceId, "admin");
+                              }}
+                              className="flex items-center justify-between"
+                            >
+                              Admin
+                              {ws.role === "admin" && <Check className="h-4 w-4" />}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                updateMemberRole(ws.workspaceId, "user");
+                              }}
+                              className="flex items-center justify-between"
+                            >
+                              User
+                              {ws.role === "user" && <Check className="h-4 w-4" />}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Progress
+                          value={progressValue}
+                          className="h-2 w-24"
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {ws.completedTasks}/{ws.totalTasks}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{user.name}</strong> ({user.email})?
+              This action cannot be undone. The user will be permanently removed from the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

@@ -15,25 +15,7 @@ import { Badge } from "@repo/design/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@repo/design/components/ui/card";
 import { Input } from "@repo/design/components/ui/input";
 import { Progress } from "@repo/design/components/ui/progress";
-import { PlusIcon, SearchIcon, Loader2, AlertCircle, ChevronDown, ChevronRight, Check, ChevronsUpDown, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@repo/design/components/ui/alert-dialog";
-import { DropdownMenuSeparator } from "@repo/design/components/ui/dropdown-menu";
-import { toast } from "sonner";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@repo/design/components/ui/dropdown-menu";
+import { PlusIcon, SearchIcon, Loader2, AlertCircle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -53,14 +35,6 @@ interface User {
   lastActivity: string | null;
 }
 
-interface WorkspaceDetail {
-  workspaceId: string;
-  workspaceName: string;
-  role: string;
-  totalTasks: number;
-  completedTasks: number;
-}
-
 interface UserListProps {
   isPlatformAdmin?: boolean;
 }
@@ -70,13 +44,6 @@ export const UserList = ({ isPlatformAdmin = false }: UserListProps) => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");
-  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
-  const [workspaceDetails, setWorkspaceDetails] = useState<Record<string, WorkspaceDetail[]>>({});
-  const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
-  const [updatingRole, setUpdatingRole] = useState<Record<string, boolean>>({});
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -106,65 +73,6 @@ export const UserList = ({ isPlatformAdmin = false }: UserListProps) => {
       )
     : users;
 
-  const toggleUserExpand = async (userId: string) => {
-    if (expandedUserId === userId) {
-      setExpandedUserId(null);
-      return;
-    }
-
-    setExpandedUserId(userId);
-
-    // Load workspace details if not already loaded
-    if (!workspaceDetails[userId]) {
-      setLoadingDetails((prev) => ({ ...prev, [userId]: true }));
-      try {
-        const response = await fetch(`/api/admin/users/${userId}/workspaces`, {
-          credentials: "include",
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setWorkspaceDetails((prev) => ({ ...prev, [userId]: data.data || [] }));
-        }
-      } catch (error) {
-        console.error("Error fetching workspace details:", error);
-      } finally {
-        setLoadingDetails((prev) => ({ ...prev, [userId]: false }));
-      }
-    }
-  };
-
-  const updateMemberRole = async (userId: string, workspaceId: string, newRole: string) => {
-    const key = `${userId}-${workspaceId}`;
-    setUpdatingRole((prev) => ({ ...prev, [key]: true }));
-    try {
-      const response = await fetch(`/api/admin/users/${userId}/workspaces/${workspaceId}/role`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ role: newRole }),
-      });
-
-      if (response.ok) {
-        // Update local state
-        setWorkspaceDetails((prev) => ({
-          ...prev,
-          [userId]: prev[userId]?.map((ws) =>
-            ws.workspaceId === workspaceId ? { ...ws, role: newRole } : ws
-          ),
-        }));
-      } else {
-        const error = await response.json();
-        console.error("Failed to update role:", error);
-        alert(error.error || "Failed to update role");
-      }
-    } catch (error) {
-      console.error("Error updating role:", error);
-      alert("Failed to update role");
-    } finally {
-      setUpdatingRole((prev) => ({ ...prev, [key]: false }));
-    }
-  };
-
   const formatLastActivity = (date: string | null) => {
     if (!date) return "Never";
     const d = new Date(date);
@@ -179,32 +87,8 @@ export const UserList = ({ isPlatformAdmin = false }: UserListProps) => {
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
-  const handleDeleteUser = async () => {
-    if (!selectedUser) return;
-    setDeleting(true);
-    try {
-      const response = await fetch("/api/auth/admin/remove-user", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ userId: selectedUser.id }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.message || "Failed to delete user");
-      }
-
-      setUsers((prev) => prev.filter((u) => u.id !== selectedUser.id));
-      toast.success("User deleted successfully");
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to delete user");
-    } finally {
-      setDeleting(false);
-      setDeleteDialogOpen(false);
-      setSelectedUser(null);
-    }
+  const handleRowClick = (userId: string) => {
+    router.push(`/dashboard/users/${userId}`);
   };
 
   return (
@@ -253,214 +137,77 @@ export const UserList = ({ isPlatformAdmin = false }: UserListProps) => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[3%]"></TableHead>
-                  <TableHead className="w-[15%]">Name</TableHead>
-                  <TableHead className="w-[20%]">Email</TableHead>
+                  <TableHead className="w-[18%]">Name</TableHead>
+                  <TableHead className="w-[22%]">Email</TableHead>
                   <TableHead className="w-[12%]">Platform Role</TableHead>
-                  <TableHead className="w-[8%]">Workspaces</TableHead>
+                  <TableHead className="w-[10%]">Workspaces</TableHead>
                   <TableHead className="w-[18%]">Task Progress</TableHead>
-                  <TableHead className="w-[8%]">Overdue</TableHead>
+                  <TableHead className="w-[10%]">Overdue</TableHead>
                   <TableHead className="w-[10%]">Last Activity</TableHead>
-                  <TableHead className="w-[6%]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {!filteredData || filteredData.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                       No users found
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredData.map((user) => (
-                    <React.Fragment key={user.id}>
-                      <TableRow>
-                        <TableCell>
-                          {user.totalTasks > 0 && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6"
-                              onClick={() => toggleUserExpand(user.id)}
-                            >
-                              {expandedUserId === user.id ? (
-                                <ChevronDown className="h-4 w-4" />
-                              ) : (
-                                <ChevronRight className="h-4 w-4" />
-                              )}
-                            </Button>
-                          )}
-                        </TableCell>
-                        <TableCell className="font-medium">{user.name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>
-                          {user.role ? (
-                            <Badge variant={user.role === "admin" ? "default" : "secondary"}>
-                              {user.role}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>{user.workspaceCount}</TableCell>
-                        <TableCell>
-                          {user.totalTasks > 0 ? (
-                            <div className="flex items-center gap-2 min-w-32">
-                              <Progress
-                                value={(user.completedTasks / user.totalTasks) * 100}
-                                className="h-2 flex-1"
-                              />
-                              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                {user.completedTasks}/{user.totalTasks}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {user.overdueTasks > 0 ? (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant="destructive" className="gap-1 cursor-help">
-                                  <AlertCircle className="h-3 w-3" />
-                                  {user.overdueTasks}
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {user.overdueTasks} overdue {user.overdueTasks === 1 ? "task" : "tasks"}
-                              </TooltipContent>
-                            </Tooltip>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {formatLastActivity(user.lastActivity)}
-                        </TableCell>
-                        <TableCell>
-                          {isPlatformAdmin && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    window.location.href = `/dashboard/users/${user.id}`;
-                                  }}
-                                >
-                                  <Pencil className="mr-2 h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="text-destructive focus:text-destructive"
-                                  onClick={() => {
-                                    setSelectedUser(user);
-                                    setDeleteDialogOpen(true);
-                                  }}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                      {expandedUserId === user.id && (
-                        <TableRow key={`${user.id}-details`}>
-                          <TableCell colSpan={9} className="bg-muted/50 py-4">
-                            {loadingDetails[user.id] ? (
-                              <div className="flex items-center justify-center py-4">
-                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                                <span className="ml-2 text-sm text-muted-foreground">
-                                  Loading workspace details...
-                                </span>
-                              </div>
-                            ) : workspaceDetails[user.id]?.length > 0 ? (
-                              <div className="pl-10">
-                                <h4 className="text-sm font-medium mb-3">Workspace Breakdown</h4>
-                                <div className="grid gap-2">
-                                  {workspaceDetails[user.id].map((ws) => {
-                                    const roleKey = `${user.id}-${ws.workspaceId}`;
-                                    const isUpdating = updatingRole[roleKey];
-                                    return (
-                                      <div
-                                        key={ws.workspaceId}
-                                        className="flex items-center justify-between bg-background rounded-md px-3 py-2"
-                                      >
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-sm">{ws.workspaceName}</span>
-                                          <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                              <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-6 px-2 gap-1"
-                                                disabled={isUpdating}
-                                              >
-                                                <Badge
-                                                  variant={ws.role === "admin" ? "default" : "outline"}
-                                                  className="text-xs pointer-events-none"
-                                                >
-                                                  {ws.role}
-                                                </Badge>
-                                                {isUpdating ? (
-                                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                                ) : (
-                                                  <ChevronsUpDown className="h-3 w-3 text-muted-foreground" />
-                                                )}
-                                              </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="start">
-                                              <DropdownMenuItem
-                                                onClick={() => updateMemberRole(user.id, ws.workspaceId, "admin")}
-                                                className="flex items-center justify-between"
-                                              >
-                                                Admin
-                                                {ws.role === "admin" && <Check className="h-4 w-4" />}
-                                              </DropdownMenuItem>
-                                              <DropdownMenuItem
-                                                onClick={() => updateMemberRole(user.id, ws.workspaceId, "user")}
-                                                className="flex items-center justify-between"
-                                              >
-                                                User
-                                                {ws.role === "user" && <Check className="h-4 w-4" />}
-                                              </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                          </DropdownMenu>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          <Progress
-                                            value={
-                                              ws.totalTasks > 0
-                                                ? (ws.completedTasks / ws.totalTasks) * 100
-                                                : 0
-                                            }
-                                            className="h-2 w-24"
-                                          />
-                                          <span className="text-xs text-muted-foreground">
-                                            {ws.completedTasks}/{ws.totalTasks}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="pl-10 text-sm text-muted-foreground">
-                                No workspace details available
-                              </div>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </React.Fragment>
+                    <TableRow
+                      key={user.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleRowClick(user.id)}
+                    >
+                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        {user.role ? (
+                          <Badge variant={user.role === "admin" ? "default" : "secondary"}>
+                            {user.role}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>{user.workspaceCount}</TableCell>
+                      <TableCell>
+                        {user.totalTasks > 0 ? (
+                          <div className="flex items-center gap-2 min-w-32">
+                            <Progress
+                              value={(user.completedTasks / user.totalTasks) * 100}
+                              className="h-2 flex-1"
+                            />
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                              {user.completedTasks}/{user.totalTasks}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {user.overdueTasks > 0 ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="destructive" className="gap-1 cursor-help">
+                                <AlertCircle className="h-3 w-3" />
+                                {user.overdueTasks}
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {user.overdueTasks} overdue {user.overdueTasks === 1 ? "task" : "tasks"}
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {formatLastActivity(user.lastActivity)}
+                      </TableCell>
+                    </TableRow>
                   ))
                 )}
               </TableBody>
@@ -468,29 +215,6 @@ export const UserList = ({ isPlatformAdmin = false }: UserListProps) => {
           )}
         </CardContent>
       </Card>
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete User</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete <strong>{selectedUser?.name}</strong> ({selectedUser?.email})?
-              This action cannot be undone. The user will be permanently removed from the system.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteUser}
-              disabled={deleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };
