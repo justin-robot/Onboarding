@@ -91,7 +91,7 @@ export function PendingInvitations({ invitations: initialInvitations }: PendingI
   };
 
   return (
-    <Card className="mb-6 border-primary/20 bg-primary/5">
+    <Card className="mb-6 border-primary/20 bg-primary/5" data-testid="pending-invitations-section">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
           <Mail className="h-5 w-5 text-primary" />
@@ -112,6 +112,8 @@ export function PendingInvitations({ invitations: initialInvitations }: PendingI
             return (
               <div
                 key={invitation.id}
+                data-testid="pending-invitation"
+                data-invitation-id={invitation.id}
                 className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border bg-background p-4"
               >
                 <div className="space-y-1">
@@ -137,6 +139,7 @@ export function PendingInvitations({ invitations: initialInvitations }: PendingI
                     size="sm"
                     onClick={() => handleDecline(invitation)}
                     disabled={isProcessing}
+                    data-testid="decline-invitation-btn"
                   >
                     {isProcessing ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -151,6 +154,7 @@ export function PendingInvitations({ invitations: initialInvitations }: PendingI
                     size="sm"
                     onClick={() => handleAccept(invitation)}
                     disabled={isProcessing}
+                    data-testid="accept-invitation-btn"
                   >
                     {isProcessing ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
