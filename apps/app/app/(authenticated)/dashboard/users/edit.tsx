@@ -358,28 +358,24 @@ export const UserEdit = ({ userId }: UserEditProps) => {
   return (
     <div className="container mx-auto py-8 px-4">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <p className="text-muted-foreground mt-2">Edit user</p>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push("/dashboard/users")}
+          >
+            <ArrowLeftIcon className="size-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">{user.name}</h1>
+            <p className="text-muted-foreground mt-1">{user.email}</p>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-6">
         <Card>
-          <CardHeader>
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => router.push("/dashboard/users")}
-              >
-                <ArrowLeftIcon className="size-4" />
-              </Button>
-              <div>
-                <CardTitle>Edit User</CardTitle>
-                <CardDescription>Update user information</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
