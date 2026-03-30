@@ -40,6 +40,10 @@ const AdminClient = () => {
   const renderContent = () => {
     // User routes
     if (pathname === "/dashboard/users/create") {
+      // Only platform admins can create users
+      if (!isPlatformAdmin) {
+        return <UserList isPlatformAdmin={isPlatformAdmin} />;
+      }
       return <UserCreate />;
     }
     if (pathname.startsWith("/dashboard/users/") && pathname !== "/dashboard/users") {

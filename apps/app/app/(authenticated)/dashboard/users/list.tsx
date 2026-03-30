@@ -103,17 +103,19 @@ export const UserList = ({ isPlatformAdmin = false }: UserListProps) => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div />
-            <Button
-              type="button"
-              className="cursor-pointer"
-              onClick={(e) => {
-                e.preventDefault();
-                window.location.href = "/dashboard/users/create";
-              }}
-            >
-              <PlusIcon className="size-4 mr-2" />
-              Create User
-            </Button>
+            {isPlatformAdmin && (
+              <Button
+                type="button"
+                className="cursor-pointer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.location.href = "/dashboard/users/create";
+                }}
+              >
+                <PlusIcon className="size-4 mr-2" />
+                Create User
+              </Button>
+            )}
           </div>
           <div className="mt-4">
             <div className="relative">
