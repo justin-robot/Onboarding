@@ -1,4 +1,4 @@
-import { invitationService, memberService, workspaceService } from "@/lib/services";
+import { invitationService, memberService, workspaceService, adminAccessService } from "@/lib/services";
 import { sendInvitationEmail } from "@repo/email";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
@@ -50,15 +50,20 @@ export async function POST(request: NextRequest, { params }: Params) {
     const user = await requireAuth();
     const { id: workspaceId } = await params;
 
-    // Verify user is a member of the workspace (preferably admin)
-    const membership = await memberService.getMember(workspaceId, user.id);
-    if (!membership) {
-      return errorResponse("Not a member of this workspace", 403);
-    }
+    // Check if user is a platform admin (can invite to any workspace)
+    const isPlatformAdmin = await adminAccessService.isPlatformAdmin(user.id);
 
-    // Only admins can invite
-    if (membership.role !== "admin") {
-      return errorResponse("Only admins can invite members", 403);
+    if (!isPlatformAdmin) {
+      // Verify user is a member of the workspace (preferably admin)
+      const membership = await memberService.getMember(workspaceId, user.id);
+      if (!membership) {
+        return errorResponse("Not a member of this workspace", 403);
+      }
+
+      // Only admins can invite
+      if (membership.role !== "admin") {
+        return errorResponse("Only admins can invite members", 403);
+      }
     }
 
     const body = await request.json();
@@ -100,27 +105,33 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     const invitation = result.invitation!;
 
-    // Send invitation email (non-blocking, don't fail if email fails)
-    try {
-      const workspace = await workspaceService.getById(workspaceId);
-      const h = await headers();
-      const host = h.get("host") || "localhost:3000";
-      const protocol = host.includes("localhost") ? "http" : "https";
-      const inviteUrl = `${protocol}://${host}/invite/${invitation.token}`;
+    // Get workspace to check if published
+    const workspace = await workspaceService.getById(workspaceId);
 
-      console.log(`Sending invitation email to ${email}...`);
-      await sendInvitationEmail({
-        to: email,
-        workspaceName: workspace?.name || "Workspace",
-        inviterName: user.name || user.email,
-        role,
-        inviteUrl,
-        expiresAt: invitation.expiresAt.toISOString(),
-      });
-      console.log(`✓ Invitation email sent to ${email}`);
-    } catch (emailError) {
-      // Log but don't fail - the invitation was created successfully
-      console.error("Failed to send invitation email:", emailError);
+    // Only send invitation email if workspace is published
+    // In draft mode, emails are queued and sent when workspace is published
+    if (workspace?.isPublished) {
+      // Send invitation email (non-blocking, don't fail if email fails)
+      try {
+        const h = await headers();
+        const host = h.get("host") || "localhost:3000";
+        const protocol = host.includes("localhost") ? "http" : "https";
+        const inviteUrl = `${protocol}://${host}/invite/${invitation.token}`;
+
+        console.log(`Sending invitation email to ${email}...`);
+        await sendInvitationEmail({
+          to: email,
+          workspaceName: workspace.name,
+          inviterName: user.name || user.email,
+          role,
+          inviteUrl,
+          expiresAt: invitation.expiresAt.toISOString(),
+        });
+        console.log(`✓ Invitation email sent to ${email}`);
+      } catch (emailError) {
+        // Log but don't fail - the invitation was created successfully
+        console.error("Failed to send invitation email:", emailError);
+      }
     }
 
     // Return invitation (with token for copy link feature)
