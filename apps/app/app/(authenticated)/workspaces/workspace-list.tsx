@@ -57,8 +57,8 @@ export function WorkspaceList({ workspaces, userId, userEmail, userRole, pending
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-  // Show admin panel if user is platform admin OR admin of any workspace
-  const canAccessAdmin = userRole === "admin" || workspaces.some((w) => w.role === "admin");
+  // Show admin panel if user is platform admin OR manager of any workspace
+  const canAccessAdmin = userRole === "admin" || workspaces.some((w) => w.role === "manager");
 
   const filteredWorkspaces = workspaces.filter((workspace) =>
     workspace.name.toLowerCase().includes(search.toLowerCase())
@@ -185,9 +185,9 @@ function WorkspaceCard({ workspace }: { workspace: WorkspaceData }) {
                 <CardTitle className="line-clamp-1 text-base group-hover:text-primary transition-colors">
                   {workspace.name}
                 </CardTitle>
-                {workspace.role === "admin" && (
+                {workspace.role === "manager" && (
                   <Badge variant="secondary" className="text-xs mt-1">
-                    Admin
+                    Manager
                   </Badge>
                 )}
               </div>
@@ -273,9 +273,9 @@ function WorkspaceListItem({ workspace }: { workspace: WorkspaceData }) {
               {workspace.isCompleted && (
                 <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
               )}
-              {workspace.role === "admin" && (
+              {workspace.role === "manager" && (
                 <Badge variant="secondary" className="text-xs">
-                  Admin
+                  Manager
                 </Badge>
               )}
             </div>

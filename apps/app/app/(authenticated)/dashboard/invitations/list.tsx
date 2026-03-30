@@ -79,7 +79,7 @@ export const InvitationList = () => {
   const [workspacesLoading, setWorkspacesLoading] = useState(false);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"admin" | "user">("user");
+  const [inviteRole, setInviteRole] = useState<"manager" | "member">("member");
   const [creating, setCreating] = useState(false);
 
   const fetchInvitations = async () => {
@@ -128,7 +128,7 @@ export const InvitationList = () => {
     setCreateDialogOpen(false);
     setSelectedWorkspaceId("");
     setInviteEmail("");
-    setInviteRole("user");
+    setInviteRole("member");
   };
 
   const handleCreateInvitation = async () => {
@@ -382,15 +382,15 @@ export const InvitationList = () => {
               <Label htmlFor="role">Role</Label>
               <Select
                 value={inviteRole}
-                onValueChange={(value: "admin" | "user") => setInviteRole(value)}
+                onValueChange={(value: "manager" | "member") => setInviteRole(value)}
                 disabled={creating}
               >
                 <SelectTrigger id="role" data-testid="role-selector">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">User</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="member">Member</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
                 </SelectContent>
               </Select>
             </div>
