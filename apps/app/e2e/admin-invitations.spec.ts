@@ -548,7 +548,7 @@ test.describe("Admin Invitation Error Handling", () => {
     await expect(errorToast).toBeVisible({ timeout: 5000 });
   });
 
-  test("shows error when workspace not selected", async ({ page }) => {
+  test("send button is disabled when workspace not selected", async ({ page }) => {
     await page.goto("/dashboard/invitations");
     await page.waitForLoadState("networkidle");
 
@@ -560,13 +560,9 @@ test.describe("Admin Invitation Error Handling", () => {
     const emailInput = page.locator('[data-testid="invite-email-input"]');
     await emailInput.fill("test@example.com");
 
-    // Try to send
+    // Send button should be disabled when no workspace is selected
     const sendButton = page.locator('[data-testid="send-invitation-btn"]');
-    await sendButton.click();
-
-    // Should show error
-    const errorToast = page.getByText(/workspace|select/i);
-    await expect(errorToast).toBeVisible({ timeout: 5000 });
+    await expect(sendButton).toBeDisabled();
   });
 
   test("shows error for duplicate invitation", async ({ page }) => {
