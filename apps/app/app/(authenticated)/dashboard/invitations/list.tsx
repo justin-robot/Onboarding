@@ -223,6 +223,7 @@ export const InvitationList = () => {
                 placeholder="Search by email or workspace..."
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
+                autoComplete="off"
                 className="pl-9"
               />
             </div>
@@ -363,13 +364,16 @@ export const InvitationList = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="invite-email">Email Address</Label>
               <Input
-                id="email"
+                id="invite-email"
+                name="invite-email"
                 type="email"
                 placeholder="user@example.com"
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
+                onKeyDown={(e) => e.stopPropagation()}
+                autoComplete="off"
                 disabled={creating}
                 data-testid="invite-email-input"
               />
