@@ -144,29 +144,15 @@ export function CreateWorkspaceDialog({
         throw new Error(error.error || "Failed to create workspace");
       }
 
-      const result = await response.json();
+      const workspace = await response.json();
 
-      // Show success message with invitation results
-      if (result.invitationResults) {
-        const { created, failed } = result.invitationResults;
-        if (created > 0 && failed === 0) {
-          toast.success(`Workspace created with ${created} pending invitation${created > 1 ? "s" : ""}. Emails will be sent when you publish.`);
-        } else if (created > 0 && failed > 0) {
-          toast.success(`Workspace created. ${created} invitation${created > 1 ? "s" : ""} pending, ${failed} failed`);
-        } else if (failed > 0) {
-          toast.warning(`Workspace created but some invitations failed`);
-        } else {
-          toast.success("Workspace created successfully");
-        }
-      } else {
-        toast.success("Workspace created successfully");
-      }
+      toast.success("Workspace created successfully");
 
       form.reset();
       setInviteEmails([]);
       setEmailInput("");
       onOpenChange(false);
-      router.push(`/workspace/${result.workspace.id}`);
+      router.push(`/workspace/${workspace.id}`);
       router.refresh();
     } catch (error) {
       toast.error(

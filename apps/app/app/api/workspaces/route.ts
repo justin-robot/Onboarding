@@ -1,4 +1,4 @@
-import { workspaceService, memberService } from "@/lib/services";
+import { workspaceService, memberService, invitationService } from "@/lib/services";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
@@ -37,6 +37,27 @@ export async function POST(request: NextRequest) {
       userId: user.id,
       role: "admin",
     });
+
+    // Handle invite emails if provided
+    // These invitations are created but emails are NOT sent until workspace is published
+    let invitationResults = { created: 0, failed: 0 };
+    if (body.inviteEmails && Array.isArray(body.inviteEmails)) {
+      for (const email of body.inviteEmails) {
+        if (typeof email === "string" && email.trim()) {
+          const result = await invitationService.create({
+            workspaceId: workspace.id,
+            email: email.trim().toLowerCase(),
+            role: "user",
+            invitedBy: user.id,
+          });
+          if (result.success) {
+            invitationResults.created++;
+          } else {
+            invitationResults.failed++;
+          }
+        }
+      }
+    }
 
     return json(workspace, 201);
   });
