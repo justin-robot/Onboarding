@@ -113,18 +113,18 @@ export function WorkspaceList({ workspaces, userId, userEmail, userRole, pending
             size="sm"
             onClick={() => setViewMode("grid")}
             className="h-8 w-8 p-0"
+            aria-label="Grid view"
           >
             <LayoutGrid className="h-4 w-4" />
-            <span className="sr-only">Grid view</span>
           </Button>
           <Button
             variant={viewMode === "list" ? "secondary" : "ghost"}
             size="sm"
             onClick={() => setViewMode("list")}
             className="h-8 w-8 p-0"
+            aria-label="List view"
           >
             <List className="h-4 w-4" />
-            <span className="sr-only">List view</span>
           </Button>
         </div>
       </div>

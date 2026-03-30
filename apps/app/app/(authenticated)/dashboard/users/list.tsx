@@ -15,7 +15,19 @@ import { Badge } from "@repo/design/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@repo/design/components/ui/card";
 import { Input } from "@repo/design/components/ui/input";
 import { Progress } from "@repo/design/components/ui/progress";
-import { PlusIcon, SearchIcon, Loader2, AlertCircle, ChevronDown, ChevronRight, Check, ChevronsUpDown } from "lucide-react";
+import { PlusIcon, SearchIcon, Loader2, AlertCircle, ChevronDown, ChevronRight, Check, ChevronsUpDown, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@repo/design/components/ui/alert-dialog";
+import { DropdownMenuSeparator } from "@repo/design/components/ui/dropdown-menu";
+import { toast } from "sonner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -62,6 +74,9 @@ export const UserList = ({ isPlatformAdmin = false }: UserListProps) => {
   const [workspaceDetails, setWorkspaceDetails] = useState<Record<string, WorkspaceDetail[]>>({});
   const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
   const [updatingRole, setUpdatingRole] = useState<Record<string, boolean>>({});
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -162,6 +177,34 @@ export const UserList = ({ isPlatformAdmin = false }: UserListProps) => {
     if (diffDays < 7) return `${diffDays} days ago`;
     if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
+
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+    setDeleting(true);
+    try {
+      const response = await fetch("/api/auth/admin/remove-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ userId: selectedUser.id }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || "Failed to delete user");
+      }
+
+      setUsers((prev) => prev.filter((u) => u.id !== selectedUser.id));
+      toast.success("User deleted successfully");
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to delete user");
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+      setSelectedUser(null);
+    }
   };
 
   return (
@@ -297,19 +340,34 @@ export const UserList = ({ isPlatformAdmin = false }: UserListProps) => {
                         </TableCell>
                         <TableCell>
                           {isPlatformAdmin && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="cursor-pointer"
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                window.location.href = `/dashboard/users/${user.id}`;
-                              }}
-                            >
-                              Edit
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    window.location.href = `/dashboard/users/${user.id}`;
+                                  }}
+                                >
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => {
+                                    setSelectedUser(user);
+                                    setDeleteDialogOpen(true);
+                                  }}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           )}
                         </TableCell>
                       </TableRow>
@@ -410,6 +468,29 @@ export const UserList = ({ isPlatformAdmin = false }: UserListProps) => {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{selectedUser?.name}</strong> ({selectedUser?.email})?
+              This action cannot be undone. The user will be permanently removed from the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
