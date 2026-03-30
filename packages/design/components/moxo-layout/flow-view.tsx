@@ -507,7 +507,7 @@ export function FlowView({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="w-full justify-start text-muted-foreground hover:text-foreground ml-11"
+                      className="justify-start text-muted-foreground hover:text-foreground ml-11"
                       onClick={() => onAddTask(section.id)}
                     >
                       <Plus className="mr-2 h-4 w-4" />
@@ -572,7 +572,7 @@ export function FlowView({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="w-full justify-start text-muted-foreground hover:text-foreground ml-11"
+                    className="justify-start text-muted-foreground hover:text-foreground ml-11"
                     onClick={() => onAddTask(section.id)}
                   >
                     <Plus className="mr-2 h-4 w-4" />
