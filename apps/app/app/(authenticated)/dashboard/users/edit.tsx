@@ -314,8 +314,8 @@ export const UserEdit = ({ userId }: UserEditProps) => {
     }
   };
 
-  const handleTaskClick = (workspaceId: string) => {
-    router.push(`/workspace/${workspaceId}`);
+  const handleTaskClick = (workspaceId: string, taskId: string) => {
+    router.push(`/workspace/${workspaceId}?task=${taskId}`);
   };
 
   const handleWorkspaceClick = (workspaceId: string) => {
@@ -513,7 +513,7 @@ export const UserEdit = ({ userId }: UserEditProps) => {
                     <TableRow
                       key={task.taskId}
                       className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleTaskClick(task.workspaceId)}
+                      onClick={() => handleTaskClick(task.workspaceId, task.taskId)}
                     >
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">

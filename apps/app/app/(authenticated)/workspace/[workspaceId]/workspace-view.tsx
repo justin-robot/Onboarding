@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   MoxoLayout,
   WorkspaceSidebar,
@@ -130,10 +130,12 @@ export function WorkspaceView({
   files = [],
 }: WorkspaceViewProps) {
   const router = useRouter();
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const initialTaskId = searchParams.get("task");
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(initialTaskId);
   const [activeTab, setActiveTab] = useState<"flow" | "files">("flow");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [rightPanelOpen, setRightPanelOpen] = useState(false);
+  const [rightPanelOpen, setRightPanelOpen] = useState(!!initialTaskId);
   const [showMembersPanel, setShowMembersPanel] = useState(false);
   const [showMeetingsPanel, setShowMeetingsPanel] = useState(false);
   const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
@@ -509,7 +511,7 @@ export function WorkspaceView({
         <AlertCircle className="h-4 w-4 text-yellow-600" />
         <AlertDescription className="flex items-center justify-between">
           <span className="text-yellow-700">
-            <strong>Draft Mode</strong> - Notifications are paused while you set up this workspace.
+            <strong>Draft Mode</strong> - Invitations are queued. They will be sent when you publish.
           </span>
           <Button
             variant="outline"
@@ -594,6 +596,7 @@ export function WorkspaceView({
             workspaceId={currentWorkspaceId}
             onClose={() => setShowMembersPanel(false)}
             currentUserRole={currentUserRole}
+            isWorkspacePublished={isPublished}
           />
         ) : showMeetingsPanel ? (
           <MeetingsPanel
