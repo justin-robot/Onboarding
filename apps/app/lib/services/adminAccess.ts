@@ -16,7 +16,7 @@ export const adminAccessService = {
     // Get user's platform admin status
     const user = await database
       .selectFrom("user")
-      .select(["id", "isPlatformAdmin", "role"])
+      .select(["id", "isPlatformAdmin"])
       .where("id", "=", userId)
       .executeTakeFirst();
 
@@ -24,8 +24,7 @@ export const adminAccessService = {
       return { canAccess: false, isPlatformAdmin: false, managerWorkspaceIds: [] };
     }
 
-    // Check both isPlatformAdmin flag and role='admin' for backward compatibility
-    const isPlatformAdmin = user.isPlatformAdmin === true || user.role === "admin";
+    const isPlatformAdmin = user.isPlatformAdmin === true;
 
     // Platform admins can access everything
     if (isPlatformAdmin) {
@@ -65,12 +64,11 @@ export const adminAccessService = {
   async isPlatformAdmin(userId: string): Promise<boolean> {
     const user = await database
       .selectFrom("user")
-      .select(["isPlatformAdmin", "role"])
+      .select("isPlatformAdmin")
       .where("id", "=", userId)
       .executeTakeFirst();
 
-    // Check both isPlatformAdmin flag and role='admin' for backward compatibility
-    return user?.isPlatformAdmin === true || user?.role === "admin";
+    return user?.isPlatformAdmin === true;
   },
 
   /**
