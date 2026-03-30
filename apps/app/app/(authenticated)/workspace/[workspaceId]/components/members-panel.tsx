@@ -77,6 +77,7 @@ interface MembersPanelProps {
   workspaceId: string;
   onClose: () => void;
   currentUserRole?: string;
+  isWorkspacePublished?: boolean;
 }
 
 function getInitials(name: string): string {
@@ -108,7 +109,7 @@ function formatRole(role: string): string {
   }
 }
 
-export function MembersPanel({ workspaceId, onClose, currentUserRole }: MembersPanelProps) {
+export function MembersPanel({ workspaceId, onClose, currentUserRole, isWorkspacePublished = true }: MembersPanelProps) {
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -201,7 +202,11 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole }: MembersP
       const invitation = await response.json();
       setInvitations((prev) => [...prev, invitation]);
       setInviteEmail("");
-      toast.success(`Invitation sent to ${inviteEmail}`);
+      toast.success(
+        isWorkspacePublished
+          ? `Invitation sent to ${inviteEmail}`
+          : `Invitation queued for ${inviteEmail} (will be sent on publish)`
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to send invitation");
     } finally {
@@ -341,7 +346,9 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole }: MembersP
                     Invite Member
                   </CardTitle>
                   <CardDescription>
-                    Send an invitation to join this workspace
+                    {isWorkspacePublished
+                      ? "Send an invitation to join this workspace"
+                      : "Queue an invitation (email will be sent when workspace is published)"}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -387,8 +394,15 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole }: MembersP
               <div className="space-y-2">
                 <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                   <Clock className="h-4 w-4" />
-                  Pending Invitations ({invitations.length})
+                  {isWorkspacePublished
+                    ? `Pending Invitations (${invitations.length})`
+                    : `Queued Invitations (${invitations.length})`}
                 </h3>
+                {!isWorkspacePublished && (
+                  <p className="text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded">
+                    Emails will be sent when workspace is published
+                  </p>
+                )}
                 <div className="space-y-2">
                   {invitations.map((invitation) => (
                     <div
