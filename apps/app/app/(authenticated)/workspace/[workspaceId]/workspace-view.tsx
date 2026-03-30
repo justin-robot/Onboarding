@@ -781,8 +781,8 @@ export function WorkspaceView({
               </div>
               <p className="text-xs text-muted-foreground px-3 -mx-3 pb-3">
                 {isPublished
-                  ? "Users will receive notifications"
-                  : "Notifications paused while setting up"}
+                  ? "Members will receive notifications"
+                  : "Notifications paused. New tasks hidden from members."}
               </p>
               <div className="-mx-6 border-t" />
               <div className="pt-2">
