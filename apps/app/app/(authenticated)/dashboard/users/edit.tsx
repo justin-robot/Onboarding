@@ -98,6 +98,7 @@ interface WorkspaceDetail {
 
 interface UserEditProps {
   userId: string;
+  isPlatformAdmin?: boolean;
 }
 
 function getStatusBadge(taskStatus: string, assigneeStatus: string) {
@@ -137,7 +138,7 @@ function formatTaskType(type: string) {
   return typeMap[type] || type;
 }
 
-export const UserEdit = ({ userId }: UserEditProps) => {
+export const UserEdit = ({ userId, isPlatformAdmin = false }: UserEditProps) => {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [tasks, setTasks] = useState<UserTask[]>([]);
@@ -163,15 +164,14 @@ export const UserEdit = ({ userId }: UserEditProps) => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const response = await fetch("/api/auth/admin/list-users", {
+        const response = await fetch(`/api/admin/users/${userId}`, {
           credentials: "include",
         });
-        if (!response.ok) throw new Error("Failed to fetch users");
+        if (!response.ok) throw new Error("Failed to fetch user");
 
-        const data = await response.json();
-        const foundUser = data.users?.find((u: User) => u.id === userId);
+        const foundUser = await response.json();
 
-        if (foundUser) {
+        if (foundUser && foundUser.id) {
           setUser(foundUser);
           form.reset({
             name: foundUser.name || "",
@@ -385,7 +385,7 @@ export const UserEdit = ({ userId }: UserEditProps) => {
                     <FormItem>
                       <FormLabel>Name</FormLabel>
                       <FormControl>
-                        <Input {...field} data-testid="user-name-input" />
+                        <Input {...field} disabled={!isPlatformAdmin} className={!isPlatformAdmin ? "bg-muted" : ""} data-testid="user-name-input" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -407,68 +407,83 @@ export const UserEdit = ({ userId }: UserEditProps) => {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password (leave blank to keep current)</FormLabel>
-                      <FormControl>
-                        <Input type="password" {...field} data-testid="user-password-input" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Role</FormLabel>
-                      <Select
-                        value={field.value || ""}
-                        onValueChange={(value) => field.onChange(value || null)}
+                {isPlatformAdmin && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password (leave blank to keep current)</FormLabel>
+                          <FormControl>
+                            <Input type="password" {...field} data-testid="user-password-input" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="role"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Role</FormLabel>
+                          <Select
+                            value={field.value || ""}
+                            onValueChange={(value) => field.onChange(value || null)}
+                          >
+                            <FormControl>
+                              <SelectTrigger data-testid="user-role-selector">
+                                <SelectValue placeholder="Select a role" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="user">User</SelectItem>
+                              <SelectItem value="admin">Admin</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="flex gap-2">
+                      <Button type="submit" disabled={saving} data-testid="save-user-btn">
+                        {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Save Changes
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => router.push("/dashboard/users")}
+                        disabled={saving}
+                        data-testid="cancel-user-btn"
                       >
-                        <FormControl>
-                          <SelectTrigger data-testid="user-role-selector">
-                            <SelectValue placeholder="Select a role" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="user">User</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="flex gap-2">
-                  <Button type="submit" disabled={saving} data-testid="save-user-btn">
-                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save Changes
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => router.push("/dashboard/users")}
-                    disabled={saving}
-                    data-testid="cancel-user-btn"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    onClick={() => setDeleteDialogOpen(true)}
-                    disabled={saving || deleting}
-                    data-testid="delete-user-btn"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete User
-                  </Button>
-                </div>
+                        Cancel
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() => setDeleteDialogOpen(true)}
+                        disabled={saving || deleting}
+                        data-testid="delete-user-btn"
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Delete User
+                      </Button>
+                    </div>
+                  </>
+                )}
+                {!isPlatformAdmin && (
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => router.push("/dashboard/users")}
+                    >
+                      Back to Users
+                    </Button>
+                  </div>
+                )}
               </form>
             </Form>
           </CardContent>

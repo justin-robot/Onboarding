@@ -46,7 +46,7 @@ const AdminClient = () => {
       // Extract user ID for edit page
       const userId = pathname.split("/dashboard/users/")[1];
       if (userId && userId !== "create") {
-        return <UserEdit userId={userId} />;
+        return <UserEdit userId={userId} isPlatformAdmin={isPlatformAdmin} />;
       }
     }
     if (pathname === "/dashboard/users") {
