@@ -36,7 +36,7 @@ export class InsufficientPermissionsError extends AccessDeniedError {
  * Role hierarchy for permission checking
  * Higher index = more permissions
  */
-const roleHierarchy: MemberRole[] = ["user", "admin"];
+const roleHierarchy: MemberRole[] = ["member", "manager"];
 
 /**
  * Check if a role meets the minimum required role
@@ -102,11 +102,11 @@ export const accessService = {
 
   /**
    * Check if a user can update a workspace
-   * Requires admin role
+   * Requires manager role
    */
   async canUpdateWorkspace(workspaceId: string, userId: string): Promise<boolean> {
     try {
-      await this.requireMinimumRole(workspaceId, userId, "admin");
+      await this.requireMinimumRole(workspaceId, userId, "manager");
       return true;
     } catch {
       return false;
@@ -115,11 +115,11 @@ export const accessService = {
 
   /**
    * Check if a user can manage members in a workspace
-   * Requires admin role
+   * Requires manager role
    */
   async canManageMembers(workspaceId: string, userId: string): Promise<boolean> {
     try {
-      await this.requireMinimumRole(workspaceId, userId, "admin");
+      await this.requireMinimumRole(workspaceId, userId, "manager");
       return true;
     } catch {
       return false;
@@ -136,11 +136,11 @@ export const accessService = {
 
   /**
    * Check if a user can create/edit sections
-   * Requires admin role
+   * Requires manager role
    */
   async canManageSections(workspaceId: string, userId: string): Promise<boolean> {
     try {
-      await this.requireMinimumRole(workspaceId, userId, "admin");
+      await this.requireMinimumRole(workspaceId, userId, "manager");
       return true;
     } catch {
       return false;
@@ -149,11 +149,11 @@ export const accessService = {
 
   /**
    * Check if a user can create/edit tasks
-   * Requires admin role
+   * Requires manager role
    */
   async canManageTasks(workspaceId: string, userId: string): Promise<boolean> {
     try {
-      await this.requireMinimumRole(workspaceId, userId, "admin");
+      await this.requireMinimumRole(workspaceId, userId, "manager");
       return true;
     } catch {
       return false;

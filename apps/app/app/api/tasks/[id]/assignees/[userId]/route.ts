@@ -24,10 +24,10 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
       return errorResponse("Section not found", 404);
     }
 
-    // Check if current user is admin
+    // Check if current user is manager
     const currentMember = await memberService.getMember(section.workspaceId, user.id);
-    if (!currentMember || currentMember.role !== "admin") {
-      return errorResponse("Only admins can unassign users from tasks", 403);
+    if (!currentMember || currentMember.role !== "manager") {
+      return errorResponse("Only managers can unassign users from tasks", 403);
     }
 
     // Check if user is assigned

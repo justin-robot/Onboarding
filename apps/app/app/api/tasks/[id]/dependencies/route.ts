@@ -57,10 +57,10 @@ export async function POST(request: NextRequest, { params }: Params) {
       return errorResponse("Section not found", 404);
     }
 
-    // Check admin permission
+    // Check manager permission
     const membership = await memberService.getMember(section.workspaceId, user.id);
-    if (!membership || membership.role !== "admin") {
-      return errorResponse("Only admins can modify dependencies", 403);
+    if (!membership || membership.role !== "manager") {
+      return errorResponse("Only managers can modify dependencies", 403);
     }
 
     // Check that dependsOnTaskId exists in the same workspace
@@ -120,10 +120,10 @@ export async function DELETE(request: NextRequest, { params }: Params) {
       return errorResponse("Section not found", 404);
     }
 
-    // Check admin permission
+    // Check manager permission
     const membership = await memberService.getMember(section.workspaceId, user.id);
-    if (!membership || membership.role !== "admin") {
-      return errorResponse("Only admins can modify dependencies", 403);
+    if (!membership || membership.role !== "manager") {
+      return errorResponse("Only managers can modify dependencies", 403);
     }
 
     let removed = false;

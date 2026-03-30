@@ -17,10 +17,10 @@ export async function POST(request: NextRequest, { params }: Params) {
     const user = await requireAuth();
     const { id } = await params;
 
-    // Check if user is admin of this workspace
+    // Check if user is manager of this workspace
     const member = await memberService.getMember(id, user.id);
-    if (!member || member.role !== "admin") {
-      return errorResponse("Only workspace admins can publish workspaces", 403);
+    if (!member || member.role !== "manager") {
+      return errorResponse("Only workspace managers can publish workspaces", 403);
     }
 
     // Check if already published
@@ -93,10 +93,10 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     const user = await requireAuth();
     const { id } = await params;
 
-    // Check if user is admin of this workspace
+    // Check if user is manager of this workspace
     const member = await memberService.getMember(id, user.id);
-    if (!member || member.role !== "admin") {
-      return errorResponse("Only workspace admins can unpublish workspaces", 403);
+    if (!member || member.role !== "manager") {
+      return errorResponse("Only workspace managers can unpublish workspaces", 403);
     }
 
     const workspace = await workspaceService.unpublish(id, {

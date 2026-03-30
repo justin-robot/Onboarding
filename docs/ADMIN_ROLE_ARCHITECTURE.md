@@ -2,13 +2,13 @@
 
 ## Implemented Solution: Workspace-Scoped Admin Access
 
-The platform now uses **Option 2: Only Workspace Admins** with a platform admin escape hatch.
+The platform now uses **Option 2: Only Workspace Managers** with a platform admin escape hatch.
 
 ### How It Works
 
-1. **Workspace Admin** (`workspace_member.role = "admin"`):
+1. **Workspace Manager** (`workspace_member.role = "manager"`):
    - Can access the admin panel
-   - Sees only workspaces where they are an admin
+   - Sees only workspaces where they are a manager
    - Can manage tasks, members, invitations within their workspaces
    - Primary admin mechanism for most users
 
@@ -23,12 +23,12 @@ The platform now uses **Option 2: Only Workspace Admins** with a platform admin 
 ```typescript
 // In dashboard layout
 const access = await adminAccessService.checkAccess(userId);
-// Returns: { canAccess: boolean, isPlatformAdmin: boolean, adminWorkspaceIds: string[] }
+// Returns: { canAccess: boolean, isPlatformAdmin: boolean, managerWorkspaceIds: string[] }
 
 // In API routes
 const { workspaceIds, isPlatformAdmin } = await requireAdminAuth();
 // workspaceIds is null for platform admins (no filter)
-// workspaceIds is string[] for workspace admins (filter to these workspaces)
+// workspaceIds is string[] for workspace managers (filter to these workspaces)
 ```
 
 ### Database Schema
@@ -37,8 +37,8 @@ const { workspaceIds, isPlatformAdmin } = await requireAdminAuth();
 -- User table has isPlatformAdmin column
 ALTER TABLE "user" ADD COLUMN "isPlatformAdmin" BOOLEAN DEFAULT FALSE;
 
--- Workspace member role determines per-workspace admin access
--- workspace_member.role: "admin" | "account_manager" | "user"
+-- Workspace member role determines per-workspace manager access
+-- workspace_member.role: "manager" | "member"
 ```
 
 ### Migration
@@ -58,7 +58,7 @@ The migration (`20250311120000_add_is_platform_admin.ts`) will:
 | File | Purpose |
 |------|---------|
 | `lib/services/adminAccess.ts` | Admin access checking service |
-| `lib/services/member.ts` | Added `isAdminInAnyWorkspace()`, `getWorkspaceIdsWhereAdmin()` |
+| `lib/services/member.ts` | Added `isManagerInAnyWorkspace()`, `getWorkspaceIdsWhereManager()` |
 | `app/api/_lib/api-utils.ts` | Added `requireAdminAuth()` helper |
 | `dashboard/layout.tsx` | Updated to use `adminAccessService.checkAccess()` |
 | `api/admin/**/route.ts` | All routes updated to scope data by workspace |
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
 
 | Admin Type | How to Get |
 |------------|------------|
-| Workspace Admin | Be added as admin to a workspace via invitation or direct member add |
+| Workspace Manager | Be added as manager to a workspace via invitation or direct member add |
 | Platform Admin | Set `isPlatformAdmin = true` in database (seeded for admin@test.com) |
 
 ### Setting a Platform Admin

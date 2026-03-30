@@ -143,7 +143,7 @@ export interface WorkspaceMemberTable {
   id: Generated<string>;
   workspaceId: string;
   userId: string;
-  role: "admin" | "user";
+  role: "manager" | "member";
   createdAt: Generated<Date>;
   updatedAt: Generated<Date>;
 }
@@ -281,7 +281,7 @@ export interface PendingInvitationTable {
   id: Generated<string>;
   workspaceId: string;
   email: string;
-  role: "admin" | "user";
+  role: "manager" | "member";
   token: string;
   expiresAt: Date;
   invitedBy: string;

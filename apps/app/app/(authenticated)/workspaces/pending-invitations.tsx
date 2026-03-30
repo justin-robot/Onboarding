@@ -120,7 +120,7 @@ export function PendingInvitations({ invitations: initialInvitations }: PendingI
                   <div className="flex items-center gap-2">
                     <h4 className="font-semibold">{invitation.workspaceName}</h4>
                     <Badge variant="outline" className="text-xs">
-                      {invitation.role === "admin" ? "Admin" : "User"}
+                      {invitation.role === "manager" ? "Manager" : "Member"}
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">

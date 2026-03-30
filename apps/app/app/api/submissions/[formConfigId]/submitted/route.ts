@@ -45,10 +45,10 @@ export async function GET(request: NextRequest, { params }: Params) {
         return errorResponse("Task not found", 404);
       }
 
-      // Check if requester is admin
+      // Check if requester is manager
       const membership = await memberService.getMember(task.workspaceId, user.id);
-      if (!membership || membership.role !== "admin") {
-        return errorResponse("Only admins can view other users' submissions", 403);
+      if (!membership || membership.role !== "manager") {
+        return errorResponse("Only managers can view other users' submissions", 403);
       }
 
       submissionUserId = targetUserId;

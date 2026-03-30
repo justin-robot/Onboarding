@@ -91,7 +91,7 @@ function getInitials(name: string): string {
 
 function getRoleBadgeVariant(role: string): "default" | "secondary" | "outline" {
   switch (role) {
-    case "admin":
+    case "manager":
       return "default";
     default:
       return "outline";
@@ -100,10 +100,10 @@ function getRoleBadgeVariant(role: string): "default" | "secondary" | "outline" 
 
 function formatRole(role: string): string {
   switch (role) {
-    case "admin":
-      return "Admin";
-    case "user":
-      return "User";
+    case "manager":
+      return "Manager";
+    case "member":
+      return "Member";
     default:
       return role;
   }
@@ -114,7 +114,7 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole, isWorkspac
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState("user");
+  const [inviteRole, setInviteRole] = useState("member");
   const [sending, setSending] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -127,8 +127,8 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole, isWorkspac
   const [removingMember, setRemovingMember] = useState(false);
   const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
-  const canInvite = currentUserRole === "admin";
-  const isAdmin = currentUserRole === "admin";
+  const canInvite = currentUserRole === "manager";
+  const isManager = currentUserRole === "manager";
 
   // Copy invitation link to clipboard
   const handleCopyLink = async (invitation: Invitation) => {
@@ -371,8 +371,8 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole, isWorkspac
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="user">User</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="member">Member</SelectItem>
+                          <SelectItem value="manager">Manager</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -557,7 +557,7 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole, isWorkspac
               </div>
 
               {/* Role management (admin only) */}
-              {isAdmin && (
+              {isManager && (
                 <div className="space-y-3">
                   <Label>Role</Label>
                   <div className="flex items-center gap-2">
@@ -570,8 +570,8 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole, isWorkspac
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="user">User</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="member">Member</SelectItem>
+                        <SelectItem value="manager">Manager</SelectItem>
                       </SelectContent>
                     </Select>
                     {editingRole !== selectedMember.role && (
@@ -592,7 +592,7 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole, isWorkspac
               )}
 
               {/* Non-admin view of role */}
-              {!isAdmin && (
+              {!isManager && (
                 <div className="space-y-2">
                   <Label>Role</Label>
                   <div className="flex items-center gap-2">
@@ -609,7 +609,7 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole, isWorkspac
             <Button variant="outline" onClick={handleCloseMemberDialog}>
               Close
             </Button>
-            {isAdmin && selectedMember && (
+            {isManager && selectedMember && (
               <>
                 {!showRemoveConfirm ? (
                   <Button

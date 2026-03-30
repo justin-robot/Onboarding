@@ -12,7 +12,7 @@ export async function GET() {
       email: user.email,
       name: user.name,
       isPlatformAdmin,
-      adminWorkspaceIds: workspaceIds,
+      managerWorkspaceIds: workspaceIds,
     });
   });
 }

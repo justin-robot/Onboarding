@@ -590,10 +590,10 @@ export const UserEdit = ({ userId }: UserEditProps) => {
                               onClick={(e) => e.stopPropagation()}
                             >
                               <Badge
-                                variant={ws.role === "admin" ? "default" : "outline"}
+                                variant={ws.role === "manager" ? "default" : "outline"}
                                 className="text-xs pointer-events-none"
                               >
-                                {ws.role}
+                                {ws.role === "manager" ? "Manager" : "Member"}
                               </Badge>
                               {isUpdating ? (
                                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -606,22 +606,22 @@ export const UserEdit = ({ userId }: UserEditProps) => {
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
-                                updateMemberRole(ws.workspaceId, "admin");
+                                updateMemberRole(ws.workspaceId, "manager");
                               }}
                               className="flex items-center justify-between"
                             >
-                              Admin
-                              {ws.role === "admin" && <Check className="h-4 w-4" />}
+                              Manager
+                              {ws.role === "manager" && <Check className="h-4 w-4" />}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={(e) => {
                                 e.stopPropagation();
-                                updateMemberRole(ws.workspaceId, "user");
+                                updateMemberRole(ws.workspaceId, "member");
                               }}
                               className="flex items-center justify-between"
                             >
-                              User
-                              {ws.role === "user" && <Check className="h-4 w-4" />}
+                              Member
+                              {ws.role === "member" && <Check className="h-4 w-4" />}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

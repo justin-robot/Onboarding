@@ -18,9 +18,9 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
       return errorResponse("Not a member of this workspace", 403);
     }
 
-    // Only admins can cancel invitations
-    if (membership.role !== "admin") {
-      return errorResponse("Only admins can cancel invitations", 403);
+    // Only managers can cancel invitations
+    if (membership.role !== "manager") {
+      return errorResponse("Only managers can cancel invitations", 403);
     }
 
     // Cancel the invitation

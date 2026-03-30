@@ -56,7 +56,7 @@ export async function requireAdminAuth(): Promise<AdminScope> {
   return {
     user,
     isPlatformAdmin: access.isPlatformAdmin,
-    workspaceIds: access.isPlatformAdmin ? null : access.adminWorkspaceIds,
+    workspaceIds: access.isPlatformAdmin ? null : access.managerWorkspaceIds,
   };
 }
 

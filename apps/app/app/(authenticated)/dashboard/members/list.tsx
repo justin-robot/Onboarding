@@ -33,8 +33,8 @@ interface Member {
 }
 
 const roleVariants: Record<string, "default" | "secondary" | "outline"> = {
-  admin: "default",
-  user: "outline",
+  manager: "default",
+  member: "outline",
 };
 
 export const MemberList = () => {
@@ -104,8 +104,8 @@ export const MemberList = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All roles</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="user">User</SelectItem>
+                <SelectItem value="manager">Manager</SelectItem>
+                <SelectItem value="member">Member</SelectItem>
               </SelectContent>
             </Select>
           </div>

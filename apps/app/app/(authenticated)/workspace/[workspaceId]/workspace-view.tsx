@@ -514,7 +514,7 @@ export function WorkspaceView({
     />
 
     {/* Draft mode banner */}
-    {!isPublished && currentUserRole === "admin" && (
+    {!isPublished && currentUserRole === "manager" && (
       <Alert className="rounded-none border-x-0 border-t-0 bg-yellow-50 border-yellow-200">
         <AlertCircle className="h-4 w-4 text-yellow-600" />
         <AlertDescription className="flex items-center justify-between">
@@ -540,7 +540,7 @@ export function WorkspaceView({
           workspaces={sidebarWorkspaces}
           selectedWorkspaceId={currentWorkspaceId}
           onWorkspaceSelect={handleWorkspaceSelect}
-          onCreateWorkspace={currentUserRole === "admin" ? () => setCreateWorkspaceDialogOpen(true) : undefined}
+          onCreateWorkspace={currentUserRole === "manager" ? () => setCreateWorkspaceDialogOpen(true) : undefined}
           onHomeClick={() => router.push("/workspaces")}
           footer={<UserMenu />}
         />
@@ -552,12 +552,12 @@ export function WorkspaceView({
           recentlyCompletedTaskId={recentlyCompletedTaskId || undefined}
           onTaskSelect={handleTaskSelect}
           onTaskReview={handleTaskSelect}
-          onAddTask={currentUserRole === "admin" ? handleAddTask : undefined}
-          onTaskReorder={currentUserRole === "admin" ? handleTaskReorder : undefined}
-          onSectionReorder={currentUserRole === "admin" ? handleSectionReorder : undefined}
-          onSectionDelete={currentUserRole === "admin" ? handleSectionDeleteRequest : undefined}
-          onSectionEdit={currentUserRole === "admin" ? handleSectionEditRequest : undefined}
-          enableDragAndDrop={currentUserRole === "admin"}
+          onAddTask={currentUserRole === "manager" ? handleAddTask : undefined}
+          onTaskReorder={currentUserRole === "manager" ? handleTaskReorder : undefined}
+          onSectionReorder={currentUserRole === "manager" ? handleSectionReorder : undefined}
+          onSectionDelete={currentUserRole === "manager" ? handleSectionDeleteRequest : undefined}
+          onSectionEdit={currentUserRole === "manager" ? handleSectionEditRequest : undefined}
+          enableDragAndDrop={currentUserRole === "manager"}
           showTimeline={true}
         />
       }
@@ -637,7 +637,7 @@ export function WorkspaceView({
               setSelectedTaskId(null);
               router.refresh();
             }}
-            isAdmin={currentUserRole === "admin"}
+            isAdmin={currentUserRole === "manager"}
           />
         ) : messagesLoaded ? (
           <RealtimeChat
@@ -764,7 +764,7 @@ export function WorkspaceView({
           <SheetTitle>Workspace Menu</SheetTitle>
         </SheetHeader>
         <div className="mt-4 space-y-1">
-          {currentUserRole === "admin" && (
+          {currentUserRole === "manager" && (
             <>
               <div className="flex items-center justify-between py-3 px-3 -mx-3 rounded-md hover:bg-muted/50">
                 <Label htmlFor="publish-toggle" className="text-sm font-medium cursor-pointer">

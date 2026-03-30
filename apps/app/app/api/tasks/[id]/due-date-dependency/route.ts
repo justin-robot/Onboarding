@@ -79,10 +79,10 @@ export async function POST(request: NextRequest, { params }: Params) {
       return errorResponse("Section not found", 404);
     }
 
-    // Verify user is an admin of the workspace
+    // Verify user is a manager of the workspace
     const membership = await memberService.getMember(section.workspaceId, user.id);
-    if (!membership || membership.role !== "admin") {
-      return errorResponse("Only admins can modify due date dependencies", 403);
+    if (!membership || membership.role !== "manager") {
+      return errorResponse("Only managers can modify due date dependencies", 403);
     }
 
     // Verify anchor task exists and is in the same workspace
@@ -141,10 +141,10 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
       return errorResponse("Section not found", 404);
     }
 
-    // Verify user is an admin of the workspace
+    // Verify user is a manager of the workspace
     const membership = await memberService.getMember(section.workspaceId, user.id);
-    if (!membership || membership.role !== "admin") {
-      return errorResponse("Only admins can modify due date dependencies", 403);
+    if (!membership || membership.role !== "manager") {
+      return errorResponse("Only managers can modify due date dependencies", 403);
     }
 
     // Remove the date anchor dependency

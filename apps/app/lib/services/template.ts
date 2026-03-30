@@ -331,13 +331,13 @@ export const templateService = {
         .execute();
     }
 
-    // Add admin user to workspace
+    // Add manager user to workspace
     await database
       .insertInto("workspace_member")
       .values({
         workspaceId: newWorkspace.id,
         userId: options.adminUserId,
-        role: "admin",
+        role: "manager",
       })
       .onConflict((oc) => oc.doNothing())
       .execute();
@@ -353,7 +353,7 @@ export const templateService = {
           .values({
             workspaceId: newWorkspace.id,
             userId,
-            role: "user",
+            role: "member",
           })
           .onConflict((oc) => oc.doNothing())
           .execute();

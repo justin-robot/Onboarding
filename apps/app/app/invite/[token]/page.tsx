@@ -33,9 +33,9 @@ interface InvitationDetails {
 
 function formatRole(role: string): string {
   switch (role) {
-    case "admin":
-      return "Admin";
-    case "user":
+    case "manager":
+      return "Manager";
+    case "member":
       return "Member";
     default:
       return role;

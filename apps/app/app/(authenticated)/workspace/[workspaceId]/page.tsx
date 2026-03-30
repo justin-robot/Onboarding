@@ -192,7 +192,7 @@ export default async function WorkspacePage({ params }: PageProps) {
         sidebarWorkspaces={validSidebarWorkspaces}
         currentWorkspaceId={workspaceId}
         currentUserId={session.user.id}
-        currentUserRole={membership?.role || (isAdmin ? "admin" : "user")}
+        currentUserRole={membership?.role || (isAdmin ? "manager" : "member")}
       />
     </div>
   );

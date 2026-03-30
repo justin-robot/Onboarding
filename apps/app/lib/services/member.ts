@@ -15,7 +15,7 @@ async function getAblyService() {
 }
 
 // Role type for workspace members
-export type MemberRole = "admin" | "user";
+export type MemberRole = "manager" | "member";
 
 export const memberService = {
   /**
@@ -239,14 +239,14 @@ export const memberService = {
   },
 
   /**
-   * Check if a user is an admin in any workspace
+   * Check if a user is a manager in any workspace
    */
-  async isAdminInAnyWorkspace(userId: string): Promise<boolean> {
+  async isManagerInAnyWorkspace(userId: string): Promise<boolean> {
     const result = await database
       .selectFrom("workspace_member")
       .select("id")
       .where("userId", "=", userId)
-      .where("role", "=", "admin")
+      .where("role", "=", "manager")
       .limit(1)
       .executeTakeFirst();
 
@@ -254,23 +254,23 @@ export const memberService = {
   },
 
   /**
-   * Get all workspace IDs where a user is an admin
+   * Get all workspace IDs where a user is a manager
    */
-  async getWorkspaceIdsWhereAdmin(userId: string): Promise<string[]> {
+  async getWorkspaceIdsWhereManager(userId: string): Promise<string[]> {
     const results = await database
       .selectFrom("workspace_member")
       .select("workspaceId")
       .where("userId", "=", userId)
-      .where("role", "=", "admin")
+      .where("role", "=", "manager")
       .execute();
 
     return results.map((r) => r.workspaceId);
   },
 
   /**
-   * Get all workspaces where a user is an admin (with workspace details)
+   * Get all workspaces where a user is a manager (with workspace details)
    */
-  async getWorkspacesWhereAdmin(userId: string) {
+  async getWorkspacesWhereManager(userId: string) {
     return database
       .selectFrom("workspace_member")
       .innerJoin("workspace", "workspace.id", "workspace_member.workspaceId")
@@ -284,7 +284,7 @@ export const memberService = {
         "workspace.deletedAt",
       ])
       .where("workspace_member.userId", "=", userId)
-      .where("workspace_member.role", "=", "admin")
+      .where("workspace_member.role", "=", "manager")
       .execute();
   },
 };

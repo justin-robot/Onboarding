@@ -31,11 +31,11 @@ export async function POST(request: NextRequest) {
       dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
     });
 
-    // Add creator as admin member
+    // Add creator as manager member
     await memberService.addMember({
       workspaceId: workspace.id,
       userId: user.id,
-      role: "admin",
+      role: "manager",
     });
 
     // Handle invite emails if provided
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
           const result = await invitationService.create({
             workspaceId: workspace.id,
             email: email.trim().toLowerCase(),
-            role: "user",
+            role: "member",
             invitedBy: user.id,
           });
           if (result.success) {

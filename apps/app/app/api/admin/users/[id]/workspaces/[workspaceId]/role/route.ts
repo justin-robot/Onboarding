@@ -18,9 +18,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const { role } = body;
 
     // Validate role
-    const validRoles = ["admin", "user"];
+    const validRoles = ["manager", "member"];
     if (!role || !validRoles.includes(role)) {
-      throw new ValidationError("Role must be one of: admin, user");
+      throw new ValidationError("Role must be one of: manager, member");
     }
 
     // Check if user has access to this workspace
@@ -36,17 +36,17 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       throw new NotFoundError("User is not a member of this workspace");
     }
 
-    // Prevent demoting yourself if you're the last admin
-    if (user.id === userId && role !== "admin") {
-      const admins = await database
+    // Prevent demoting yourself if you're the last manager
+    if (user.id === userId && role !== "manager") {
+      const managers = await database
         .selectFrom("workspace_member")
         .select("userId")
         .where("workspaceId", "=", workspaceId)
-        .where("role", "=", "admin")
+        .where("role", "=", "manager")
         .execute();
 
-      if (admins.length === 1 && admins[0].userId === userId) {
-        throw new ValidationError("Cannot demote yourself - you are the last admin of this workspace");
+      if (managers.length === 1 && managers[0].userId === userId) {
+        throw new ValidationError("Cannot demote yourself - you are the last manager of this workspace");
       }
     }
 

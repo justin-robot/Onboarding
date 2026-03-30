@@ -149,23 +149,23 @@ export const chatService = {
     actorId?: string
   ): Promise<Message | null> {
     // System messages need a valid userId due to FK constraint
-    // Use the actorId if provided, otherwise fall back to first admin
+    // Use the actorId if provided, otherwise fall back to first manager
     let userId = actorId;
 
     if (!userId) {
-      const admin = await database
+      const manager = await database
         .selectFrom("workspace_member")
         .innerJoin("user", "user.id", "workspace_member.userId")
         .select("user.id")
         .where("workspace_member.workspaceId", "=", workspaceId)
-        .where("workspace_member.role", "=", "admin")
+        .where("workspace_member.role", "=", "manager")
         .executeTakeFirst();
 
-      if (!admin) {
-        console.error("Cannot send system message: no admin found for workspace");
+      if (!manager) {
+        console.error("Cannot send system message: no manager found for workspace");
         return null;
       }
-      userId = admin.id;
+      userId = manager.id;
     }
 
     return this.sendMessage({

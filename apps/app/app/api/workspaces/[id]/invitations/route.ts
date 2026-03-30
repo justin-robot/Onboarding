@@ -20,13 +20,13 @@ export async function GET(_request: NextRequest, { params }: Params) {
       return errorResponse("Not a member of this workspace", 403);
     }
 
-    // Check if user is admin to include tokens
+    // Check if user is manager to include tokens
     const membership = await memberService.getMember(workspaceId, user.id);
-    const isAdmin = membership?.role === "admin";
+    const isManager = membership?.role === "manager";
 
     const invitations = await invitationService.getByWorkspaceId(workspaceId);
 
-    // Return invitation data (include tokens for admins)
+    // Return invitation data (include tokens for managers)
     return json(
       invitations.map((inv) => ({
         id: inv.id,
@@ -34,7 +34,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
         role: inv.role,
         expiresAt: inv.expiresAt,
         createdAt: inv.createdAt,
-        ...(isAdmin && { token: inv.token }),
+        ...(isManager && { token: inv.token }),
       }))
     );
   });
@@ -54,20 +54,20 @@ export async function POST(request: NextRequest, { params }: Params) {
     const isPlatformAdmin = await adminAccessService.isPlatformAdmin(user.id);
 
     if (!isPlatformAdmin) {
-      // Verify user is a member of the workspace (preferably admin)
+      // Verify user is a member of the workspace (preferably manager)
       const membership = await memberService.getMember(workspaceId, user.id);
       if (!membership) {
         return errorResponse("Not a member of this workspace", 403);
       }
 
-      // Only admins can invite
-      if (membership.role !== "admin") {
-        return errorResponse("Only admins can invite members", 403);
+      // Only managers can invite
+      if (membership.role !== "manager") {
+        return errorResponse("Only managers can invite members", 403);
       }
     }
 
     const body = await request.json();
-    const { email, role = "user" } = body;
+    const { email, role = "member" } = body;
 
     // Validate email
     if (!email || typeof email !== "string") {
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     // Validate role
-    const validRoles = ["admin", "user"];
+    const validRoles = ["manager", "member"];
     if (!validRoles.includes(role)) {
       return errorResponse(`role must be one of: ${validRoles.join(", ")}`, 400);
     }

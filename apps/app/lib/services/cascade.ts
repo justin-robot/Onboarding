@@ -97,21 +97,21 @@ export const cascadeService = {
         .where("id", "=", dep.taskId)
         .execute();
 
-      // Send due-date-cleared notification to workspace admins
+      // Send due-date-cleared notification to workspace managers
       if (notificationContext) {
         try {
-          // Get workspace admins
-          const admins = await database
+          // Get workspace managers
+          const managers = await database
             .selectFrom("workspace_member")
             .select("userId")
             .where("workspaceId", "=", dep.workspaceId)
-            .where("role", "=", "admin")
+            .where("role", "=", "manager")
             .execute();
 
-          for (const admin of admins) {
+          for (const manager of managers) {
             await notificationContext.triggerWorkflow({
               workflowId: "due-date-cleared",
-              recipientId: admin.userId,
+              recipientId: manager.userId,
               data: {
                 workspaceId: dep.workspaceId,
                 workspaceName: dep.workspaceName,
