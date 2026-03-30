@@ -1,4 +1,4 @@
-import { invitationService } from "@/lib/services";
+import { invitationService, workspaceService } from "@/lib/services";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
@@ -17,6 +17,21 @@ export async function POST(request: NextRequest) {
     // Validate token
     if (!token || typeof token !== "string") {
       return errorResponse("token is required", 400);
+    }
+
+    // Get invitation to check workspace status
+    const invitation = await invitationService.getByToken(token);
+    if (!invitation) {
+      return errorResponse("Invalid or already used invitation", 404);
+    }
+
+    // Check if workspace is published (draft workspaces cannot accept invitations)
+    const workspace = await workspaceService.getById(invitation.workspaceId);
+    if (!workspace) {
+      return errorResponse("Workspace not found", 404);
+    }
+    if (!workspace.isPublished) {
+      return errorResponse("This workspace is not yet available. The invitation will be active once the workspace is published.", 403);
     }
 
     // Redeem the invitation

@@ -66,16 +66,18 @@ export default async function WorkspacesPage() {
   const rawInvitations = await invitationService.getByEmail(session.user.email);
 
   // Filter out expired invitations and enrich with workspace/inviter info
+  // Only show invitations for PUBLISHED workspaces (draft workspace invitations are hidden)
   const now = new Date();
-  const pendingInvitations: PendingInvitationData[] = await Promise.all(
+  const pendingInvitationsWithWorkspace = await Promise.all(
     rawInvitations
       .filter((inv) => new Date(inv.expiresAt) > now)
       .map(async (inv) => {
-        // Get workspace name
+        // Get workspace name and publish status
         const workspace = await database
           .selectFrom("workspace")
-          .select(["name"])
+          .select(["name", "isPublished"])
           .where("id", "=", inv.workspaceId)
+          .where("deletedAt", "is", null)
           .executeTakeFirst();
 
         // Get inviter name
@@ -95,9 +97,15 @@ export default async function WorkspacesPage() {
           inviterName: inviter?.name || inviter?.email || "Someone",
           expiresAt: inv.expiresAt.toISOString(),
           createdAt: inv.createdAt.toISOString(),
+          isWorkspacePublished: workspace?.isPublished ?? false,
         };
       })
   );
+
+  // Filter to only show invitations for published workspaces
+  const pendingInvitations: PendingInvitationData[] = pendingInvitationsWithWorkspace
+    .filter((inv) => inv.isWorkspacePublished)
+    .map(({ isWorkspacePublished, ...rest }) => rest);
 
   return (
     <div className="h-full overflow-y-auto bg-slate-50 dark:bg-slate-950">

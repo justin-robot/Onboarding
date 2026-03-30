@@ -26,15 +26,21 @@ export async function GET(_request: NextRequest, { params }: Params) {
       return errorResponse("This invitation has expired", 410);
     }
 
-    // Get workspace name
+    // Get workspace name and publish status
     const workspace = await database
       .selectFrom("workspace")
-      .select(["id", "name"])
+      .select(["id", "name", "isPublished"])
       .where("id", "=", invitation.workspaceId)
+      .where("deletedAt", "is", null)
       .executeTakeFirst();
 
     if (!workspace) {
       return errorResponse("Workspace not found", 404);
+    }
+
+    // Don't show invitations for draft (unpublished) workspaces
+    if (!workspace.isPublished) {
+      return errorResponse("This workspace is not yet available. The invitation will be active once the workspace is published.", 403);
     }
 
     // Get inviter name
