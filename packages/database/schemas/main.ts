@@ -134,6 +134,7 @@ export interface WorkspaceTable {
   dueDate: Date | null;
   isTemplate: Generated<boolean>;
   isPublished: Generated<boolean>;
+  hasBeenPublished: Generated<boolean>; // True once workspace has ever been published
   deletedAt: Date | null;
   createdAt: Generated<Date>;
   updatedAt: Generated<Date>;
@@ -176,6 +177,7 @@ export interface TaskTable {
   dueDateValue: Date | null;
   deletedAt: Date | null;
   completedAt: Date | null;
+  isDraft: Generated<boolean>; // Tasks created while workspace is in draft mode (after first publish)
   createdAt: Generated<Date>;
   updatedAt: Generated<Date>;
 }

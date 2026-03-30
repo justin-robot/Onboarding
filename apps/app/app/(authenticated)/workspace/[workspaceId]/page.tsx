@@ -37,8 +37,13 @@ export default async function WorkspacePage({ params }: PageProps) {
     notFound();
   }
 
+  // Determine user's role for draft content visibility
+  // Admins and managers see draft content, members do not
+  const userRole = membership?.role || (isAdmin ? "manager" : "member");
+
   // Fetch workspace with nested data including lock status
-  const workspace = await workspaceService.getByIdWithNestedAndLockStatus(workspaceId);
+  // Draft tasks are filtered out for members
+  const workspace = await workspaceService.getByIdWithNestedAndLockStatusForRole(workspaceId, userRole);
   if (!workspace) {
     notFound();
   }
@@ -161,6 +166,7 @@ export default async function WorkspacePage({ params }: PageProps) {
             createdAt: task.createdAt?.toISOString(),
             updatedAt: task.updatedAt?.toISOString(),
             completedAt: task.completedAt?.toISOString(),
+            isDraft: task.isDraft, // For showing draft badge to managers
           };
         }),
       };

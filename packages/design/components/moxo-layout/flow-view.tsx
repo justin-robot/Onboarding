@@ -49,6 +49,7 @@ interface FlowTask {
   dueDate?: Date | string;
   createdAt?: Date | string;
   assignees?: string[];
+  isDraft?: boolean; // Tasks created while workspace is in draft mode
 }
 
 interface FlowSection {
@@ -173,6 +174,7 @@ function SortableTaskCard({
         timelinePosition={timelinePosition}
         timelineStatus={getTimelineStatus(task)}
         isLastInSection={isLastInSection}
+        isDraft={task.isDraft}
       />
     </div>
   );
@@ -566,6 +568,7 @@ export function FlowView({
                     timelinePosition={index + 1}
                     timelineStatus={getTimelineStatus(task)}
                     isLastInSection={index === tasks.length - 1}
+                    isDraft={task.isDraft}
                   />
                 ))}
                 {onAddTask && (
@@ -619,6 +622,7 @@ export function FlowView({
                   description={isCompact ? undefined : activeItem.item.description}
                   dueDate={activeItem.item.dueDate}
                   createdAt={activeItem.item.createdAt}
+                  isDraft={activeItem.item.isDraft}
                 />
               </div>
             )}

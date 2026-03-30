@@ -555,4 +555,35 @@ export const taskService = {
       locked: !unlocked,
     };
   },
+
+  /**
+   * Convert all draft tasks in a workspace to regular tasks
+   * Called when a workspace is published
+   */
+  async publishDraftTasks(workspaceId: string): Promise<number> {
+    // Get all section IDs for this workspace
+    const sections = await database
+      .selectFrom("section")
+      .select("id")
+      .where("workspaceId", "=", workspaceId)
+      .where("deletedAt", "is", null)
+      .execute();
+
+    if (sections.length === 0) {
+      return 0;
+    }
+
+    const sectionIds = sections.map((s) => s.id);
+
+    // Update all draft tasks in these sections to non-draft
+    const result = await database
+      .updateTable("task")
+      .set({ isDraft: false, updatedAt: new Date() })
+      .where("sectionId", "in", sectionIds)
+      .where("isDraft", "=", true)
+      .where("deletedAt", "is", null)
+      .executeTakeFirst();
+
+    return Number(result?.numUpdatedRows ?? 0n);
+  },
 };

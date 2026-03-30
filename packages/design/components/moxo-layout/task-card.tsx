@@ -78,6 +78,8 @@ interface TaskCardProps {
   isLastInSection?: boolean;
   /** Click handler for Review button */
   onReviewClick?: () => void;
+  /** Whether task was created in draft mode (visible to managers only) */
+  isDraft?: boolean;
 }
 
 // Type-specific styling configuration - using solid colors to match Add Task dialog
@@ -276,6 +278,7 @@ export function TaskCard({
   timelineStatus = "upcoming",
   isLastInSection = false,
   onReviewClick,
+  isDraft,
 }: TaskCardProps) {
   const config = typeConfig[type];
   const Icon = config.icon;
@@ -340,6 +343,11 @@ export function TaskCard({
             <span className={cn("text-xs", statusSubtitle.className)}>
               {statusSubtitle.text}
             </span>
+            {isDraft && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                Draft
+              </span>
+            )}
             {dueDateBadge && (
               <span className={cn("flex items-center gap-1 text-xs font-medium", dueDateBadge.colorClass)}>
                 {dueDateBadge.isOverdue && <AlertCircle className="h-3 w-3" />}

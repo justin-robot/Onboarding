@@ -185,6 +185,85 @@ export const workspaceService = {
   },
 
   /**
+   * Get a workspace with nested sections and tasks, filtered by user role
+   * Draft tasks are hidden from members, visible to managers
+   */
+  async getByIdWithNestedAndLockStatusForRole(
+    id: string,
+    role: "manager" | "member"
+  ): Promise<WorkspaceWithNestedAndLock | null> {
+    // First get the workspace
+    const workspace = await this.getById(id);
+    if (!workspace) {
+      return null;
+    }
+
+    // Get sections for this workspace (ordered by position)
+    const sections = await database
+      .selectFrom("section")
+      .selectAll()
+      .where("workspaceId", "=", id)
+      .where("deletedAt", "is", null)
+      .orderBy("position", "asc")
+      .execute();
+
+    // Get tasks for all sections (ordered by position)
+    // Filter out draft tasks for members
+    const sectionIds = sections.map((s) => s.id);
+    let tasksQuery = database
+      .selectFrom("task")
+      .selectAll()
+      .where("deletedAt", "is", null)
+      .orderBy("position", "asc");
+
+    if (sectionIds.length > 0) {
+      tasksQuery = tasksQuery.where("sectionId", "in", sectionIds);
+    } else {
+      // No sections, return empty workspace
+      return {
+        ...workspace,
+        sections: [],
+      };
+    }
+
+    // Members cannot see draft tasks
+    if (role === "member") {
+      tasksQuery = tasksQuery.where("isDraft", "=", false);
+    }
+
+    const tasks = await tasksQuery.execute();
+
+    // Compute lock status for all tasks
+    const tasksWithLock: TaskWithLock[] = [];
+    for (const task of tasks) {
+      const unlocked = await dependencyService.isTaskUnlocked(task.id);
+      tasksWithLock.push({
+        ...task,
+        locked: !unlocked,
+      });
+    }
+
+    // Group tasks by section
+    const tasksBySectionId = new Map<string, TaskWithLock[]>();
+    for (const task of tasksWithLock) {
+      const sectionTasks = tasksBySectionId.get(task.sectionId) ?? [];
+      sectionTasks.push(task);
+      tasksBySectionId.set(task.sectionId, sectionTasks);
+    }
+
+    // Build nested structure
+    const sectionsWithTasks: SectionWithTasksAndLock[] = sections.map((section) => ({
+      ...section,
+      tasks: tasksBySectionId.get(section.id) ?? [],
+    }));
+
+    return {
+      ...workspace,
+      sections: sectionsWithTasks,
+    };
+  },
+
+  /**
    * Update a workspace (excludes soft-deleted)
    */
   async update(
@@ -283,25 +362,32 @@ export const workspaceService = {
 
   /**
    * Publish a workspace (enables notifications)
+   * Also converts any draft tasks to regular tasks
    */
   async publish(id: string, auditContext?: AuditContext): Promise<Workspace | null> {
     const result = await database
       .updateTable("workspace")
-      .set({ isPublished: true, updatedAt: new Date() })
+      .set({ isPublished: true, hasBeenPublished: true, updatedAt: new Date() })
       .where("id", "=", id)
       .where("deletedAt", "is", null)
       .returningAll()
       .executeTakeFirst();
 
-    if (result && auditContext) {
-      await auditLogService.logEvent({
-        workspaceId: id,
-        eventType: "workspace.published",
-        actorId: auditContext.actorId,
-        source: auditContext.source,
-        ipAddress: auditContext.ipAddress,
-        metadata: { workspaceName: result.name },
-      });
+    if (result) {
+      // Convert all draft tasks to regular tasks
+      const { taskService } = await import("./task");
+      const draftTasksConverted = await taskService.publishDraftTasks(id);
+
+      if (auditContext) {
+        await auditLogService.logEvent({
+          workspaceId: id,
+          eventType: "workspace.published",
+          actorId: auditContext.actorId,
+          source: auditContext.source,
+          ipAddress: auditContext.ipAddress,
+          metadata: { workspaceName: result.name, draftTasksConverted },
+        });
+      }
     }
 
     return result ?? null;

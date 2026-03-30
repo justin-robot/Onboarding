@@ -91,6 +91,7 @@ interface WorkspaceData {
       createdAt?: string;
       updatedAt?: string;
       completedAt?: string;
+      isDraft?: boolean; // Tasks created while workspace is in draft mode
     }>;
   }>;
 }
@@ -294,6 +295,7 @@ export function WorkspaceView({
       assignees: task.assignees,
       description: task.description || undefined,
       dueDate: task.dueDate,
+      isDraft: task.isDraft,
     })),
   }));
 

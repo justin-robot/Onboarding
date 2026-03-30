@@ -1,4 +1,4 @@
-import { taskService, configService, sectionService, assigneeService, pendingAssigneeService } from "@/lib/services";
+import { taskService, configService, sectionService, assigneeService, pendingAssigneeService, workspaceService } from "@/lib/services";
 import { ablyService, WORKSPACE_EVENTS } from "@/lib/services/ably";
 import { notificationService } from "@repo/notifications";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
@@ -42,6 +42,21 @@ export async function POST(request: NextRequest, { params }: Params) {
       return errorResponse(`Type must be one of: ${validTypes.join(", ")}`);
     }
 
+    // Check if task should be created as draft
+    // Tasks are draft when workspace is unpublished AND has been published before
+    const section = await sectionService.getById(sectionId);
+    if (!section) {
+      return errorResponse("Section not found", 404);
+    }
+
+    const workspace = await workspaceService.getById(section.workspaceId);
+    if (!workspace) {
+      return errorResponse("Workspace not found", 404);
+    }
+
+    // Task is draft if workspace is in draft mode and was previously published
+    const isDraft = !workspace.isPublished && workspace.hasBeenPublished;
+
     const task = await taskService.create({
       sectionId,
       title: body.title,
@@ -50,6 +65,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       type: body.type as TaskType,
       dueDateType: body.dueDateType as DueDateType | undefined,
       dueDateValue: body.dueDateValue ? new Date(body.dueDateValue) : undefined,
+      isDraft,
     });
 
     // Auto-create config for task types that support it
@@ -79,23 +95,22 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     // Broadcast task creation via Ably (non-blocking)
+    // Note: section was already fetched above
     (async () => {
       try {
-        const section = await sectionService.getById(sectionId);
-        if (section) {
-          await ablyService.broadcastToWorkspace(
-            section.workspaceId,
-            WORKSPACE_EVENTS.TASK_CREATED,
-            {
-              id: task.id,
-              title: task.title,
-              type: task.type,
-              status: task.status,
-              sectionId: task.sectionId,
-              position: task.position,
-            }
-          );
-        }
+        await ablyService.broadcastToWorkspace(
+          section.workspaceId,
+          WORKSPACE_EVENTS.TASK_CREATED,
+          {
+            id: task.id,
+            title: task.title,
+            type: task.type,
+            status: task.status,
+            sectionId: task.sectionId,
+            position: task.position,
+            isDraft: task.isDraft,
+          }
+        );
       } catch (err) {
         console.error("Failed to broadcast task creation:", err);
       }
