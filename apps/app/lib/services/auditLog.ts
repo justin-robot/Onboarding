@@ -61,6 +61,7 @@ export type AuditEventType =
   | "workspace.settings_updated"
   | "workspace.marked_as_template"
   | "workspace.unmarked_as_template"
+  | "workspace.saved_as_template"
   // Section events
   | "section.created"
   | "section.updated"
