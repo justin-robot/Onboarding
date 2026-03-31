@@ -386,44 +386,44 @@ async function seed() {
         id: uuid(),
         workspaceId: ids.workspace1,
         userId: ids.adminUser,
-        role: "admin" as const,
+        role: "manager" as const,
       },
       {
         id: uuid(),
         workspaceId: ids.workspace1,
         userId: ids.accountManager,
-        role: "user" as const,
+        role: "member" as const,
       },
       {
         id: uuid(),
         workspaceId: ids.workspace1,
         userId: ids.user1,
-        role: "user" as const,
+        role: "member" as const,
       },
       {
         id: uuid(),
         workspaceId: ids.workspace1,
         userId: ids.user2,
-        role: "user" as const,
+        role: "member" as const,
       },
       // Workspace 2: admin, account manager, user1
       {
         id: uuid(),
         workspaceId: ids.workspace2,
         userId: ids.adminUser,
-        role: "admin" as const,
+        role: "manager" as const,
       },
       {
         id: uuid(),
         workspaceId: ids.workspace2,
         userId: ids.accountManager,
-        role: "user" as const,
+        role: "member" as const,
       },
       {
         id: uuid(),
         workspaceId: ids.workspace2,
         userId: ids.user1,
-        role: "user" as const,
+        role: "member" as const,
       },
     ];
 
@@ -435,13 +435,13 @@ async function seed() {
           id: uuid(),
           workspaceId: ids.workspace1,
           userId: realUserId,
-          role: "admin" as const,
+          role: "manager" as const,
         },
         {
           id: uuid(),
           workspaceId: ids.workspace2,
           userId: realUserId,
-          role: "admin" as const,
+          role: "manager" as const,
         }
       );
     }

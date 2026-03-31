@@ -32,14 +32,14 @@ test.describe("Member Management", () => {
         userId: "user-1",
         name: "John Doe",
         email: "john@example.com",
-        role: "admin",
+        role: "manager",
         createdAt: "2026-01-15T10:00:00Z",
       };
 
       expect(sampleMember.id).toBeTruthy();
       expect(sampleMember.userId).toBeTruthy();
       expect(sampleMember.email).toBeTruthy();
-      expect(["admin", "user"]).toContain(sampleMember.role);
+      expect(["manager", "member"]).toContain(sampleMember.role);
     });
 
     test("validates invitation interface structure", () => {
@@ -55,7 +55,7 @@ test.describe("Member Management", () => {
       const sampleInvitation: Invitation = {
         id: "inv-1",
         email: "newuser@example.com",
-        role: "user",
+        role: "member",
         token: "abc123xyz",
         expiresAt: "2026-04-15T10:00:00Z",
         createdAt: "2026-03-15T10:00:00Z",
@@ -79,7 +79,7 @@ test.describe("Member Management", () => {
       request,
     }) => {
       const response = await request.patch("/api/workspaces/ws-123/members/user-1", {
-        data: { role: "admin" },
+        data: { role: "manager" },
       });
       expect(response.status()).toBe(401);
     });
@@ -127,32 +127,32 @@ test.describe("Member Management", () => {
     test("formats role display correctly", () => {
       const formatRole = (role: string): string => {
         switch (role) {
-          case "admin":
-            return "Admin";
-          case "user":
-            return "User";
+          case "manager":
+            return "Manager";
+          case "member":
+            return "Member";
           default:
             return role;
         }
       };
 
-      expect(formatRole("admin")).toBe("Admin");
-      expect(formatRole("user")).toBe("User");
+      expect(formatRole("manager")).toBe("Manager");
+      expect(formatRole("member")).toBe("Member");
       expect(formatRole("custom")).toBe("custom");
     });
 
     test("returns correct badge variant for role", () => {
       const getRoleBadgeVariant = (role: string): "default" | "secondary" | "outline" => {
         switch (role) {
-          case "admin":
+          case "manager":
             return "default";
           default:
             return "outline";
         }
       };
 
-      expect(getRoleBadgeVariant("admin")).toBe("default");
-      expect(getRoleBadgeVariant("user")).toBe("outline");
+      expect(getRoleBadgeVariant("manager")).toBe("default");
+      expect(getRoleBadgeVariant("member")).toBe("outline");
     });
   });
 
@@ -190,10 +190,10 @@ test.describe("Member Management", () => {
 
       expect(state.showDialog).toBe(false);
 
-      openDialog({ id: "1", name: "John", role: "user" });
+      openDialog({ id: "1", name: "John", role: "member" });
       expect(state.showDialog).toBe(true);
       expect(state.selectedMember?.name).toBe("John");
-      expect(state.editingRole).toBe("user");
+      expect(state.editingRole).toBe("member");
 
       closeDialog();
       expect(state.showDialog).toBe(false);
@@ -210,14 +210,14 @@ test.describe("Member Management", () => {
     });
   });
 
-  test.describe("Role Management (Admin Only)", () => {
-    test("admin can see role edit controls", () => {
+  test.describe("Role Management (Manager Only)", () => {
+    test("manager can see role edit controls", () => {
       const canEditRole = (currentUserRole: string): boolean => {
-        return currentUserRole === "admin";
+        return currentUserRole === "manager";
       };
 
-      expect(canEditRole("admin")).toBe(true);
-      expect(canEditRole("user")).toBe(false);
+      expect(canEditRole("manager")).toBe(true);
+      expect(canEditRole("member")).toBe(false);
     });
 
     test("validates role change request", () => {
@@ -230,12 +230,12 @@ test.describe("Member Management", () => {
       const request: RoleChangeRequest = {
         workspaceId: "ws-1",
         userId: "user-1",
-        newRole: "admin",
+        newRole: "manager",
       };
 
       expect(request.workspaceId).toBeTruthy();
       expect(request.userId).toBeTruthy();
-      expect(["admin", "user"]).toContain(request.newRole);
+      expect(["manager", "member"]).toContain(request.newRole);
     });
 
     test("updates local state after role change", () => {
@@ -245,8 +245,8 @@ test.describe("Member Management", () => {
       }
 
       let members: Member[] = [
-        { id: "1", role: "user" },
-        { id: "2", role: "admin" },
+        { id: "1", role: "member" },
+        { id: "2", role: "manager" },
       ];
 
       const updateMemberRole = (memberId: string, newRole: string) => {
@@ -255,31 +255,31 @@ test.describe("Member Management", () => {
         );
       };
 
-      updateMemberRole("1", "admin");
-      expect(members.find((m) => m.id === "1")?.role).toBe("admin");
+      updateMemberRole("1", "manager");
+      expect(members.find((m) => m.id === "1")?.role).toBe("manager");
     });
 
     test("shows save button only when role is changed", () => {
-      const originalRole = "user";
-      const editingRole = "admin";
+      const originalRole = "member";
+      const editingRole = "manager";
 
       const showSaveButton = editingRole !== originalRole;
       expect(showSaveButton).toBe(true);
 
-      const sameRole = "user";
+      const sameRole = "member";
       const hideSaveButton = sameRole === originalRole;
       expect(hideSaveButton).toBe(true);
     });
   });
 
-  test.describe("Member Removal (Admin Only)", () => {
-    test("admin can see remove button", () => {
+  test.describe("Member Removal (Manager Only)", () => {
+    test("manager can see remove button", () => {
       const canRemoveMember = (currentUserRole: string): boolean => {
-        return currentUserRole === "admin";
+        return currentUserRole === "manager";
       };
 
-      expect(canRemoveMember("admin")).toBe(true);
-      expect(canRemoveMember("user")).toBe(false);
+      expect(canRemoveMember("manager")).toBe(true);
+      expect(canRemoveMember("member")).toBe(false);
     });
 
     test("requires confirmation before removal", () => {
@@ -329,13 +329,13 @@ test.describe("Member Management", () => {
   });
 
   test.describe("Invitation Management", () => {
-    test("admin can see invite form", () => {
+    test("manager can see invite form", () => {
       const canInvite = (currentUserRole: string): boolean => {
-        return currentUserRole === "admin";
+        return currentUserRole === "manager";
       };
 
-      expect(canInvite("admin")).toBe(true);
-      expect(canInvite("user")).toBe(false);
+      expect(canInvite("manager")).toBe(true);
+      expect(canInvite("member")).toBe(false);
     });
 
     test("validates invitation email", () => {
@@ -349,10 +349,10 @@ test.describe("Member Management", () => {
     });
 
     test("validates invitation role options", () => {
-      const validRoles = ["admin", "user"];
+      const validRoles = ["manager", "member"];
 
-      expect(validRoles).toContain("admin");
-      expect(validRoles).toContain("user");
+      expect(validRoles).toContain("manager");
+      expect(validRoles).toContain("member");
       expect(validRoles).not.toContain("guest");
     });
 
@@ -369,7 +369,7 @@ test.describe("Member Management", () => {
         invitations = [...invitations, invitation];
       };
 
-      addInvitation({ id: "1", email: "new@example.com", role: "user" });
+      addInvitation({ id: "1", email: "new@example.com", role: "member" });
       expect(invitations).toHaveLength(1);
       expect(invitations[0].email).toBe("new@example.com");
     });

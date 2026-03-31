@@ -5,7 +5,7 @@
  *
  * This will create:
  * - 1 workspace with sections and tasks of all types
- * - Add the specified user as an admin member
+ * - Add the specified user as a manager
  */
 
 import "dotenv/config";
@@ -48,18 +48,18 @@ async function seed(userEmail: string) {
 
   console.log(`✓ Created workspace: Acme Corp Onboarding`);
 
-  // Add user as admin member
+  // Add user as manager member
   await db
     .insertInto("workspace_member")
     .values({
       id: randomUUID(),
       workspaceId,
       userId: user.id,
-      role: "admin",
+      role: "manager",
     })
     .execute();
 
-  console.log(`✓ Added ${user.name} as admin`);
+  console.log(`✓ Added ${user.name} as manager`);
 
   // Create sections
   const sections = [

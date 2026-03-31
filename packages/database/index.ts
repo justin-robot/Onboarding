@@ -40,12 +40,29 @@ const createDb = (url?: string) => {
   });
 };
 
-// Export main database instance
-export const database = createDb();
+// Lazy initialization for database and pool to allow migrations to run
+// without DATABASE_URL_DEV being set (migrations use DATABASE_URL_DEV_ADMIN)
+let _database: Kysely<Database> | null = null;
+let _pool: Pool | null = null;
 
-// Export Pool for BetterAuth (HTTP mode, no WebSocket connections)
-export const pool = new Pool({ 
-  connectionString: getDatabaseUrl() 
+// Export main database instance (lazy)
+export const database = new Proxy({} as Kysely<Database>, {
+  get(_, prop) {
+    if (!_database) {
+      _database = createDb();
+    }
+    return (_database as any)[prop];
+  },
+});
+
+// Export Pool for BetterAuth (HTTP mode, no WebSocket connections) (lazy)
+export const pool = new Proxy({} as Pool, {
+  get(_, prop) {
+    if (!_pool) {
+      _pool = new Pool({ connectionString: getDatabaseUrl() });
+    }
+    return (_pool as any)[prop];
+  },
 });
 
 // Export createDb for migrations

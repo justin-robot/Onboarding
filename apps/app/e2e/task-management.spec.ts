@@ -118,14 +118,14 @@ test.describe("Task Management", () => {
               userId: "user-1",
               name: "Admin User",
               email: "admin@example.com",
-              role: "admin",
+              role: "manager",
             },
             {
               id: "member-2",
               userId: "user-2",
               name: "Test User",
               email: "test@example.com",
-              role: "user",
+              role: "member",
             },
           ]),
         });
