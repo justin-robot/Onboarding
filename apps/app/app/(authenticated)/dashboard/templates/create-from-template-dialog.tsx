@@ -209,9 +209,9 @@ export const CreateFromTemplateDialog = ({
             />
 
             <div className="space-y-2">
-              <Label>Assign to Users (optional)</Label>
+              <Label>Invite Users (optional)</Label>
               <FormDescription>
-                Selected users will be added as members and assigned to all tasks
+                Selected users will be invited and assigned to all tasks. Invitations are sent when the workspace is published.
               </FormDescription>
               {loadingUsers ? (
                 <div className="flex items-center gap-2 py-2">

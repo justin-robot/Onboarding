@@ -1,6 +1,8 @@
 import { database } from "@repo/database";
 import type { AuditContext } from "./auditLog";
 import { auditLogService } from "./auditLog";
+import { invitationService } from "./invitation";
+import { pendingAssigneeService } from "./pendingAssignee";
 
 export interface DuplicateWorkspaceOptions {
   name: string;
@@ -136,13 +138,14 @@ export const templateService = {
         ? await database.selectFrom("form_element").selectAll().where("formPageId", "in", formPageIds).execute()
         : [];
 
-    // Create new workspace
+    // Create new workspace in draft mode
     const newWorkspace = await database
       .insertInto("workspace")
       .values({
         name: options.name,
         description: options.description ?? sourceWorkspace.description,
         dueDate: options.dueDate ?? null,
+        isPublished: false, // Start in draft mode
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -331,7 +334,7 @@ export const templateService = {
         .execute();
     }
 
-    // Add manager user to workspace
+    // Add manager user to workspace (the creator is always a direct member)
     await database
       .insertInto("workspace_member")
       .values({
@@ -342,32 +345,38 @@ export const templateService = {
       .onConflict((oc) => oc.doNothing())
       .execute();
 
-    // Assign additional users to workspace if specified
+    // Create invitations and pending task assignments for users
+    // Users will be invited (not directly assigned) and invitations sent when workspace is published
     if (options.assignToUsers && options.assignToUsers.length > 0) {
-      // Add users as workspace members (skip admin if already in list)
       for (const userId of options.assignToUsers) {
         if (userId === options.adminUserId) continue; // Admin already added above
 
-        await database
-          .insertInto("workspace_member")
-          .values({
-            workspaceId: newWorkspace.id,
-            userId,
-            role: "member",
-          })
-          .onConflict((oc) => oc.doNothing())
-          .execute();
+        // Get user's email for invitation
+        const user = await database
+          .selectFrom("user")
+          .select(["id", "email"])
+          .where("id", "=", userId)
+          .executeTakeFirst();
 
-        // Assign user to all tasks
-        for (const [, newTaskId] of taskIdMap) {
-          await database
-            .insertInto("task_assignee")
-            .values({
-              taskId: newTaskId,
-              userId,
-            })
-            .onConflict((oc) => oc.doNothing())
-            .execute();
+        if (!user || !user.email) continue;
+
+        // Create invitation (email will be sent when workspace is published)
+        const inviteResult = await invitationService.create({
+          workspaceId: newWorkspace.id,
+          email: user.email,
+          role: "member",
+          invitedBy: options.adminUserId,
+        });
+
+        if (inviteResult.success) {
+          // Create pending task assignments for ALL tasks
+          for (const [, newTaskId] of taskIdMap) {
+            await pendingAssigneeService.create(
+              newTaskId,
+              user.email,
+              options.adminUserId
+            );
+          }
         }
       }
     }
@@ -385,7 +394,8 @@ export const templateService = {
           sourceWorkspaceName: sourceWorkspace.name,
           sectionsCreated: sections.length,
           tasksCreated: tasks.length,
-          usersAssigned: options.assignToUsers?.length ?? 0,
+          usersInvited: options.assignToUsers?.length ?? 0,
+          startedInDraftMode: true,
         },
       });
     }
