@@ -1,4 +1,4 @@
-import { workspaceService, memberService, invitationService } from "@/lib/services";
+import { workspaceService, memberService, invitationService, adminAccessService } from "@/lib/services";
 import { sendInvitationEmail } from "@repo/email";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
@@ -17,10 +17,13 @@ export async function POST(request: NextRequest, { params }: Params) {
     const user = await requireAuth();
     const { id } = await params;
 
-    // Check if user is manager of this workspace
-    const member = await memberService.getMember(id, user.id);
-    if (!member || member.role !== "manager") {
-      return errorResponse("Only workspace managers can publish workspaces", 403);
+    // Check if user is platform admin or manager of this workspace
+    const isPlatformAdmin = await adminAccessService.isPlatformAdmin(user.id);
+    if (!isPlatformAdmin) {
+      const member = await memberService.getMember(id, user.id);
+      if (!member || member.role !== "manager") {
+        return errorResponse("Only workspace managers can publish workspaces", 403);
+      }
     }
 
     // Check if already published
@@ -93,10 +96,13 @@ export async function DELETE(request: NextRequest, { params }: Params) {
     const user = await requireAuth();
     const { id } = await params;
 
-    // Check if user is manager of this workspace
-    const member = await memberService.getMember(id, user.id);
-    if (!member || member.role !== "manager") {
-      return errorResponse("Only workspace managers can unpublish workspaces", 403);
+    // Check if user is platform admin or manager of this workspace
+    const isPlatformAdmin = await adminAccessService.isPlatformAdmin(user.id);
+    if (!isPlatformAdmin) {
+      const member = await memberService.getMember(id, user.id);
+      if (!member || member.role !== "manager") {
+        return errorResponse("Only workspace managers can unpublish workspaces", 403);
+      }
     }
 
     const workspace = await workspaceService.unpublish(id, {
