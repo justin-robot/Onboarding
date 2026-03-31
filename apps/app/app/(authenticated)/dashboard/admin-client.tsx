@@ -20,6 +20,7 @@ import { AuditLogList } from "./audit-logs/list";
 const AdminClient = () => {
   const pathname = usePathname();
   const [isPlatformAdmin, setIsPlatformAdmin] = useState<boolean>(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchAdminProfile = async () => {
@@ -28,6 +29,7 @@ const AdminClient = () => {
         if (response.ok) {
           const data = await response.json();
           setIsPlatformAdmin(data.isPlatformAdmin);
+          setCurrentUserId(data.id);
         }
       } catch (error) {
         console.error("Error fetching admin profile:", error);
@@ -51,7 +53,7 @@ const AdminClient = () => {
       // Extract user ID for edit page
       const userId = pathname.split("/dashboard/users/")[1];
       if (userId && userId !== "create") {
-        return <UserEdit userId={userId} isPlatformAdmin={isPlatformAdmin} />;
+        return <UserEdit userId={userId} isPlatformAdmin={isPlatformAdmin} currentUserId={currentUserId} />;
       }
     }
     if (pathname === "/dashboard/users") {

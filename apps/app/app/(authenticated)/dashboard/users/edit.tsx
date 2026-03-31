@@ -101,6 +101,7 @@ interface WorkspaceDetail {
 interface UserEditProps {
   userId: string;
   isPlatformAdmin?: boolean;
+  currentUserId?: string | null;
 }
 
 function getStatusBadge(taskStatus: string, assigneeStatus: string) {
@@ -140,7 +141,7 @@ function formatTaskType(type: string) {
   return typeMap[type] || type;
 }
 
-export const UserEdit = ({ userId, isPlatformAdmin = false }: UserEditProps) => {
+export const UserEdit = ({ userId, isPlatformAdmin = false, currentUserId }: UserEditProps) => {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [tasks, setTasks] = useState<UserTask[]>([]);
@@ -475,16 +476,18 @@ export const UserEdit = ({ userId, isPlatformAdmin = false }: UserEditProps) => 
                         {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Save Changes
                       </Button>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        onClick={() => setDeleteDialogOpen(true)}
-                        disabled={saving || deleting}
-                        data-testid="delete-user-btn"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete User
-                      </Button>
+                      {userId !== currentUserId && (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          onClick={() => setDeleteDialogOpen(true)}
+                          disabled={saving || deleting}
+                          data-testid="delete-user-btn"
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete User
+                        </Button>
+                      )}
                     </div>
                   </>
                 )}
