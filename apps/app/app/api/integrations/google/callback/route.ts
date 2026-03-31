@@ -32,7 +32,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // Validate required parameters
     if (!code || !state) {
       return NextResponse.redirect(
-        new URL("/?error=missing_params", request.url)
+        new URL("/workspaces?error=missing_params", request.url)
       );
     }
 
@@ -40,23 +40,31 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const stateData = googleCalendarService.parseState(state);
     if (!stateData) {
       return NextResponse.redirect(
-        new URL("/?error=invalid_state", request.url)
+        new URL("/workspaces?error=invalid_state", request.url)
       );
     }
 
     const { workspaceId, userId } = stateData;
 
-    // Exchange code for tokens and store them
-    await googleCalendarService.handleCallback(code, workspaceId, userId);
+    try {
+      // Exchange code for tokens and store them
+      await googleCalendarService.handleCallback(code, workspaceId, userId);
 
-    // Redirect back to workspace with success message
-    return NextResponse.redirect(
-      new URL(`/workspace/${workspaceId}?success=google_connected`, request.url)
-    );
+      // Redirect back to workspace with success message
+      return NextResponse.redirect(
+        new URL(`/workspace/${workspaceId}?success=google_connected`, request.url)
+      );
+    } catch (callbackError) {
+      console.error("Error exchanging Google OAuth tokens:", callbackError);
+      // Still redirect to workspace but with error
+      return NextResponse.redirect(
+        new URL(`/workspace/${workspaceId}?error=google_connect_failed`, request.url)
+      );
+    }
   } catch (error) {
     console.error("Error handling Google OAuth callback:", error);
     return NextResponse.redirect(
-      new URL("/?error=callback_failed", request.url)
+      new URL("/workspaces?error=callback_failed", request.url)
     );
   }
 }

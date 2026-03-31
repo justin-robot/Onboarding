@@ -184,6 +184,35 @@ export function WorkspaceView({
   const [initialMessages, setInitialMessages] = useState<Message[]>([]);
   const [messagesLoaded, setMessagesLoaded] = useState(false);
 
+  // Handle OAuth callback params (Google Calendar connection)
+  useEffect(() => {
+    const success = searchParams.get("success");
+    const error = searchParams.get("error");
+
+    if (success === "google_connected") {
+      toast.success("Google Calendar connected successfully");
+      // Open meetings panel to show the result
+      setShowMeetingsPanel(true);
+      setShowMembersPanel(false);
+      setSelectedTaskId(null);
+      setRightPanelOpen(true);
+      // Clean URL without reloading
+      const url = new URL(window.location.href);
+      url.searchParams.delete("success");
+      window.history.replaceState({}, "", url.toString());
+    } else if (error === "google_connect_failed") {
+      toast.error("Failed to connect Google Calendar. Please try again.");
+      const url = new URL(window.location.href);
+      url.searchParams.delete("error");
+      window.history.replaceState({}, "", url.toString());
+    } else if (error === "oauth_denied") {
+      toast.error("Google Calendar connection was cancelled");
+      const url = new URL(window.location.href);
+      url.searchParams.delete("error");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, [searchParams]);
+
   // Fetch initial messages once on mount
   useEffect(() => {
     const fetchInitialMessages = async () => {
