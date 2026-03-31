@@ -514,7 +514,7 @@ export function WorkspaceView({
   };
 
   return (
-    <>
+    <div className="flex flex-col h-full">
     {/* Real-time workspace event subscriptions */}
     <RealtimeWorkspaceEvents
       workspaceId={currentWorkspaceId}
@@ -543,6 +543,7 @@ export function WorkspaceView({
     )}
 
     <MoxoLayout
+      className="flex-1 min-h-0"
       sidebar={
         <WorkspaceSidebar
           workspaces={sidebarWorkspaces}
@@ -944,6 +945,6 @@ export function WorkspaceView({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  </>
+  </div>
   );
 }
