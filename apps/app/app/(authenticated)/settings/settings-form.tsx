@@ -17,19 +17,10 @@ import { ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import type { UserProfile } from "@/lib/services";
+import { GoogleCalendarSettings } from "./google-calendar-settings";
 
 const profileSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name is too long"),
-  username: z
-    .string()
-    .min(3, "Username must be at least 3 characters")
-    .max(30, "Username is too long")
-    .regex(
-      /^[a-zA-Z0-9_-]+$/,
-      "Username can only contain letters, numbers, underscores, and hyphens"
-    )
-    .nullable()
-    .or(z.literal("")),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
@@ -46,7 +37,6 @@ export function SettingsForm({ initialProfile }: SettingsFormProps) {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       name: initialProfile.name,
-      username: initialProfile.username ?? "",
     },
   });
 
@@ -62,7 +52,6 @@ export function SettingsForm({ initialProfile }: SettingsFormProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: data.name,
-          username: data.username || null,
         }),
       });
 
@@ -102,19 +91,6 @@ export function SettingsForm({ initialProfile }: SettingsFormProps) {
               errorMessage={errors.name?.message}
               {...form.register("name")}
             />
-          </div>
-
-          <div>
-            <Text className="mb-2 font-medium">Username</Text>
-            <TextInput
-              placeholder="username"
-              error={!!errors.username}
-              errorMessage={errors.username?.message}
-              {...form.register("username")}
-            />
-            <Text className="mt-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-              A unique identifier for your account
-            </Text>
           </div>
 
           <div>
@@ -163,6 +139,8 @@ export function SettingsForm({ initialProfile }: SettingsFormProps) {
           </Link>
         </div>
       </Card>
+
+      <GoogleCalendarSettings />
     </div>
   );
 }
