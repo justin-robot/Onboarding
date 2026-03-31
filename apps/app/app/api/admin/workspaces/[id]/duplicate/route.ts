@@ -10,7 +10,7 @@ const duplicateWorkspaceSchema = z.object({
   description: z.string().nullable().optional(),
   dueDate: z.string().nullable().optional(),
   adminUserId: z.string().min(1, "Admin user is required"),
-  assignToUsers: z.array(z.string()).optional(),
+  inviteEmail: z.string().email().nullable().optional(),
 });
 
 /**
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       return errorResponse(parsed.error.issues[0]?.message || "Invalid request body", 400);
     }
 
-    const { name, description, dueDate, adminUserId, assignToUsers } = parsed.data;
+    const { name, description, dueDate, adminUserId, inviteEmail } = parsed.data;
 
     const result = await templateService.duplicateWorkspace(
       sourceWorkspaceId,
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         description: description || undefined,
         dueDate: dueDate ? new Date(dueDate) : undefined,
         adminUserId,
-        assignToUsers,
+        inviteEmail: inviteEmail || undefined,
       },
       {
         actorId: user.id,

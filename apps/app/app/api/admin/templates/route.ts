@@ -30,7 +30,7 @@ const createFromTemplateSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().nullable().optional(),
   dueDate: z.string().nullable().optional(),
-  assignToUsers: z.array(z.string()).optional(),
+  inviteEmail: z.string().email().nullable().optional(),
 });
 
 /**
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       return errorResponse(parsed.error.issues[0]?.message || "Invalid request body", 400);
     }
 
-    const { templateId, name, description, dueDate, assignToUsers } = parsed.data;
+    const { templateId, name, description, dueDate, inviteEmail } = parsed.data;
 
     const result = await templateService.createFromTemplate(
       templateId,
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
         description: description || undefined,
         dueDate: dueDate ? new Date(dueDate) : undefined,
         adminUserId: user.id,
-        assignToUsers,
+        inviteEmail: inviteEmail || undefined,
       },
       {
         actorId: user.id,

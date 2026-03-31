@@ -15,8 +15,6 @@ import {
 import { Button } from "@repo/design/components/ui/button";
 import { Input } from "@repo/design/components/ui/input";
 import { Textarea } from "@repo/design/components/ui/textarea";
-import { Checkbox } from "@repo/design/components/ui/checkbox";
-import { Label } from "@repo/design/components/ui/label";
 import {
   Form,
   FormControl,
@@ -33,16 +31,10 @@ const createFromTemplateSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   dueDate: z.string().optional(),
-  assignToUsers: z.array(z.string()).optional(),
+  inviteEmail: z.string().email("Please enter a valid email address").optional().or(z.literal("")),
 });
 
 type CreateFromTemplateFormValues = z.infer<typeof createFromTemplateSchema>;
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
 
 interface Template {
   id: string;
@@ -65,8 +57,6 @@ export const CreateFromTemplateDialog = ({
   onOpenChange,
   onSuccess,
 }: CreateFromTemplateDialogProps) => {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
   const [creating, setCreating] = useState(false);
 
   const form = useForm<CreateFromTemplateFormValues>({
@@ -75,7 +65,7 @@ export const CreateFromTemplateDialog = ({
       name: "",
       description: "",
       dueDate: "",
-      assignToUsers: [],
+      inviteEmail: "",
     },
   });
 
@@ -85,16 +75,8 @@ export const CreateFromTemplateDialog = ({
         name: "",
         description: template.description || "",
         dueDate: "",
-        assignToUsers: [],
+        inviteEmail: "",
       });
-
-      // Load users for assignment
-      setLoadingUsers(true);
-      fetch("/api/auth/admin/list-users", { credentials: "include" })
-        .then((res) => res.json())
-        .then((data) => setUsers(data.users || []))
-        .catch((err) => console.error("Failed to load users:", err))
-        .finally(() => setLoadingUsers(false));
     }
   }, [open, template, form]);
 
@@ -112,7 +94,7 @@ export const CreateFromTemplateDialog = ({
           name: data.name,
           description: data.description || null,
           dueDate: data.dueDate || null,
-          assignToUsers: data.assignToUsers,
+          inviteEmail: data.inviteEmail || null,
         }),
       });
 
@@ -130,20 +112,6 @@ export const CreateFromTemplateDialog = ({
       toast.error(error instanceof Error ? error.message : "Failed to create workspace");
     } finally {
       setCreating(false);
-    }
-  };
-
-  const selectedUsers = form.watch("assignToUsers") || [];
-
-  const toggleUser = (userId: string) => {
-    const current = form.getValues("assignToUsers") || [];
-    if (current.includes(userId)) {
-      form.setValue(
-        "assignToUsers",
-        current.filter((id) => id !== userId)
-      );
-    } else {
-      form.setValue("assignToUsers", [...current, userId]);
     }
   };
 
@@ -208,40 +176,26 @@ export const CreateFromTemplateDialog = ({
               )}
             />
 
-            <div className="space-y-2">
-              <Label>Invite Users (optional)</Label>
-              <FormDescription>
-                Selected users will be invited and assigned to all tasks. Invitations are sent when the workspace is published.
-              </FormDescription>
-              {loadingUsers ? (
-                <div className="flex items-center gap-2 py-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm text-muted-foreground">Loading users...</span>
-                </div>
-              ) : (
-                <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-2">
-                  {users.length === 0 ? (
-                    <p className="text-sm text-muted-foreground py-2">No users available</p>
-                  ) : (
-                    users.map((user) => (
-                      <div key={user.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`user-${user.id}`}
-                          checked={selectedUsers.includes(user.id)}
-                          onCheckedChange={() => toggleUser(user.id)}
-                        />
-                        <Label
-                          htmlFor={`user-${user.id}`}
-                          className="text-sm font-normal cursor-pointer"
-                        >
-                          {user.name} ({user.email})
-                        </Label>
-                      </div>
-                    ))
-                  )}
-                </div>
+            <FormField
+              control={form.control}
+              name="inviteEmail"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Invite User (optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      {...field}
+                      placeholder="Enter email address to invite"
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    This user will be invited and assigned to all tasks. The invitation is sent when the workspace is published.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
 
             <DialogFooter>
               <Button

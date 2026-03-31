@@ -9,7 +9,7 @@ export interface DuplicateWorkspaceOptions {
   description?: string;
   dueDate?: Date;
   adminUserId: string;
-  assignToUsers?: string[];
+  inviteEmail?: string;
 }
 
 export interface DuplicateWorkspaceResult {
@@ -345,38 +345,25 @@ export const templateService = {
       .onConflict((oc) => oc.doNothing())
       .execute();
 
-    // Create invitations and pending task assignments for users
-    // Users will be invited (not directly assigned) and invitations sent when workspace is published
-    if (options.assignToUsers && options.assignToUsers.length > 0) {
-      for (const userId of options.assignToUsers) {
-        if (userId === options.adminUserId) continue; // Admin already added above
+    // Create invitation and pending task assignments for the invited user
+    // Invitation will be sent when workspace is published
+    if (options.inviteEmail) {
+      // Create invitation (email will be sent when workspace is published)
+      const inviteResult = await invitationService.create({
+        workspaceId: newWorkspace.id,
+        email: options.inviteEmail,
+        role: "member",
+        invitedBy: options.adminUserId,
+      });
 
-        // Get user's email for invitation
-        const user = await database
-          .selectFrom("user")
-          .select(["id", "email"])
-          .where("id", "=", userId)
-          .executeTakeFirst();
-
-        if (!user || !user.email) continue;
-
-        // Create invitation (email will be sent when workspace is published)
-        const inviteResult = await invitationService.create({
-          workspaceId: newWorkspace.id,
-          email: user.email,
-          role: "member",
-          invitedBy: options.adminUserId,
-        });
-
-        if (inviteResult.success) {
-          // Create pending task assignments for ALL tasks
-          for (const [, newTaskId] of taskIdMap) {
-            await pendingAssigneeService.create(
-              newTaskId,
-              user.email,
-              options.adminUserId
-            );
-          }
+      if (inviteResult.success) {
+        // Create pending task assignments for ALL tasks
+        for (const [, newTaskId] of taskIdMap) {
+          await pendingAssigneeService.create(
+            newTaskId,
+            options.inviteEmail,
+            options.adminUserId
+          );
         }
       }
     }
@@ -394,7 +381,7 @@ export const templateService = {
           sourceWorkspaceName: sourceWorkspace.name,
           sectionsCreated: sections.length,
           tasksCreated: tasks.length,
-          usersInvited: options.assignToUsers?.length ?? 0,
+          invitedEmail: options.inviteEmail || null,
           startedInDraftMode: true,
         },
       });
