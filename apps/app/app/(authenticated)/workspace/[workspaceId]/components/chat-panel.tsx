@@ -564,6 +564,7 @@ function MessageBubble({
               <p className="text-sm text-muted-foreground truncate flex-1">
                 {message.replyToMessage.content}
               </p>
+              <span className="text-lg text-muted-foreground font-serif">"</span>
             </div>
           </div>
         )}
