@@ -42,6 +42,8 @@ export const testUser = testUsers.admin;
 export const authStateDir = path.join(__dirname, "../.auth");
 export const adminAuthState = path.join(authStateDir, "admin.json");
 export const userAuthState = path.join(authStateDir, "user.json");
+export const emilyAuthState = path.join(authStateDir, "emily.json");
+export const sarahAuthState = path.join(authStateDir, "sarah.json");
 
 /**
  * Check if auth state file exists and is valid
@@ -149,14 +151,21 @@ export async function performLogin(
 ): Promise<boolean> {
   try {
     await page.goto("/sign-in");
-    await page.waitForLoadState("domcontentloaded");
+    await page.waitForLoadState("networkidle");
 
     // Fill in credentials
-    await page.getByLabel("Email").fill(email);
-    await page.getByLabel("Password").fill(password);
+    const emailInput = page.getByLabel("Email");
+    const passwordInput = page.getByLabel("Password");
+
+    await emailInput.fill(email);
+    await passwordInput.fill(password);
+
+    // Wait for inputs to be filled
+    await page.waitForTimeout(500);
 
     // Submit the form
-    await page.getByRole("button", { name: /sign in/i }).click();
+    const submitButton = page.getByRole("button", { name: /sign in/i });
+    await submitButton.click();
 
     // Wait for navigation to dashboard or workspace
     await page.waitForURL(/\/(dashboard|workspace)/, { timeout: 30000 });

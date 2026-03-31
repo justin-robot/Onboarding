@@ -5,6 +5,8 @@ import {
   authStateDir,
   adminAuthState,
   userAuthState,
+  emilyAuthState,
+  sarahAuthState,
   loginAndSaveState,
   hasValidAuthState,
 } from "./fixtures/auth";
@@ -37,11 +39,15 @@ async function globalSetup(config: FullConfig) {
   // Check if we already have valid auth states
   const hasAdminAuth = hasValidAuthState(adminAuthState);
   const hasUserAuth = hasValidAuthState(userAuthState);
+  const hasEmilyAuth = hasValidAuthState(emilyAuthState);
+  const hasSarahAuth = hasValidAuthState(sarahAuthState);
 
-  if (hasAdminAuth && hasUserAuth) {
+  if (hasAdminAuth && hasUserAuth && hasEmilyAuth && hasSarahAuth) {
     console.log("Valid auth states found, skipping login setup.");
     console.log("  - Admin auth state: OK");
     console.log("  - User auth state: OK");
+    console.log("  - Emily auth state: OK");
+    console.log("  - Sarah auth state: OK");
     console.log("\nTo refresh auth states, delete the .auth directory.\n");
     return;
   }
@@ -80,7 +86,7 @@ async function globalSetup(config: FullConfig) {
 
     // Setup user auth state (using marcus@example.com as default user)
     if (!hasUserAuth) {
-      console.log("Logging in as regular user...");
+      console.log("Logging in as regular user (Marcus)...");
       const userContext = await browser.newContext({ baseURL });
       const userPage = await userContext.newPage();
       userPage.setDefaultTimeout(30000);
@@ -102,6 +108,56 @@ async function globalSetup(config: FullConfig) {
       await userContext.close();
     } else {
       console.log("User auth state already exists.");
+    }
+
+    // Setup Emily auth state
+    if (!hasEmilyAuth) {
+      console.log("Logging in as Emily...");
+      const emilyContext = await browser.newContext({ baseURL });
+      const emilyPage = await emilyContext.newPage();
+      emilyPage.setDefaultTimeout(30000);
+
+      const emilySuccess = await loginAndSaveState(
+        emilyPage,
+        testUsers.user2.email,
+        testUsers.user2.password,
+        emilyAuthState
+      );
+
+      if (emilySuccess) {
+        console.log("  Emily login successful!");
+      } else {
+        console.error("  Emily login FAILED!");
+      }
+
+      await emilyContext.close();
+    } else {
+      console.log("Emily auth state already exists.");
+    }
+
+    // Setup Sarah auth state
+    if (!hasSarahAuth) {
+      console.log("Logging in as Sarah...");
+      const sarahContext = await browser.newContext({ baseURL });
+      const sarahPage = await sarahContext.newPage();
+      sarahPage.setDefaultTimeout(30000);
+
+      const sarahSuccess = await loginAndSaveState(
+        sarahPage,
+        testUsers.accountManager.email,
+        testUsers.accountManager.password,
+        sarahAuthState
+      );
+
+      if (sarahSuccess) {
+        console.log("  Sarah login successful!");
+      } else {
+        console.error("  Sarah login FAILED!");
+      }
+
+      await sarahContext.close();
+    } else {
+      console.log("Sarah auth state already exists.");
     }
   } finally {
     await browser.close();

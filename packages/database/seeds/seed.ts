@@ -339,6 +339,7 @@ async function seed() {
           description:
             "Client onboarding workflow for Acme Corporation — includes compliance docs, team intro, and contract signing.",
           dueDate: inTwoWeeks,
+          isPublished: true, // Published so notifications work in E2E tests
         },
         {
           id: ids.workspace2,
@@ -346,6 +347,7 @@ async function seed() {
           description:
             "Internal audit preparation for Q1 financials. All documents must be reviewed and approved before submission.",
           dueDate: inOneMonth,
+          isPublished: true, // Published so notifications work in E2E tests
         },
       ])
       .execute();

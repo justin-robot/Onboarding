@@ -92,11 +92,12 @@ export const commentService = {
     if (options.notificationContext) {
       const shouldNotify = await notificationGuard.shouldNotify(taskWithWorkspace.workspaceId);
       if (shouldNotify) {
-        // Get all assignees for this task
+        // Get all assignees for this task with their user info for inline identification
         const assignees = await database
           .selectFrom("task_assignee")
-          .select(["userId"])
-          .where("taskId", "=", options.taskId)
+          .innerJoin("user", "user.id", "task_assignee.userId")
+          .select(["task_assignee.userId", "user.name", "user.email"])
+          .where("task_assignee.taskId", "=", options.taskId)
           .execute();
 
         // Notify each assignee except the comment author
@@ -109,6 +110,8 @@ export const commentService = {
             options.notificationContext.triggerWorkflow({
               workflowId: "comment-added",
               recipientId: assignee.userId,
+              recipientName: assignee.name ?? undefined,
+              recipientEmail: assignee.email,
               data: {
                 workspaceId: taskWithWorkspace.workspaceId,
                 workspaceName: taskWithWorkspace.workspaceName,
