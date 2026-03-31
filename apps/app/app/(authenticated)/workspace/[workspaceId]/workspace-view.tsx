@@ -768,11 +768,11 @@ export function WorkspaceView({
 
     {/* Workspace Menu Sheet */}
     <Sheet open={showWorkspaceMenu} onOpenChange={setShowWorkspaceMenu}>
-      <SheetContent side="right" className="w-[320px] sm:w-[360px]">
+      <SheetContent side="right" className="w-[320px] sm:w-[400px]">
         <SheetHeader>
           <SheetTitle>Workspace Menu</SheetTitle>
         </SheetHeader>
-        <div className="mt-4 space-y-1">
+        <div className="mt-4 space-y-1 px-6">
           {currentUserRole === "manager" && (
             <>
               <div className="py-3">
