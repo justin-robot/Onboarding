@@ -7,28 +7,26 @@ import {
 } from "./fixtures/auth";
 
 /**
- * E2E Tests: Notification System
+ * E2E Tests: Notification System (True End-to-End)
  *
- * These tests verify that actions trigger Knock notifications
+ * These tests verify that UI actions trigger Knock notifications
  * and that notifications actually appear in the UI.
  *
+ * TRUE END-TO-END: Both the action AND the verification happen through the UI.
+ * - Comments are typed and submitted through the UI
+ * - Notifications are checked through the UI
+ *
  * Prerequisites:
- * - Database must be seeded: pnpm db:seed
+ * - Database must be seeded: pnpm seed:dev
  * - Knock must be configured with valid API keys
  * - Workspace must be PUBLISHED (notifications are suppressed for drafts)
  * - Global setup must have run (happens automatically with pnpm e2e)
- *
- * Test Strategy:
- * - Use API calls to trigger notification-generating actions (more reliable)
- * - Use UI to verify notifications appear in the Knock feed
- * - FAIL tests if notifications don't appear (strict verification)
  */
 
 // Seeded workspace and task IDs
 const WORKSPACE_ID = "11111111-1111-1111-1111-111111111101";
-const TASK_FORM_ID = "33333333-3333-3333-3333-333333333301";
-// taskApproval has Admin User and Account Manager as assignees
-const TASK_APPROVAL_ID = "33333333-3333-3333-3333-333333333306";
+// taskApproval has Account Manager (Sarah) and Admin User as assignees
+const TASK_APPROVAL_TITLE = "Submit Final Approval";
 
 // Knock notification feed selectors
 const SELECTORS = {
@@ -37,6 +35,11 @@ const SELECTORS = {
   notificationItem: ".rnf-notification-cell",
   emptyState: ".rnf-empty-feed",
   markAllRead: 'button:has-text("Mark all")',
+  // Task and comment selectors
+  taskCard: "button.group", // Task cards are buttons
+  commentInput: 'input[placeholder="Write a comment..."]',
+  commentTextarea: 'textarea[placeholder="Write a comment..."]',
+  sendButton: 'button:has(svg.lucide-send)',
 };
 
 /**
@@ -147,31 +150,6 @@ async function waitForNotification(
 }
 
 /**
- * Helper to add a comment via API
- */
-async function addCommentViaAPI(
-  context: BrowserContext,
-  taskId: string,
-  content: string
-): Promise<{ success: boolean; error?: string }> {
-  const page = await context.newPage();
-  try {
-    const response = await page.request.post(`/api/tasks/${taskId}/comments`, {
-      data: { content },
-    });
-
-    if (response.ok()) {
-      return { success: true };
-    }
-    return { success: false, error: `API returned ${response.status()}` };
-  } catch (error) {
-    return { success: false, error: String(error) };
-  } finally {
-    await page.close();
-  }
-}
-
-/**
  * Helper to check if workspace is published
  */
 async function isWorkspacePublished(
@@ -198,11 +176,45 @@ async function isWorkspacePublished(
   }
 }
 
+/**
+ * Helper to click on a task by title (TRUE UI INTERACTION)
+ */
+async function clickTaskByTitle(page: Page, taskTitle: string): Promise<void> {
+  // Find the task card button containing the title
+  const taskCard = page.locator("button").filter({ hasText: taskTitle }).first();
+  await expect(taskCard).toBeVisible({ timeout: 10000 });
+  await taskCard.click();
+  // Wait for task details panel to open
+  await page.waitForTimeout(500);
+}
+
+/**
+ * Helper to add a comment through the UI (TRUE UI INTERACTION)
+ */
+async function addCommentThroughUI(page: Page, comment: string): Promise<void> {
+  // Try compact mode input first, then textarea
+  let commentInput = page.locator(SELECTORS.commentInput);
+
+  if (!(await commentInput.isVisible({ timeout: 2000 }).catch(() => false))) {
+    // Try textarea for full mode
+    commentInput = page.locator(SELECTORS.commentTextarea);
+  }
+
+  await expect(commentInput).toBeVisible({ timeout: 10000 });
+  await commentInput.fill(comment);
+
+  // Submit by pressing Enter (works for compact mode)
+  await commentInput.press("Enter");
+
+  // Wait for comment to be submitted
+  await page.waitForTimeout(1000);
+}
+
 // ============================================================================
 // TESTS
 // ============================================================================
 
-test.describe("Notification System", () => {
+test.describe("Notification System - True End-to-End", () => {
   // Set longer timeout for notification tests
   test.setTimeout(120000);
 
@@ -294,8 +306,8 @@ test.describe("Notification System", () => {
     });
   });
 
-  test.describe("Comment Notification", () => {
-    test("adding comment triggers notification for other assignees", async ({ browser }) => {
+  test.describe("Comment Notification - True E2E", () => {
+    test("adding comment through UI triggers notification for other assignees", async ({ browser }) => {
       if (!hasValidAuthState(sarahAuthState) || !hasValidAuthState(userAuthState)) {
         test.skip(true, "Auth states not found (need Sarah and Marcus)");
         return;
@@ -312,29 +324,33 @@ test.describe("Notification System", () => {
           return;
         }
 
-        // Sarah: Navigate to workspace and get initial count
-        // Sarah is assigned to taskApproval, so she should receive comment notifications
+        // Sarah: Navigate to workspace and get initial notification count
         const sarahPage = await sarahContext.newPage();
         await navigateToWorkspace(sarahPage, WORKSPACE_ID);
         await waitForBellButton(sarahPage);
         const initialCount = await getUnreadCount(sarahPage);
         console.log(`Initial Sarah notification count: ${initialCount}`);
 
-        // User (Marcus): Add a comment via API to taskApproval
-        // Sarah is assigned to taskApproval, so she should receive the notification
+        // User (Marcus): Navigate to workspace and add a comment THROUGH THE UI
+        const userPage = await userContext.newPage();
+        await navigateToWorkspace(userPage, WORKSPACE_ID);
+        await userPage.waitForTimeout(2000); // Wait for page to fully load
+
+        // Click on the approval task (Sarah is assigned to it)
+        console.log(`Looking for task: ${TASK_APPROVAL_TITLE}`);
+        await clickTaskByTitle(userPage, TASK_APPROVAL_TITLE);
+        console.log("Task clicked, panel should be open");
+
+        // Wait for the comment section to load
+        await userPage.waitForTimeout(1000);
+
+        // Add a comment through the UI
         const testComment = `E2E test comment at ${Date.now()}`;
-        const result = await addCommentViaAPI(userContext, TASK_APPROVAL_ID, testComment);
+        console.log(`Adding comment through UI: ${testComment}`);
+        await addCommentThroughUI(userPage, testComment);
+        console.log("Comment submitted through UI");
 
-        if (!result.success) {
-          console.error(`Failed to add comment: ${result.error}`);
-          // Don't skip - this is a real failure
-          expect(result.success).toBe(true);
-          return;
-        }
-
-        console.log("Comment added successfully via API");
-
-        // Wait a bit for notification to be delivered
+        // Wait for notification to be delivered
         await sarahPage.waitForTimeout(3000);
 
         // Sarah: Wait for notification to appear
@@ -361,8 +377,8 @@ test.describe("Notification System", () => {
         if (!notificationFound) {
           console.error("FAIL: Comment notification did not appear");
           console.error("Possible causes:");
-          console.error("  - KNOCK_SECRET_API_KEY not set in environment (required for server-side notifications)");
-          console.error("  - Sarah is not an assignee on the task (check seed data)");
+          console.error("  - KNOCK_SECRET_API_KEY not set in environment");
+          console.error("  - Sarah is not an assignee on the task");
           console.error("  - Workspace is not published");
           console.error("  - 'comment-added' workflow doesn't exist in Knock dashboard");
           console.error("  - Knock service returned an error (check server logs)");
@@ -371,6 +387,7 @@ test.describe("Notification System", () => {
         expect(notificationFound).toBe(true);
 
         await sarahPage.close();
+        await userPage.close();
       } finally {
         await sarahContext.close();
         await userContext.close();
