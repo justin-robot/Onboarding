@@ -96,9 +96,6 @@ export function SettingsForm({ initialProfile }: SettingsFormProps) {
           <div>
             <Text className="mb-2 font-medium">Email</Text>
             <TextInput value={initialProfile.email} disabled />
-            <Text className="mt-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-              Contact support to change your email address
-            </Text>
           </div>
 
           <Divider />
