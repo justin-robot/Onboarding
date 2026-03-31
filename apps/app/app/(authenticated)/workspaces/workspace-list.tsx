@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@repo/design/components/ui/button";
 import { Input } from "@repo/design/components/ui/input";
@@ -54,6 +55,7 @@ interface WorkspaceListProps {
 }
 
 export function WorkspaceList({ workspaces, userId, userEmail, userRole, pendingInvitations = [] }: WorkspaceListProps) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -93,7 +95,14 @@ export function WorkspaceList({ workspaces, userId, userEmail, userRole, pending
             <Plus className="mr-2 h-4 w-4" />
             Create Workspace
           </Button>
-          <NotificationsTrigger />
+          <NotificationsTrigger
+            onNotificationClick={({ workspaceId, taskId }) => {
+              const url = taskId
+                ? `/workspace/${workspaceId}?task=${taskId}`
+                : `/workspace/${workspaceId}`;
+              router.push(url);
+            }}
+          />
           <UserMenu />
         </div>
       </div>

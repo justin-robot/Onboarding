@@ -17,3 +17,54 @@
 .rnf-notification-feed-container {
   z-index: 9999 !important;
 }
+
+/* Custom notification cell wrapper for action buttons */
+.rnf-notification-cell-wrapper {
+  position: relative;
+}
+
+.rnf-notification-cell-wrapper .rnf-notification-cell {
+  padding-right: 60px; /* Make room for action buttons */
+}
+
+/* Hide Knock's default archive button since we have custom actions */
+.rnf-notification-cell__archive-btn {
+  display: none !important;
+}
+
+/* Style the notification cell on hover */
+.rnf-notification-cell-wrapper:hover .rnf-notification-cell {
+  background-color: var(--rnf-hover-bg, rgba(0, 0, 0, 0.04));
+}
+
+/* Make notification cells clickable */
+.rnf-notification-cell {
+  cursor: pointer;
+}
+
+/* Custom header styling - override Knock's default header */
+.rnf-notification-feed__header {
+  display: none !important;
+}
+
+.rnf-notification-feed-header {
+  background: var(--rnf-bg, #fff);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .rnf-notification-cell-wrapper:hover .rnf-notification-cell {
+    background-color: var(--rnf-hover-bg, rgba(255, 255, 255, 0.04));
+  }
+
+  .rnf-notification-feed-header {
+    background: var(--rnf-bg, #1a1a1a);
+  }
+}
+
+/* Empty state for archived */
+.rnf-notification-feed__empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--rnf-text-secondary, #6b7280);
+}

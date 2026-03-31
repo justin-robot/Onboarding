@@ -545,7 +545,19 @@ export function WorkspaceView({
     },
     actions: (
       <WorkspaceNotificationsProvider workspaceId={currentWorkspaceId}>
-        <NotificationsTrigger />
+        <NotificationsTrigger
+          onNotificationClick={({ workspaceId, taskId }) => {
+            if (workspaceId === currentWorkspaceId && taskId) {
+              // Same workspace - just select the task
+              handleTaskSelect(taskId);
+            } else if (taskId) {
+              // Different workspace - navigate
+              router.push(`/workspace/${workspaceId}?task=${taskId}`);
+            } else {
+              router.push(`/workspace/${workspaceId}`);
+            }
+          }}
+        />
       </WorkspaceNotificationsProvider>
     ),
   };
