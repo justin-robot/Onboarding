@@ -238,7 +238,7 @@ export type FileSourceType = "upload" | "task_attachment" | "chat";
 export interface FileTable {
   id: Generated<string>;
   workspaceId: string;
-  uploadedBy: string;
+  uploadedBy: string | null;
   name: string;
   mimeType: string;
   size: number;
