@@ -29,6 +29,7 @@ import { CreateWorkspaceDialog } from "./create-workspace-dialog";
 import { PendingInvitations, type PendingInvitationData } from "./pending-invitations";
 import { formatDistanceToNow } from "date-fns";
 import { UserMenu } from "../components/user-menu";
+import { NotificationsTrigger } from "@repo/notifications";
 
 interface WorkspaceData {
   id: string;
@@ -92,6 +93,7 @@ export function WorkspaceList({ workspaces, userId, userEmail, userRole, pending
             <Plus className="mr-2 h-4 w-4" />
             Create Workspace
           </Button>
+          <NotificationsTrigger />
           <UserMenu />
         </div>
       </div>

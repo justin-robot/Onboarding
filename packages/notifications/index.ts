@@ -29,6 +29,7 @@ export const getKnockClient = () => {
 // Client-side exports (must be in separate files due to "use client")
 export * from "./components/provider";
 export * from "./components/trigger";
+export * from "./components/workspace-provider";
 
 // Server-side notification service
 export {

@@ -66,7 +66,7 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
-import { NotificationsTrigger } from "@repo/notifications";
+import { NotificationsTrigger, WorkspaceNotificationsProvider } from "@repo/notifications";
 import { UserMenu } from "../../components/user-menu";
 import { CreateWorkspaceDialog } from "../../workspaces/create-workspace-dialog";
 
@@ -543,7 +543,11 @@ export function WorkspaceView({
       setRightPanelOpen(false);
       setShowWorkspaceMenu(true);
     },
-    actions: <NotificationsTrigger />,
+    actions: (
+      <WorkspaceNotificationsProvider workspaceId={currentWorkspaceId}>
+        <NotificationsTrigger />
+      </WorkspaceNotificationsProvider>
+    ),
   };
 
   return (
