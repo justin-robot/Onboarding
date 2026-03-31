@@ -1,4 +1,5 @@
 import { commentService, taskService, memberService } from "@/lib/services";
+import { auditLogService } from "@/lib/services/auditLog";
 import { notificationService } from "@repo/notifications";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
@@ -89,6 +90,19 @@ export async function POST(request: NextRequest, { params }: Params) {
       userId: user.id,
       content: body.content.trim(),
       notificationContext,
+    });
+
+    // Log audit event for comment creation
+    await auditLogService.logEvent({
+      workspaceId,
+      eventType: "comment.created",
+      actorId: user.id,
+      taskId,
+      source: "web",
+      metadata: {
+        taskTitle: task.title,
+        commentId: comment.id,
+      },
     });
 
     // Return comment with user info

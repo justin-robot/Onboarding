@@ -1,4 +1,5 @@
 import { fileService, workspaceService, memberService } from "@/lib/services";
+import { auditLogService } from "@/lib/services/auditLog";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
@@ -67,6 +68,20 @@ export async function POST(
       sourceType: "upload",
       folderId: folderId || null,
       generateThumbnail: true,
+    });
+
+    // Log audit event for file upload
+    await auditLogService.logEvent({
+      workspaceId,
+      eventType: "file.uploaded",
+      actorId: user.id,
+      source: "web",
+      metadata: {
+        fileName: name,
+        fileId: file.id,
+        mimeType,
+        size,
+      },
     });
 
     return json(file);

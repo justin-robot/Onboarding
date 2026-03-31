@@ -1,5 +1,6 @@
 import { taskService, configService, sectionService, assigneeService, workspaceService } from "@/lib/services";
 import { ablyService, WORKSPACE_EVENTS } from "@/lib/services/ably";
+import { auditLogService } from "@/lib/services/auditLog";
 import { notificationService } from "@repo/notifications";
 import { json, errorResponse, requireAuth, withErrorHandler } from "../../../_lib/api-utils";
 import type { NextRequest } from "next/server";
@@ -53,6 +54,25 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (!result.success) {
       return errorResponse(result.error || "Failed to record rejection", 500);
     }
+
+    // Get section for workspaceId (needed for audit log)
+    const section = await sectionService.getById(task.sectionId);
+    if (!section) {
+      return errorResponse("Section not found", 404);
+    }
+
+    // Log audit event for rejection
+    await auditLogService.logEvent({
+      workspaceId: section.workspaceId,
+      eventType: "approval.rejected",
+      actorId: user.id,
+      taskId: id,
+      source: "web",
+      metadata: {
+        taskTitle: task.title,
+        reason,
+      },
+    });
 
     // For rejection, we keep the task open (not completed) so the submitter can revise
     // Just update the task to reflect it needs revision
