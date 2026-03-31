@@ -194,13 +194,14 @@ export const WorkspaceList = () => {
         throw new Error(result.error || "Failed to save as template");
       }
 
-      // Remove the workspace from the list (it's now a template)
-      setWorkspaces((prev) => prev.filter((w) => w.id !== selectedWorkspace.id));
-      toast.success("Workspace saved as template! Redirecting to Templates...");
+      const result = await response.json();
 
-      // Redirect to templates page after a brief delay
+      // Don't remove workspace from list - it remains as a regular workspace
+      toast.success("Template created! The original workspace has been linked to it.");
+
+      // Navigate to the new template detail page
       setTimeout(() => {
-        router.push("/dashboard/templates");
+        router.push(`/dashboard/templates/${result.templateId}`);
       }, 1000);
     } catch (error) {
       console.error("Error saving as template:", error);
@@ -610,9 +611,10 @@ export const WorkspaceList = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Save as Template</AlertDialogTitle>
             <AlertDialogDescription>
-              This will convert &quot;{selectedWorkspace?.name}&quot; into a template. The workspace
-              will no longer appear in the Workspaces list but can be used to quickly create new
-              client workspaces from the Templates section.
+              This will create a new template based on &quot;{selectedWorkspace?.name}&quot;.
+              The original workspace will remain unchanged and can be used to quickly create new
+              workspaces from the Templates section. All workspaces created from this template
+              will be linked to it.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -621,10 +623,10 @@ export const WorkspaceList = () => {
               {actionLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  Creating Template...
                 </>
               ) : (
-                "Save as Template"
+                "Create Template"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>

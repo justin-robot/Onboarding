@@ -139,6 +139,7 @@ export const templateService = {
         : [];
 
     // Create new workspace in draft mode
+    // If source is a template, link the new workspace to it via sourceTemplateId
     const newWorkspace = await database
       .insertInto("workspace")
       .values({
@@ -146,6 +147,7 @@ export const templateService = {
         description: options.description ?? sourceWorkspace.description,
         dueDate: options.dueDate ?? null,
         isPublished: false, // Start in draft mode
+        sourceTemplateId: sourceWorkspace.isTemplate ? sourceWorkspaceId : null,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -681,5 +683,377 @@ export const templateService = {
     }
 
     return { success: true };
+  },
+
+  /**
+   * Save a workspace as a template by creating a copy
+   * The original workspace remains as a regular workspace and is linked to the new template
+   */
+  async saveAsTemplate(
+    sourceWorkspaceId: string,
+    auditContext?: AuditContext
+  ): Promise<{ success: boolean; templateId?: string; error?: string }> {
+    try {
+      // Get source workspace
+      const sourceWorkspace = await database
+        .selectFrom("workspace")
+        .selectAll()
+        .where("id", "=", sourceWorkspaceId)
+        .where("deletedAt", "is", null)
+        .where("isTemplate", "=", false)
+        .executeTakeFirst();
+
+      if (!sourceWorkspace) {
+        return { success: false, error: "Workspace not found or is already a template" };
+      }
+
+      // Get all sections
+      const sections = await database
+        .selectFrom("section")
+        .selectAll()
+        .where("workspaceId", "=", sourceWorkspaceId)
+        .where("deletedAt", "is", null)
+        .orderBy("position", "asc")
+        .execute();
+
+      // Get all tasks
+      const tasks = sections.length > 0
+        ? await database
+            .selectFrom("task")
+            .selectAll()
+            .where(
+              "sectionId",
+              "in",
+              sections.map((s) => s.id)
+            )
+            .where("deletedAt", "is", null)
+            .orderBy("position", "asc")
+            .execute()
+        : [];
+
+      // Get all dependencies
+      const dependencies = tasks.length > 0
+        ? await database
+            .selectFrom("task_dependency")
+            .selectAll()
+            .where(
+              "taskId",
+              "in",
+              tasks.map((t) => t.id)
+            )
+            .execute()
+        : [];
+
+      // Get all configs for each task type
+      const taskIds = tasks.map((t) => t.id);
+
+      const [formConfigs, acknowledgementConfigs, bookingConfigs, esignConfigs, fileRequestConfigs, approvalConfigs] =
+        taskIds.length > 0
+          ? await Promise.all([
+              database.selectFrom("form_config").selectAll().where("taskId", "in", taskIds).execute(),
+              database.selectFrom("acknowledgement_config").selectAll().where("taskId", "in", taskIds).execute(),
+              database.selectFrom("time_booking_config").selectAll().where("taskId", "in", taskIds).execute(),
+              database.selectFrom("esign_config").selectAll().where("taskId", "in", taskIds).execute(),
+              database.selectFrom("file_request_config").selectAll().where("taskId", "in", taskIds).execute(),
+              database.selectFrom("approval_config").selectAll().where("taskId", "in", taskIds).execute(),
+            ])
+          : [[], [], [], [], [], []];
+
+      // Get form pages and elements
+      const formConfigIds = formConfigs.map((fc) => fc.id);
+      const formPages =
+        formConfigIds.length > 0
+          ? await database.selectFrom("form_page").selectAll().where("formConfigId", "in", formConfigIds).execute()
+          : [];
+
+      const formPageIds = formPages.map((fp) => fp.id);
+      const formElements =
+        formPageIds.length > 0
+          ? await database.selectFrom("form_element").selectAll().where("formPageId", "in", formPageIds).execute()
+          : [];
+
+      // Create new workspace as a template
+      const newTemplate = await database
+        .insertInto("workspace")
+        .values({
+          name: sourceWorkspace.name,
+          description: sourceWorkspace.description,
+          dueDate: null, // Templates don't have due dates
+          isTemplate: true,
+          isPublished: false,
+          hasBeenPublished: false,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+
+      // Map old IDs to new IDs
+      const sectionIdMap = new Map<string, string>();
+      const taskIdMap = new Map<string, string>();
+      const formConfigIdMap = new Map<string, string>();
+      const formPageIdMap = new Map<string, string>();
+
+      // Create sections
+      for (const section of sections) {
+        const newSection = await database
+          .insertInto("section")
+          .values({
+            workspaceId: newTemplate.id,
+            title: section.title,
+            position: section.position,
+          })
+          .returningAll()
+          .executeTakeFirstOrThrow();
+
+        sectionIdMap.set(section.id, newSection.id);
+      }
+
+      // Create tasks
+      for (const task of tasks) {
+        const newSectionId = sectionIdMap.get(task.sectionId);
+        if (!newSectionId) continue;
+
+        const newTask = await database
+          .insertInto("task")
+          .values({
+            sectionId: newSectionId,
+            title: task.title,
+            description: task.description,
+            type: task.type,
+            status: "not_started",
+            position: task.position,
+            completionRule: task.completionRule,
+            dueDateType: task.dueDateType,
+            dueDateValue: task.dueDateValue,
+          })
+          .returningAll()
+          .executeTakeFirstOrThrow();
+
+        taskIdMap.set(task.id, newTask.id);
+      }
+
+      // Create form configs
+      for (const config of formConfigs) {
+        const newTaskId = taskIdMap.get(config.taskId);
+        if (!newTaskId) continue;
+
+        const newConfig = await database
+          .insertInto("form_config")
+          .values({ taskId: newTaskId })
+          .returningAll()
+          .executeTakeFirstOrThrow();
+
+        formConfigIdMap.set(config.id, newConfig.id);
+      }
+
+      // Create form pages
+      for (const page of formPages) {
+        const newConfigId = formConfigIdMap.get(page.formConfigId);
+        if (!newConfigId) continue;
+
+        const newPage = await database
+          .insertInto("form_page")
+          .values({
+            formConfigId: newConfigId,
+            title: page.title,
+            position: page.position,
+          })
+          .returningAll()
+          .executeTakeFirstOrThrow();
+
+        formPageIdMap.set(page.id, newPage.id);
+      }
+
+      // Create form elements
+      for (const element of formElements) {
+        const newPageId = formPageIdMap.get(element.formPageId);
+        if (!newPageId) continue;
+
+        await database
+          .insertInto("form_element")
+          .values({
+            formPageId: newPageId,
+            type: element.type,
+            label: element.label,
+            placeholder: element.placeholder,
+            helpText: element.helpText,
+            required: element.required,
+            validation: element.validation ? JSON.stringify(element.validation) : null,
+            options: element.options ? JSON.stringify(element.options) : null,
+            position: element.position,
+          } as any)
+          .execute();
+      }
+
+      // Create other configs
+      for (const config of acknowledgementConfigs) {
+        const newTaskId = taskIdMap.get(config.taskId);
+        if (!newTaskId) continue;
+
+        await database
+          .insertInto("acknowledgement_config")
+          .values({ taskId: newTaskId, instructions: config.instructions })
+          .execute();
+      }
+
+      for (const config of bookingConfigs) {
+        const newTaskId = taskIdMap.get(config.taskId);
+        if (!newTaskId) continue;
+
+        await database
+          .insertInto("time_booking_config")
+          .values({ taskId: newTaskId, bookingLink: config.bookingLink })
+          .execute();
+      }
+
+      for (const config of esignConfigs) {
+        const newTaskId = taskIdMap.get(config.taskId);
+        if (!newTaskId) continue;
+
+        await database
+          .insertInto("esign_config")
+          .values({ taskId: newTaskId, fileId: config.fileId, signerEmail: config.signerEmail })
+          .execute();
+      }
+
+      for (const config of fileRequestConfigs) {
+        const newTaskId = taskIdMap.get(config.taskId);
+        if (!newTaskId) continue;
+
+        await database
+          .insertInto("file_request_config")
+          .values({ taskId: newTaskId, targetFolderId: config.targetFolderId })
+          .execute();
+      }
+
+      for (const config of approvalConfigs) {
+        const newTaskId = taskIdMap.get(config.taskId);
+        if (!newTaskId) continue;
+
+        await database.insertInto("approval_config").values({ taskId: newTaskId }).execute();
+      }
+
+      // Create dependencies with remapped IDs
+      for (const dep of dependencies) {
+        const newTaskId = taskIdMap.get(dep.taskId);
+        const newDependsOnTaskId = taskIdMap.get(dep.dependsOnTaskId);
+        if (!newTaskId || !newDependsOnTaskId) continue;
+
+        await database
+          .insertInto("task_dependency")
+          .values({
+            taskId: newTaskId,
+            dependsOnTaskId: newDependsOnTaskId,
+            type: dep.type,
+            offsetDays: dep.offsetDays,
+          })
+          .execute();
+      }
+
+      // Link the original workspace to the new template
+      await database
+        .updateTable("workspace")
+        .set({
+          sourceTemplateId: newTemplate.id,
+          updatedAt: new Date(),
+        })
+        .where("id", "=", sourceWorkspaceId)
+        .execute();
+
+      // Log audit event
+      if (auditContext) {
+        await auditLogService.logEvent({
+          workspaceId: newTemplate.id,
+          eventType: "workspace.saved_as_template",
+          actorId: auditContext.actorId,
+          source: auditContext.source,
+          ipAddress: auditContext.ipAddress,
+          metadata: {
+            sourceWorkspaceId,
+            sourceWorkspaceName: sourceWorkspace.name,
+            templateId: newTemplate.id,
+            sectionsCreated: sections.length,
+            tasksCreated: tasks.length,
+          },
+        });
+      }
+
+      return { success: true, templateId: newTemplate.id };
+    } catch (error) {
+      console.error("Error saving workspace as template:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to save as template",
+      };
+    }
+  },
+
+  /**
+   * Get a template with all workspaces derived from it
+   */
+  async getTemplateWithDerivedWorkspaces(templateId: string): Promise<{
+    template: Template;
+    derivedWorkspaces: Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      createdAt: Date;
+      isPublished: boolean;
+      progress: number;
+    }>;
+  } | null> {
+    const template = await this.getTemplate(templateId);
+    if (!template) return null;
+
+    // Get all workspaces that were created from this template
+    const workspaces = await database
+      .selectFrom("workspace")
+      .select([
+        "workspace.id",
+        "workspace.name",
+        "workspace.description",
+        "workspace.createdAt",
+        "workspace.isPublished",
+      ])
+      .where("workspace.sourceTemplateId", "=", templateId)
+      .where("workspace.deletedAt", "is", null)
+      .where("workspace.isTemplate", "=", false)
+      .orderBy("workspace.createdAt", "desc")
+      .execute();
+
+    // Get task counts and completion stats for each workspace
+    const derivedWorkspaces = await Promise.all(
+      workspaces.map(async (workspace) => {
+        const stats = await database
+          .selectFrom("task")
+          .innerJoin("section", "section.id", "task.sectionId")
+          .select((eb) => [
+            eb.fn.count("task.id").as("taskCount"),
+            eb.fn
+              .count(
+                eb.case().when("task.status", "=", "completed").then("task.id").end()
+              )
+              .as("completedTaskCount"),
+          ])
+          .where("section.workspaceId", "=", workspace.id)
+          .where("task.deletedAt", "is", null)
+          .where("section.deletedAt", "is", null)
+          .executeTakeFirst();
+
+        const taskCount = Number(stats?.taskCount || 0);
+        const completedTaskCount = Number(stats?.completedTaskCount || 0);
+        const progress = taskCount > 0 ? Math.round((completedTaskCount / taskCount) * 100) : 0;
+
+        return {
+          id: workspace.id,
+          name: workspace.name,
+          description: workspace.description,
+          createdAt: workspace.createdAt,
+          isPublished: workspace.isPublished,
+          progress,
+        };
+      })
+    );
+
+    return { template, derivedWorkspaces };
   },
 };

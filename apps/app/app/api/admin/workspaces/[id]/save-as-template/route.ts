@@ -5,7 +5,8 @@ import type { NextRequest } from "next/server";
 type Params = { params: Promise<{ id: string }> };
 
 /**
- * POST /api/admin/workspaces/[id]/save-as-template - Mark workspace as a template
+ * POST /api/admin/workspaces/[id]/save-as-template - Create a template copy of workspace
+ * The original workspace remains unchanged and is linked to the new template
  */
 export async function POST(request: NextRequest, { params }: Params) {
   return withErrorHandler(async () => {
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       return errorResponse("Workspace not found", 404);
     }
 
-    const result = await templateService.markAsTemplate(workspaceId, {
+    const result = await templateService.saveAsTemplate(workspaceId, {
       actorId: user.id,
       source: "admin",
     });
@@ -29,7 +30,8 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     return json({
       success: true,
-      message: "Workspace saved as template successfully",
+      templateId: result.templateId,
+      message: "Template created successfully. Original workspace remains unchanged.",
     });
   });
 }

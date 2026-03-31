@@ -135,6 +135,7 @@ export interface WorkspaceTable {
   isTemplate: Generated<boolean>;
   isPublished: Generated<boolean>;
   hasBeenPublished: Generated<boolean>; // True once workspace has ever been published
+  sourceTemplateId: string | null; // References the template this workspace was created from
   deletedAt: Date | null;
   createdAt: Generated<Date>;
   updatedAt: Generated<Date>;

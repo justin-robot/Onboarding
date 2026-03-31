@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Table,
   TableBody,
@@ -53,6 +54,7 @@ interface Template {
 }
 
 export const TemplateList = () => {
+  const router = useRouter();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState("");
@@ -165,10 +167,10 @@ export const TemplateList = () => {
               </TableHeader>
               <TableBody>
                 {templates.map((template) => (
-                  <TableRow key={template.id}>
-                    <TableCell>
+                  <TableRow key={template.id} className="cursor-pointer hover:bg-muted/50">
+                    <TableCell onClick={() => router.push(`/dashboard/templates/${template.id}`)}>
                       <div>
-                        <div className="font-medium">{template.name}</div>
+                        <div className="font-medium hover:text-primary">{template.name}</div>
                         {template.description && (
                           <div className="text-sm text-muted-foreground truncate max-w-xs">
                             {template.description}
@@ -176,22 +178,22 @@ export const TemplateList = () => {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={() => router.push(`/dashboard/templates/${template.id}`)}>
                       <div className="flex items-center gap-1.5 text-muted-foreground">
                         <FileStack className="h-4 w-4" />
                         {template.sectionCount}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={() => router.push(`/dashboard/templates/${template.id}`)}>
                       <div className="flex items-center gap-1.5 text-muted-foreground">
                         <ClipboardList className="h-4 w-4" />
                         {template.taskCount}
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
+                    <TableCell onClick={() => router.push(`/dashboard/templates/${template.id}`)} className="text-muted-foreground text-sm">
                       {formatDate(template.createdAt)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1">
                         <Button
                           type="button"

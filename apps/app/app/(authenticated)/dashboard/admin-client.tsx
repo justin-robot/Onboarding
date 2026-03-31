@@ -10,6 +10,7 @@ import { UserCreate } from "./users/create";
 import { WorkspaceList } from "./workspaces/list";
 import { WorkspaceEdit } from "./workspaces/edit";
 import { TemplateList } from "./templates/list";
+import { TemplateDetail } from "./templates/detail";
 import { TaskList } from "./tasks/list";
 import { TaskEdit } from "./tasks/edit";
 import { MemberList } from "./members/list";
@@ -70,6 +71,13 @@ const AdminClient = () => {
     }
 
     // Template routes
+    if (pathname.startsWith("/dashboard/templates/") && pathname !== "/dashboard/templates") {
+      // Extract template ID for detail page
+      const templateId = pathname.split("/dashboard/templates/")[1];
+      if (templateId) {
+        return <TemplateDetail templateId={templateId} />;
+      }
+    }
     if (pathname === "/dashboard/templates") {
       return <TemplateList />;
     }
