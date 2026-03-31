@@ -11,11 +11,24 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@repo/design/components/ui/dropdown-menu";
-import { Loader2, Send, MoreVertical, Trash2, Paperclip, Smile } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@repo/design/components/ui/popover";
+import { Loader2, Send, MoreVertical, Trash2, Paperclip, Smile, X, FileText } from "lucide-react";
 import { cn } from "@repo/design/lib/utils";
 import { toast } from "sonner";
 import { format, isToday, isYesterday, formatDistanceToNow } from "date-fns";
 import { isEdited } from "@repo/design/lib/date-utils";
+
+// Common emoji categories for quick access
+const EMOJI_CATEGORIES = [
+  { name: "Smileys", emojis: ["😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "😉", "😊", "😇", "🥰", "😍", "😘", "😗"] },
+  { name: "Gestures", emojis: ["👍", "👎", "👌", "✌️", "🤞", "🤟", "🤘", "🤙", "👋", "🖐️", "✋", "👏", "🙌", "🤝", "🙏", "💪"] },
+  { name: "Hearts", emojis: ["❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❣️", "💕", "💞", "💓", "💗", "💖"] },
+  { name: "Objects", emojis: ["⭐", "🔥", "✨", "💯", "✅", "❌", "⚡", "💡", "🎉", "🎊", "🎁", "📌", "📍", "🔔", "💬", "📝"] },
+];
 
 export interface Comment {
   id: string;
@@ -66,7 +79,10 @@ export function CommentSection({
   const [sending, setSending] = useState(false);
   const [content, setContent] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch comments and activities on mount
   useEffect(() => {
@@ -189,6 +205,24 @@ export function CommentSection({
     }
   };
 
+  // Handle emoji selection
+  const handleEmojiSelect = (emoji: string) => {
+    setContent((prev) => prev + emoji);
+  };
+
+  // Handle file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("File size must be less than 10MB");
+        return;
+      }
+      setSelectedFile(file);
+    }
+    e.target.value = "";
+  };
+
   // Get initials from name
   const getInitials = (name?: string) => {
     if (!name) return "?";
@@ -261,6 +295,34 @@ export function CommentSection({
           )}
         </div>
 
+        {/* Hidden file input */}
+        <input
+          type="file"
+          ref={fileInputRef}
+          className="hidden"
+          onChange={handleFileSelect}
+          accept="image/*,.pdf,.doc,.docx,.txt,.csv,.xls,.xlsx"
+        />
+
+        {/* Selected file preview */}
+        {selectedFile && (
+          <div className="mb-2 flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2">
+            <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-sm truncate flex-1">{selectedFile.name}</span>
+            <span className="text-xs text-muted-foreground shrink-0">
+              {(selectedFile.size / 1024).toFixed(1)} KB
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 shrink-0"
+              onClick={() => setSelectedFile(null)}
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
+
         {/* Moxo-style input with emoji and paperclip on right */}
         <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2">
           <input
@@ -277,10 +339,52 @@ export function CommentSection({
             className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             disabled={sending}
           />
-          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground">
-            <Smile className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground">
+
+          {/* Emoji picker */}
+          <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+                disabled={sending}
+              >
+                <Smile className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72 p-2" align="end">
+              <div className="space-y-2">
+                {EMOJI_CATEGORIES.map((category) => (
+                  <div key={category.name}>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">
+                      {category.name}
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {category.emojis.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          className="h-7 w-7 flex items-center justify-center rounded hover:bg-muted text-lg"
+                          onClick={() => handleEmojiSelect(emoji)}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Attachment button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={sending}
+          >
             <Paperclip className="h-4 w-4" />
           </Button>
         </div>
