@@ -189,6 +189,13 @@ export function WorkspaceView({
     const success = searchParams.get("success");
     const error = searchParams.get("error");
 
+    const cleanUrl = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("success");
+      url.searchParams.delete("error");
+      window.history.replaceState({}, "", url.toString());
+    };
+
     if (success === "google_connected") {
       toast.success("Google Calendar connected successfully");
       // Open meetings panel to show the result
@@ -196,20 +203,17 @@ export function WorkspaceView({
       setShowMembersPanel(false);
       setSelectedTaskId(null);
       setRightPanelOpen(true);
-      // Clean URL without reloading
-      const url = new URL(window.location.href);
-      url.searchParams.delete("success");
-      window.history.replaceState({}, "", url.toString());
-    } else if (error === "google_connect_failed") {
-      toast.error("Failed to connect Google Calendar. Please try again.");
-      const url = new URL(window.location.href);
-      url.searchParams.delete("error");
-      window.history.replaceState({}, "", url.toString());
-    } else if (error === "oauth_denied") {
-      toast.error("Google Calendar connection was cancelled");
-      const url = new URL(window.location.href);
-      url.searchParams.delete("error");
-      window.history.replaceState({}, "", url.toString());
+      cleanUrl();
+    } else if (error) {
+      // Handle various error types
+      const errorMessages: Record<string, string> = {
+        google_connect_failed: "Failed to connect Google Calendar. Please try again.",
+        oauth_denied: "Google Calendar connection was cancelled.",
+        config_error: "Google Calendar is not configured correctly. Please contact support.",
+        redirect_mismatch: "OAuth redirect URL mismatch. Please contact support.",
+      };
+      toast.error(errorMessages[error] || "An error occurred connecting Google Calendar.");
+      cleanUrl();
     }
   }, [searchParams]);
 

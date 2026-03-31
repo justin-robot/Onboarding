@@ -16,7 +16,10 @@ function getEncryptionKey(): Buffer {
   if (!key) {
     throw new Error("GOOGLE_TOKEN_ENCRYPTION_KEY not configured");
   }
-  // Ensure key is 32 bytes
+  // Key must be 64 hex characters (32 bytes for AES-256)
+  if (key.length !== 64 || !/^[0-9a-fA-F]+$/.test(key)) {
+    throw new Error("GOOGLE_TOKEN_ENCRYPTION_KEY must be exactly 64 hex characters");
+  }
   return Buffer.from(key, "hex");
 }
 

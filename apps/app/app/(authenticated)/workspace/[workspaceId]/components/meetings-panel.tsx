@@ -383,29 +383,10 @@ export function MeetingsPanel({ workspaceId, onClose, hideHeader = false }: Meet
   }, [fetchMeetings]);
 
   const handleConnectCalendar = () => {
-    // Open Google OAuth flow in new tab to avoid navigating away
-    // The callback will redirect to the workspace page in the new tab
-    window.open(
-      `/api/workspaces/${workspaceId}/integrations/google/connect`,
-      "_blank",
-      "noopener,noreferrer"
-    );
+    // Navigate to Google OAuth flow in the same window
+    // The callback will redirect back to this workspace with success/error params
+    window.location.href = `/api/workspaces/${workspaceId}/integrations/google/connect`;
   };
-
-  // Refetch meetings when user returns to the tab (after OAuth in new tab)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible" && isConnected === false) {
-        // User returned to tab, check if calendar is now connected
-        fetchMeetings();
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [isConnected, fetchMeetings]);
 
   // Loading state
   if (isLoading) {

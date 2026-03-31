@@ -55,10 +55,24 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         new URL(`/workspace/${workspaceId}?success=google_connected`, request.url)
       );
     } catch (callbackError) {
-      console.error("Error exchanging Google OAuth tokens:", callbackError);
-      // Still redirect to workspace but with error
+      // Log detailed error for debugging
+      const errorMessage = callbackError instanceof Error ? callbackError.message : "Unknown error";
+      console.error("Error exchanging Google OAuth tokens:", {
+        error: errorMessage,
+        workspaceId,
+        userId,
+        // Don't log the code as it's sensitive
+      });
+
+      // Include error type in redirect for better debugging
+      const errorType = errorMessage.includes("ENCRYPTION_KEY")
+        ? "config_error"
+        : errorMessage.includes("redirect_uri")
+          ? "redirect_mismatch"
+          : "google_connect_failed";
+
       return NextResponse.redirect(
-        new URL(`/workspace/${workspaceId}?error=google_connect_failed`, request.url)
+        new URL(`/workspace/${workspaceId}?error=${errorType}`, request.url)
       );
     }
   } catch (error) {
