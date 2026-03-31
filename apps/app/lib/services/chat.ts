@@ -162,19 +162,22 @@ export const chatService = {
         .executeTakeFirst();
 
       if (!manager) {
-        console.error("Cannot send system message: no manager found for workspace");
+        console.error("[Chat] Cannot send system message: no manager found for workspace", { workspaceId });
         return null;
       }
       userId = manager.id;
     }
 
-    return this.sendMessage({
+    console.log("[Chat] Sending system message", { workspaceId, content: content.substring(0, 50), userId });
+    const message = await this.sendMessage({
       workspaceId,
       userId,
       content,
       type: "system",
       referencedTaskId,
     });
+    console.log("[Chat] System message sent", { messageId: message.id });
+    return message;
   },
 
   /**

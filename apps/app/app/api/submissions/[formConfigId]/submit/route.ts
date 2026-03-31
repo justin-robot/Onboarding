@@ -72,6 +72,12 @@ export async function POST(request: NextRequest, { params }: Params) {
         const section = await sectionService.getById(task.sectionId);
         if (section) {
           // Log form submission audit event
+          console.log("[Form Submit] Logging form.submitted audit event", {
+            workspaceId: section.workspaceId,
+            taskId: formConfig.taskId,
+            taskTitle: task.title,
+            actorId: user.id,
+          });
           await auditLogService.logEvent({
             workspaceId: section.workspaceId,
             eventType: "form.submitted",
@@ -83,9 +89,12 @@ export async function POST(request: NextRequest, { params }: Params) {
               formConfigId,
             },
           });
+        } else {
+          console.warn("[Form Submit] Section not found for task", { taskId: formConfig.taskId, sectionId: task.sectionId });
         }
+      } else {
+        console.warn("[Form Submit] Task not found", { taskId: formConfig.taskId });
       }
-
       const completionResult = await completionService.completeTaskForUser(
         formConfig.taskId,
         user.id,
@@ -99,6 +108,8 @@ export async function POST(request: NextRequest, { params }: Params) {
           { taskId: formConfig.taskId, userId: user.id }
         );
       }
+    } else {
+      console.warn("[Form Submit] No taskId on formConfig", { formConfigId });
     }
 
     return json({

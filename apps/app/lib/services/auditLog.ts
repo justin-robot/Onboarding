@@ -225,9 +225,12 @@ export const auditLogService = {
         if (messageContent) {
           // Fire and forget - don't block the audit log
           // Pass actorId so chat can show "You" for the current user's actions
+          console.log("[AuditLog] Creating system message for", eventType, { workspaceId, messageContent, taskId });
           chatService.sendSystemMessage(workspaceId, messageContent, taskId, actorId).catch((err) => {
             console.error("Failed to create system message:", err);
           });
+        } else {
+          console.warn("[AuditLog] No message content generated for", eventType);
         }
       } catch (err) {
         console.error("Failed to create system message for audit event:", err);
