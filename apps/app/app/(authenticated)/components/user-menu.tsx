@@ -28,18 +28,14 @@ export function UserMenu() {
 
   const user = session?.user;
 
-  if (!user) {
-    return null;
-  }
-
-  const initials = user.name
+  const initials = user?.name
     ? user.name
         .split(" ")
         .map((n: string) => n[0])
         .join("")
         .toUpperCase()
         .slice(0, 2)
-    : user.email?.charAt(0).toUpperCase() ?? "?";
+    : user?.email?.charAt(0).toUpperCase() ?? "?";
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -61,23 +57,27 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-9 w-9 rounded-full cursor-pointer">
-          <Avatar className="h-9 w-9 pointer-events-none">
-            {user.image && <AvatarImage src={user.image} alt={user.name ?? "User"} />}
-            <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+        <Button variant="ghost" className="relative h-10 w-10 rounded-full cursor-pointer p-0">
+          <Avatar className="h-10 w-10 pointer-events-none">
+            {user?.image && <AvatarImage src={user.image} alt={user?.name ?? "User"} />}
+            <AvatarFallback className="bg-slate-800 text-white text-sm font-medium">
               {initials}
             </AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.name}</p>
-            <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
+      <DropdownMenuContent className="w-56" align="start" side="top" forceMount>
+        {user && (
+          <>
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">{user.name}</p>
+                <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+          </>
+        )}
         <DropdownMenuGroup>
           <DropdownMenuItem onClick={() => router.push("/settings")}>
             <Settings className="mr-2 h-4 w-4" />
@@ -100,15 +100,19 @@ export function UserMenu() {
             </DropdownMenuSubContent>
           </DropdownMenuSub>
         </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={handleSignOut}
-          disabled={isSigningOut}
-          variant="destructive"
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          {isSigningOut ? "Signing out..." : "Sign out"}
-        </DropdownMenuItem>
+        {user && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleSignOut}
+              disabled={isSigningOut}
+              variant="destructive"
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              {isSigningOut ? "Signing out..." : "Sign out"}
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
