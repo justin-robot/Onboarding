@@ -49,8 +49,14 @@ import {
   DialogTitle,
 } from "@repo/design/components/ui/dialog";
 import { Input } from "@repo/design/components/ui/input";
-import { Switch } from "@repo/design/components/ui/switch";
 import { Label } from "@repo/design/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/design/components/ui/select";
 import {
   AlertCircle,
   Calendar,
@@ -768,22 +774,34 @@ export function WorkspaceView({
         <div className="mt-4 space-y-1">
           {currentUserRole === "manager" && (
             <>
-              <div className="flex items-center justify-between py-3 px-3 -mx-3 rounded-md hover:bg-muted/50">
-                <Label htmlFor="publish-toggle" className="text-sm font-medium cursor-pointer">
-                  {isPublished ? "Published" : "Draft Mode"}
+              <div className="py-3">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                  Status
                 </Label>
-                <Switch
-                  id="publish-toggle"
-                  checked={isPublished}
-                  onCheckedChange={handlePublishToggle}
+                <Select
+                  value={isPublished ? "published" : "draft"}
+                  onValueChange={(value) => handlePublishToggle(value === "published")}
                   disabled={publishToggleLoading}
-                />
+                >
+                  <SelectTrigger className="w-full mt-2">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Draft Mode</SelectItem>
+                    <SelectItem value="published">Published</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="mt-3 space-y-2 text-xs text-muted-foreground">
+                  <p>
+                    <span className="font-medium text-foreground">Draft:</span>{" "}
+                    Notifications paused. New tasks hidden from members.
+                  </p>
+                  <p>
+                    <span className="font-medium text-foreground">Published:</span>{" "}
+                    Members notified. All tasks visible.
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground px-3 -mx-3 pb-3">
-                {isPublished
-                  ? "Members will receive notifications"
-                  : "Notifications paused. New tasks hidden from members."}
-              </p>
               <div className="-mx-6 border-t" />
               <div className="pt-2">
                 <Button
