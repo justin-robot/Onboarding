@@ -5,7 +5,7 @@ import {
   NotificationCell,
   useKnockFeed,
 } from "@knocklabs/react";
-import { Bell, Check, Archive, Inbox } from "lucide-react";
+import { Bell, Check, CheckCheck, Archive, Inbox } from "lucide-react";
 import type { RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -40,8 +40,9 @@ export const NotificationsTrigger = ({
   const [feedView, setFeedView] = useState<FeedView>("inbox");
   const notifButtonRef = useRef<HTMLButtonElement>(null);
   const { feedClient, useFeedStore } = useKnockFeed();
-  const { metadata } = useFeedStore();
+  const { metadata, items } = useFeedStore();
   const unreadCount = metadata?.unread_count ?? 0;
+  const unreadItems = items?.filter((item) => !item.read_at) ?? [];
 
   // Prevent hydration mismatch by only rendering after mount
   useEffect(() => {
@@ -113,6 +114,13 @@ export const NotificationsTrigger = ({
     },
     [feedClient]
   );
+
+  // Handle mark all as read
+  const handleMarkAllAsRead = useCallback(() => {
+    if (feedClient && unreadItems.length > 0) {
+      feedClient.markAsRead(unreadItems);
+    }
+  }, [feedClient, unreadItems]);
 
   // Custom render for notification items
   const renderItem = useCallback(
@@ -189,7 +197,18 @@ export const NotificationsTrigger = ({
           <div className="rnf-notification-feed-header">
             <div className="flex items-center justify-between w-full px-4 py-3 border-b border-border">
               <span className="font-semibold text-sm">Notifications</span>
-              <div className="flex items-center gap-1 p-0.5 rounded-md bg-muted">
+              <div className="flex items-center gap-3">
+                {feedView === "inbox" && unreadItems.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleMarkAllAsRead}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <CheckCheck className="h-3.5 w-3.5" />
+                    Mark all as read
+                  </button>
+                )}
+                <div className="flex items-center gap-1 p-0.5 rounded-md bg-muted">
                 <button
                   type="button"
                   onClick={() => setFeedView("inbox")}
@@ -214,6 +233,7 @@ export const NotificationsTrigger = ({
                   <Archive className="h-3.5 w-3.5 inline-block mr-1" />
                   Archived
                 </button>
+                </div>
               </div>
             </div>
           </div>
