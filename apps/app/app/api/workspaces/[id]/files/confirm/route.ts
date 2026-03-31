@@ -22,9 +22,9 @@ export async function POST(
       return errorResponse("Workspace not found", 404);
     }
 
-    // Verify user is a member of the workspace
-    const isMember = await memberService.isMember(workspaceId, user.id);
-    if (!isMember) {
+    // Verify user has access to the workspace (member or platform admin)
+    const hasAccess = await memberService.hasWorkspaceAccess(workspaceId, user.id);
+    if (!hasAccess) {
       return errorResponse("You are not a member of this workspace", 403);
     }
 

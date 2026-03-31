@@ -16,9 +16,9 @@ export async function GET(request: NextRequest, { params }: Params) {
     const user = await requireAuth();
     const { id: workspaceId } = await params;
 
-    // Verify user is a member of the workspace
-    const isMember = await memberService.isMember(workspaceId, user.id);
-    if (!isMember) {
+    // Verify user has access to the workspace (member or platform admin)
+    const hasAccess = await memberService.hasWorkspaceAccess(workspaceId, user.id);
+    if (!hasAccess) {
       return errorResponse("Not a member of this workspace", 403);
     }
 
@@ -63,9 +63,9 @@ export async function POST(request: NextRequest, { params }: Params) {
     const user = await requireAuth();
     const { id: workspaceId } = await params;
 
-    // Verify user is a member of the workspace
-    const isMember = await memberService.isMember(workspaceId, user.id);
-    if (!isMember) {
+    // Verify user has access to the workspace (member or platform admin)
+    const hasAccess = await memberService.hasWorkspaceAccess(workspaceId, user.id);
+    if (!hasAccess) {
       return errorResponse("Not a member of this workspace", 403);
     }
 

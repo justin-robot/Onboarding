@@ -29,9 +29,9 @@ export async function GET(_request: NextRequest, { params }: Params) {
       return errorResponse("Section not found", 404);
     }
 
-    // Verify user is a member of the workspace
-    const isMember = await memberService.isMember(section.workspaceId, user.id);
-    if (!isMember) {
+    // Verify user has access to the workspace (member or platform admin)
+    const hasAccess = await memberService.hasWorkspaceAccess(section.workspaceId, user.id);
+    if (!hasAccess) {
       return errorResponse("You are not a member of this workspace", 403);
     }
 

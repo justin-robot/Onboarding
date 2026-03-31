@@ -2,6 +2,19 @@ import { database } from "@repo/database";
 import { auditLogService, type AuditContext } from "./auditLog";
 import type { WorkspaceMember } from "@repo/database";
 
+/**
+ * Check if a user is a platform admin (internal helper to avoid circular imports)
+ */
+async function checkIsPlatformAdmin(userId: string): Promise<boolean> {
+  const user = await database
+    .selectFrom("user")
+    .select("isPlatformAdmin")
+    .where("id", "=", userId)
+    .executeTakeFirst();
+
+  return user?.isPlatformAdmin === true;
+}
+
 // Dynamically import ably to avoid bundling issues with Next.js
 const ABLY_PATH = "./ably";
 async function getAblyService() {
@@ -198,6 +211,22 @@ export const memberService = {
   async isMember(workspaceId: string, userId: string): Promise<boolean> {
     const member = await this.getMember(workspaceId, userId);
     return member !== null;
+  },
+
+  /**
+   * Check if a user has access to a workspace.
+   * Returns true if the user is a member OR is a platform admin.
+   * Platform admins have implicit access to all workspaces.
+   */
+  async hasWorkspaceAccess(workspaceId: string, userId: string): Promise<boolean> {
+    // First check membership (most common case)
+    const isMember = await this.isMember(workspaceId, userId);
+    if (isMember) {
+      return true;
+    }
+
+    // Check if user is a platform admin
+    return checkIsPlatformAdmin(userId);
   },
 
   /**

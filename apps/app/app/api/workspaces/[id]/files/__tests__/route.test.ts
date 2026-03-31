@@ -15,6 +15,7 @@ vi.mock("@/lib/services", () => ({
   },
   memberService: {
     isMember: vi.fn(),
+    hasWorkspaceAccess: vi.fn(),
   },
 }));
 
@@ -39,6 +40,7 @@ describe("Workspace Files API", () => {
     vi.mocked(requireAuth).mockResolvedValue(mockUser);
     vi.mocked(workspaceService.getById).mockResolvedValue(mockWorkspace);
     vi.mocked(memberService.isMember).mockResolvedValue(true);
+    vi.mocked(memberService.hasWorkspaceAccess).mockResolvedValue(true);
   });
 
   describe("GET /api/workspaces/[id]/files", () => {
@@ -69,8 +71,8 @@ describe("Workspace Files API", () => {
         .rejects.toThrow("Unauthorized");
     });
 
-    it("should return 403 if not a workspace member", async () => {
-      vi.mocked(memberService.isMember).mockResolvedValue(false);
+    it("should return 403 if not a workspace member or platform admin", async () => {
+      vi.mocked(memberService.hasWorkspaceAccess).mockResolvedValue(false);
 
       const { GET } = await import("../route");
       const request = new Request("http://localhost/api/workspaces/ws-1/files");

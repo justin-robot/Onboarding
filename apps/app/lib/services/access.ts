@@ -2,6 +2,19 @@ import { database } from "@repo/database";
 import { memberService, type MemberRole } from "./member";
 
 /**
+ * Check if a user is a platform admin (internal helper)
+ */
+async function checkIsPlatformAdmin(userId: string): Promise<boolean> {
+  const user = await database
+    .selectFrom("user")
+    .select("isPlatformAdmin")
+    .where("id", "=", userId)
+    .executeTakeFirst();
+
+  return user?.isPlatformAdmin === true;
+}
+
+/**
  * Access control errors
  */
 export class AccessDeniedError extends Error {
@@ -54,19 +67,27 @@ export const accessService = {
   /**
    * Check if a user has access to a workspace
    * Returns the member record if access is granted
-   * Throws NotWorkspaceMemberError if not a member
+   * Platform admins have implicit access to all workspaces (treated as managers)
+   * Throws NotWorkspaceMemberError if not a member and not a platform admin
    */
   async requireWorkspaceAccess(
     workspaceId: string,
     userId: string
-  ): Promise<{ role: MemberRole }> {
+  ): Promise<{ role: MemberRole; isPlatformAdmin?: boolean }> {
     const member = await memberService.getMember(workspaceId, userId);
 
-    if (!member) {
-      throw new NotWorkspaceMemberError(workspaceId);
+    if (member) {
+      return { role: member.role as MemberRole };
     }
 
-    return { role: member.role as MemberRole };
+    // Check if user is a platform admin (they have implicit access)
+    const isPlatformAdmin = await checkIsPlatformAdmin(userId);
+    if (isPlatformAdmin) {
+      // Platform admins are treated as having manager-level access
+      return { role: "manager", isPlatformAdmin: true };
+    }
+
+    throw new NotWorkspaceMemberError(workspaceId);
   },
 
   /**
