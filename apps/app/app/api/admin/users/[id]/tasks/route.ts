@@ -1,5 +1,13 @@
 import { database } from "@repo/database";
-import { json, requireAdminAuth, withErrorHandler } from "../../../../_lib/api-utils";
+import {
+  json,
+  errorResponse,
+  requireAdminAuth,
+  withErrorHandler,
+} from "../../../../_lib/api-utils";
+import { assigneeService } from "@/lib/services/assignee";
+import { memberService } from "@/lib/services/member";
+import { notificationService } from "@repo/notifications";
 import type { NextRequest } from "next/server";
 
 type Params = { params: Promise<{ id: string }> };
@@ -68,5 +76,72 @@ export async function GET(_request: NextRequest, { params }: Params) {
     }));
 
     return json({ data: formattedTasks });
+  });
+}
+
+/**
+ * POST /api/admin/users/[id]/tasks - Assign user to a task
+ */
+export async function POST(request: NextRequest, { params }: Params) {
+  return withErrorHandler(async () => {
+    const { user, workspaceIds } = await requireAdminAuth();
+    const { id: userId } = await params;
+
+    const body = await request.json();
+    const { taskId } = body;
+
+    if (!taskId) {
+      return errorResponse("taskId is required", 400);
+    }
+
+    // Get task's workspace
+    const task = await database
+      .selectFrom("task")
+      .innerJoin("section", "section.id", "task.sectionId")
+      .select(["task.id", "section.workspaceId"])
+      .where("task.id", "=", taskId)
+      .where("task.deletedAt", "is", null)
+      .executeTakeFirst();
+
+    if (!task) {
+      return errorResponse("Task not found", 404);
+    }
+
+    // Check admin has access to this workspace
+    if (workspaceIds !== null && !workspaceIds.includes(task.workspaceId)) {
+      return errorResponse("Task not found", 404);
+    }
+
+    // Check if user is a member of the workspace
+    const isMember = await memberService.isMember(task.workspaceId, userId);
+    if (!isMember) {
+      return errorResponse(
+        "User must be a member of the workspace first",
+        400
+      );
+    }
+
+    // Use assigneeService.assign with notification and audit context
+    const result = await assigneeService.assign(
+      taskId,
+      userId,
+      notificationService,
+      { actorId: user.id, source: "admin" }
+    );
+
+    if (!result.success) {
+      if (result.error === "NOT_WORKSPACE_MEMBER") {
+        return errorResponse(
+          "User must be a workspace member first",
+          400
+        );
+      }
+      if (result.error === "ALREADY_ASSIGNED") {
+        return errorResponse("User is already assigned to this task", 400);
+      }
+      return errorResponse(result.error || "Failed to assign user", 400);
+    }
+
+    return json({ success: true, assignee: result.assignee }, 201);
   });
 }

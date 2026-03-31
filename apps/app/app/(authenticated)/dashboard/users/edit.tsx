@@ -55,8 +55,10 @@ import {
   DropdownMenuTrigger,
 } from "@repo/design/components/ui/dropdown-menu";
 import { Progress } from "@repo/design/components/ui/progress";
-import { ArrowLeftIcon, Loader2, CheckCircle2, Clock, Circle, ExternalLink, Check, ChevronsUpDown, Trash2 } from "lucide-react";
+import { ArrowLeftIcon, Loader2, CheckCircle2, Clock, Circle, ExternalLink, Check, ChevronsUpDown, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { AddToWorkspaceDialog } from "./add-to-workspace-dialog";
+import { AddToTaskDialog } from "./add-to-task-dialog";
 
 const userSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -150,6 +152,8 @@ export const UserEdit = ({ userId, isPlatformAdmin = false }: UserEditProps) => 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [updatingRole, setUpdatingRole] = useState<Record<string, boolean>>({});
+  const [addWorkspaceOpen, setAddWorkspaceOpen] = useState(false);
+  const [addTaskOpen, setAddTaskOpen] = useState(false);
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
@@ -160,6 +164,40 @@ export const UserEdit = ({ userId, isPlatformAdmin = false }: UserEditProps) => 
       role: null,
     },
   });
+
+  const fetchTasks = async () => {
+    setTasksLoading(true);
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/tasks`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch tasks");
+
+      const data = await response.json();
+      setTasks(data.data || []);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+    } finally {
+      setTasksLoading(false);
+    }
+  };
+
+  const fetchWorkspaces = async () => {
+    setWorkspacesLoading(true);
+    try {
+      const response = await fetch(`/api/admin/users/${userId}/workspaces`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch workspaces");
+
+      const data = await response.json();
+      setWorkspaces(data.data || []);
+    } catch (error) {
+      console.error("Error fetching workspaces:", error);
+    } finally {
+      setWorkspacesLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -185,38 +223,6 @@ export const UserEdit = ({ userId, isPlatformAdmin = false }: UserEditProps) => 
         toast.error("Failed to load user");
       } finally {
         setLoading(false);
-      }
-    };
-
-    const fetchTasks = async () => {
-      try {
-        const response = await fetch(`/api/admin/users/${userId}/tasks`, {
-          credentials: "include",
-        });
-        if (!response.ok) throw new Error("Failed to fetch tasks");
-
-        const data = await response.json();
-        setTasks(data.data || []);
-      } catch (error) {
-        console.error("Error fetching tasks:", error);
-      } finally {
-        setTasksLoading(false);
-      }
-    };
-
-    const fetchWorkspaces = async () => {
-      try {
-        const response = await fetch(`/api/admin/users/${userId}/workspaces`, {
-          credentials: "include",
-        });
-        if (!response.ok) throw new Error("Failed to fetch workspaces");
-
-        const data = await response.json();
-        setWorkspaces(data.data || []);
-      } catch (error) {
-        console.error("Error fetching workspaces:", error);
-      } finally {
-        setWorkspacesLoading(false);
       }
     };
 
@@ -481,11 +487,21 @@ export const UserEdit = ({ userId, isPlatformAdmin = false }: UserEditProps) => 
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Workspaces</CardTitle>
-            <CardDescription>
-              {workspaces.length} workspace{workspaces.length !== 1 ? "s" : ""} assigned
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle>Workspaces</CardTitle>
+              <CardDescription>
+                {workspaces.length} workspace{workspaces.length !== 1 ? "s" : ""} assigned
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAddWorkspaceOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add to Workspace
+            </Button>
           </CardHeader>
           <CardContent>
             {workspacesLoading ? (
@@ -582,16 +598,28 @@ export const UserEdit = ({ userId, isPlatformAdmin = false }: UserEditProps) => 
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Assigned Tasks</CardTitle>
-            <CardDescription>
-              {tasks.length} task{tasks.length !== 1 ? "s" : ""} assigned
-              {tasks.length > 0 && (
-                <span className="ml-2">
-                  ({completedCount} completed, {pendingCount} pending)
-                </span>
-              )}
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle>Assigned Tasks</CardTitle>
+              <CardDescription>
+                {tasks.length} task{tasks.length !== 1 ? "s" : ""} assigned
+                {tasks.length > 0 && (
+                  <span className="ml-2">
+                    ({completedCount} completed, {pendingCount} pending)
+                  </span>
+                )}
+              </CardDescription>
+            </div>
+            {workspaces.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setAddTaskOpen(true)}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Add to Task
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
             {tasksLoading ? (
@@ -672,6 +700,20 @@ export const UserEdit = ({ userId, isPlatformAdmin = false }: UserEditProps) => 
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AddToWorkspaceDialog
+        userId={userId}
+        open={addWorkspaceOpen}
+        onOpenChange={setAddWorkspaceOpen}
+        onSuccess={fetchWorkspaces}
+      />
+
+      <AddToTaskDialog
+        userId={userId}
+        open={addTaskOpen}
+        onOpenChange={setAddTaskOpen}
+        onSuccess={fetchTasks}
+      />
     </div>
   );
 };

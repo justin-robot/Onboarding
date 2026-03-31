@@ -1,5 +1,11 @@
 import { database } from "@repo/database";
-import { json, requireAdminAuth, withErrorHandler } from "../../../../_lib/api-utils";
+import {
+  json,
+  errorResponse,
+  requireAdminAuth,
+  withErrorHandler,
+} from "../../../../_lib/api-utils";
+import { memberService } from "@/lib/services/member";
 import type { NextRequest } from "next/server";
 
 type Params = { params: Promise<{ id: string }> };
@@ -72,5 +78,60 @@ export async function GET(_request: NextRequest, { params }: Params) {
     }));
 
     return json({ data: workspacesWithProgress });
+  });
+}
+
+/**
+ * POST /api/admin/users/[id]/workspaces - Add user to a workspace
+ */
+export async function POST(request: NextRequest, { params }: Params) {
+  return withErrorHandler(async () => {
+    const { user, workspaceIds } = await requireAdminAuth();
+    const { id: userId } = await params;
+
+    const body = await request.json();
+    const { workspaceId, role = "member" } = body;
+
+    if (!workspaceId) {
+      return errorResponse("workspaceId is required", 400);
+    }
+
+    if (role !== "member" && role !== "manager") {
+      return errorResponse("role must be 'member' or 'manager'", 400);
+    }
+
+    // Check admin has access to this workspace
+    if (workspaceIds !== null && !workspaceIds.includes(workspaceId)) {
+      return errorResponse("Workspace not found", 404);
+    }
+
+    // Verify workspace exists and is not deleted
+    const workspace = await database
+      .selectFrom("workspace")
+      .select("id")
+      .where("id", "=", workspaceId)
+      .where("deletedAt", "is", null)
+      .executeTakeFirst();
+
+    if (!workspace) {
+      return errorResponse("Workspace not found", 404);
+    }
+
+    // Use memberService.addMember with audit context
+    try {
+      const member = await memberService.addMember(
+        { workspaceId, userId, role },
+        { actorId: user.id, source: "admin" }
+      );
+      return json({ success: true, member }, 201);
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message.includes("already a member")
+      ) {
+        return errorResponse("User is already a member of this workspace", 400);
+      }
+      throw error;
+    }
   });
 }
