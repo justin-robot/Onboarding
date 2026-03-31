@@ -58,7 +58,7 @@ export function WorkspaceSidebar({
   footer,
 }: WorkspaceSidebarProps) {
   return (
-    <div className={cn("flex h-full flex-col bg-slate-50 dark:bg-slate-900", className)}>
+    <div className={cn("flex h-full flex-col overflow-hidden bg-slate-50 dark:bg-slate-900", className)}>
       {/* Home Button */}
       {onHomeClick && (
         <div className="border-b border-border/50 p-1.5">
@@ -96,8 +96,8 @@ export function WorkspaceSidebar({
       </div>
 
       {/* Workspace List */}
-      <ScrollArea className="flex-1">
-        <div className="space-y-0.5 p-1.5">
+      <ScrollArea className="flex-1 [&>div]:!overflow-x-hidden">
+        <div className="space-y-0.5 p-1.5 overflow-hidden">
           {isLoading ? (
             // Loading skeletons
             Array.from({ length: 3 }).map((_, i) => (
