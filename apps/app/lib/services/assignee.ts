@@ -269,7 +269,8 @@ export const assigneeService = {
   /**
    * Assign a task by email address
    * If user exists and is a member of the workspace, assigns directly
-   * Otherwise creates a pending assignment
+   * If user has a pending invitation to the workspace, creates a pending assignment
+   * Otherwise rejects the request
    */
   async assignByEmail(
     taskId: string,
@@ -317,7 +318,23 @@ export const assigneeService = {
       }
     }
 
-    // User doesn't exist or isn't a member - create pending assignment
+    // Check if there's a pending invitation for this email in this workspace
+    const pendingInvitation = await database
+      .selectFrom("pending_invitation")
+      .select(["id"])
+      .where("email", "=", normalizedEmail)
+      .where("workspaceId", "=", taskWithWorkspace.workspaceId)
+      .executeTakeFirst();
+
+    if (!pendingInvitation) {
+      return {
+        success: false,
+        type: "pending",
+        error: "User must be a workspace member or have a pending invitation"
+      };
+    }
+
+    // User has a pending invitation - create pending assignment
     // Import pendingAssigneeService dynamically to avoid circular dependency
     const { pendingAssigneeService } = await import("./pendingAssignee");
     const result = await pendingAssigneeService.create(taskId, normalizedEmail, createdBy);

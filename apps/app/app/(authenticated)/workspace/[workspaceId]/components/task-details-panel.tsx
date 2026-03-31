@@ -186,8 +186,6 @@ export function TaskDetailsPanel({
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
   const [isAssigning, setIsAssigning] = useState(false);
-  const [emailToAssign, setEmailToAssign] = useState("");
-  const [isAssigningEmail, setIsAssigningEmail] = useState(false);
   // For viewing a specific assignee's form submission (admin only)
   const [viewingSubmissionUserId, setViewingSubmissionUserId] = useState<string | null>(null);
   // Blocking tasks (prerequisites that must be completed)
@@ -455,54 +453,6 @@ export function TaskDetailsPanel({
     } catch (err) {
       console.error("Unassign error:", err);
       toast.error(err instanceof Error ? err.message : "Failed to unassign user");
-    }
-  };
-
-  // Handle assigning by email
-  const handleAssignByEmail = async () => {
-    if (!emailToAssign.trim()) return;
-
-    setIsAssigningEmail(true);
-    try {
-      const response = await fetch(`/api/tasks/${task.id}/assignees`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: emailToAssign.trim() }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to assign email");
-      }
-
-      const data = await response.json();
-      if (data.type === "pending") {
-        // Add to pending assignees
-        setPendingAssignees(prev => [...prev, {
-          id: data.pendingAssignee?.id || crypto.randomUUID(),
-          taskId: task.id,
-          email: emailToAssign.trim().toLowerCase(),
-          createdBy: currentUserId,
-          createdAt: new Date().toISOString(),
-        }]);
-        toast.success("Email added - they'll be assigned when they join");
-      } else {
-        // Assigned directly, refresh assignees
-        const assigneesRes = await fetch(`/api/tasks/${task.id}/assignees`);
-        if (assigneesRes.ok) {
-          const assigneesData = await assigneesRes.json();
-          setAssignees(assigneesData.assignees || []);
-          setPendingAssignees(assigneesData.pendingAssignees || []);
-        }
-        toast.success("User assigned to task");
-      }
-
-      setEmailToAssign("");
-      onTaskComplete();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to assign email");
-    } finally {
-      setIsAssigningEmail(false);
     }
   };
 
@@ -998,41 +948,6 @@ export function TaskDetailsPanel({
               </div>
             )}
 
-            {/* Assign by email (admin only) */}
-            {isAdmin && (
-              <div className="mt-2">
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    handleAssignByEmail();
-                  }}
-                  className="flex gap-2"
-                >
-                  <Input
-                    type="email"
-                    placeholder="Assign by email..."
-                    value={emailToAssign}
-                    onChange={(e) => setEmailToAssign(e.target.value)}
-                    disabled={isAssigningEmail}
-                    className="flex-1"
-                  />
-                  <Button
-                    type="submit"
-                    size="sm"
-                    disabled={!emailToAssign.trim() || isAssigningEmail}
-                  >
-                    {isAssigningEmail ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <UserPlus className="h-4 w-4" />
-                    )}
-                  </Button>
-                </form>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Assign to anyone - they'll be notified when they join
-                </p>
-              </div>
-            )}
           </div>
 
           {/* Task action area - only show if not showing dedicated section above */}
