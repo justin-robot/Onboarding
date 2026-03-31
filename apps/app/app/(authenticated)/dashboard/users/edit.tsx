@@ -236,6 +236,7 @@ export const UserEdit = ({ userId, isPlatformAdmin = false }: UserEditProps) => 
 
     setSaving(true);
     try {
+      // Update user details (name, role)
       const response = await fetch("/api/auth/admin/update-user", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -245,7 +246,6 @@ export const UserEdit = ({ userId, isPlatformAdmin = false }: UserEditProps) => 
           data: {
             name: data.name,
             role: data.role,
-            ...(data.password ? { password: data.password } : {}),
           },
         }),
       });
@@ -253,6 +253,24 @@ export const UserEdit = ({ userId, isPlatformAdmin = false }: UserEditProps) => 
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
         throw new Error(error.message || "Failed to update user");
+      }
+
+      // If password was provided, update it using the separate endpoint
+      if (data.password) {
+        const passwordResponse = await fetch("/api/auth/admin/set-user-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            userId: user.id,
+            newPassword: data.password,
+          }),
+        });
+
+        if (!passwordResponse.ok) {
+          const error = await passwordResponse.json().catch(() => ({}));
+          throw new Error(error.message || "Failed to update password");
+        }
       }
 
       toast.success("User updated successfully");

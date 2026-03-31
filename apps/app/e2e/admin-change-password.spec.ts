@@ -10,7 +10,7 @@ import { test, expect, testUsers } from "./fixtures/auth";
  */
 
 // Increase timeout for these tests since they involve multiple login flows
-test.setTimeout(60000);
+test.setTimeout(120000);
 
 // Test configuration
 const TEST_USER = testUsers.user1; // Marcus Johnson
@@ -57,22 +57,35 @@ async function loginAndVerify(
   }
 }
 
-// Helper to wait for users table to load and click on a user row
-async function clickUserInTable(page: import("@playwright/test").Page, userEmail: string) {
-  // Wait for loading to finish
-  const loadingSpinner = page.locator("text=Loading users...");
-  await loadingSpinner.waitFor({ state: "hidden", timeout: 15000 }).catch(() => {});
+// Helper to navigate to user edit page by finding user ID from API
+async function navigateToUserEdit(page: import("@playwright/test").Page, userEmail: string) {
+  // Wait for page to fully load
+  await page.waitForLoadState("networkidle");
 
-  // Wait for table to be visible
+  // Wait for loading spinner to disappear
+  const loadingSpinner = page.locator("text=Loading users...");
+  await loadingSpinner.waitFor({ state: "hidden", timeout: 30000 }).catch(() => {});
+
+  // Wait for table to be visible with data
   const tableBody = page.locator("table tbody");
-  await expect(tableBody).toBeVisible({ timeout: 10000 });
+  await expect(tableBody).toBeVisible({ timeout: 15000 });
+
+  // Use search to filter for the user (the table may have many users)
+  const searchInput = page.locator("input[placeholder*='Search']");
+  await expect(searchInput).toBeVisible();
+  await searchInput.click();
+  await searchInput.fill(userEmail);
+  await page.waitForTimeout(1000); // Wait for filter to apply
 
   // Find the row with the user's email
   const userRow = page.locator("table tbody tr").filter({ hasText: userEmail });
   await expect(userRow).toBeVisible({ timeout: 10000 });
 
-  // Click the row directly with force to ensure click registers
-  await userRow.click({ force: true });
+  // Scroll the row into view
+  await userRow.scrollIntoViewIfNeeded();
+
+  // Click the row - it has an onClick handler that does router.push
+  await userRow.click();
 
   // Wait for navigation to user edit page
   await page.waitForURL(/\/dashboard\/users\/[^/]+$/, { timeout: 15000 });
@@ -86,6 +99,12 @@ async function waitForUserEditForm(page: import("@playwright/test").Page) {
   // Wait for the form to be visible
   const nameInput = page.getByTestId("user-name-input");
   await expect(nameInput).toBeVisible({ timeout: 10000 });
+
+  // Wait for name input to have a value (indicates form has been populated from API)
+  await expect(nameInput).not.toHaveValue("", { timeout: 10000 });
+
+  // Small delay to ensure form is fully initialized
+  await page.waitForTimeout(500);
 }
 
 // Run only on Chromium to avoid browser-specific issues
@@ -95,7 +114,7 @@ test.describe("Admin Change Password - Full E2E Flow", () => {
   // Run tests serially since they modify the same user's password
   test.describe.configure({ mode: "serial" });
 
-  test("admin can submit password change form successfully", async ({ adminPage }) => {
+  test("admin can change user password and user can login with new password", async ({ adminPage, browser }) => {
     // ========================================
     // STEP 1: Admin navigates to user edit page
     // ========================================
@@ -103,45 +122,103 @@ test.describe("Admin Change Password - Full E2E Flow", () => {
     await adminPage.waitForLoadState("networkidle");
 
     // Find Marcus Johnson in the users table and click to edit
-    await clickUserInTable(adminPage, TEST_USER.email);
+    await navigateToUserEdit(adminPage, TEST_USER.email);
 
     // Wait for the edit form to load
     await waitForUserEditForm(adminPage);
 
     // ========================================
-    // STEP 2: Admin fills in password field
+    // STEP 2: Admin changes the password
     // ========================================
     const passwordInput = adminPage.getByTestId("user-password-input");
     await expect(passwordInput).toBeVisible({ timeout: 5000 });
+    await expect(passwordInput).toBeEnabled();
 
-    // Enter a new password
+    // Click on the input first to focus it
+    await passwordInput.click();
+    await adminPage.waitForTimeout(200);
+
+    // Clear any existing value and type the new password
+    await passwordInput.clear();
     await passwordInput.fill(NEW_PASSWORD);
+
+    // Verify the password was entered
     await expect(passwordInput).toHaveValue(NEW_PASSWORD);
 
-    // ========================================
-    // STEP 3: Admin submits the form
-    // ========================================
+    // Click the save button
     const saveButton = adminPage.getByTestId("save-user-btn");
     await expect(saveButton).toBeVisible();
     await expect(saveButton).toBeEnabled();
     await saveButton.click();
 
-    // Wait for navigation back to users list (indicates successful save)
+    // Wait for success toast and navigation back to users list
     await adminPage.waitForURL(/\/dashboard\/users$/, { timeout: 15000 });
-
-    // Verify success toast appeared
     const successToast = adminPage.locator("text=User updated successfully");
     await expect(successToast).toBeVisible({ timeout: 5000 });
+
+    // ========================================
+    // STEP 3: Verify user can login with NEW password
+    // ========================================
+    const freshContext = await browser.newContext();
+    const freshPage = await freshContext.newPage();
+
+    const loginResult = await loginAndVerify(freshPage, TEST_USER.email, NEW_PASSWORD);
+    expect(loginResult.success).toBe(true);
+
+    await freshContext.close();
+
+    // ========================================
+    // STEP 4: Verify user CANNOT login with OLD password
+    // ========================================
+    const failContext = await browser.newContext();
+    const failPage = await failContext.newPage();
+
+    const failResult = await loginAndVerify(failPage, TEST_USER.email, ORIGINAL_PASSWORD);
+    expect(failResult.success).toBe(false);
+
+    await failContext.close();
   });
 
-  test("user can still login after admin views their profile", async ({ adminPage, browser }) => {
+  test("restore original password for cleanup", async ({ adminPage, browser }) => {
+    // Restore Marcus's password back to the original
+    await adminPage.goto("/dashboard/users");
+    await adminPage.waitForLoadState("networkidle");
+
+    await navigateToUserEdit(adminPage, TEST_USER.email);
+    await waitForUserEditForm(adminPage);
+
+    // Change password back to original
+    const passwordInput = adminPage.getByTestId("user-password-input");
+    await expect(passwordInput).toBeVisible();
+    await expect(passwordInput).toBeEnabled();
+    await passwordInput.click();
+    await adminPage.waitForTimeout(200);
+    await passwordInput.clear();
+    await passwordInput.fill(ORIGINAL_PASSWORD);
+
+    const saveButton = adminPage.getByTestId("save-user-btn");
+    await saveButton.click();
+
+    await adminPage.waitForURL(/\/dashboard\/users$/, { timeout: 15000 });
+
+    // Verify user can login with original password again
+    const verifyContext = await browser.newContext();
+    const verifyPage = await verifyContext.newPage();
+
+    const loginResult = await loginAndVerify(verifyPage, TEST_USER.email, ORIGINAL_PASSWORD);
+    expect(loginResult.success).toBe(true);
+
+    await verifyContext.close();
+  });
+
+  test("user can still login after admin views their profile without changing password", async ({ adminPage, browser }) => {
     // This test verifies the form doesn't accidentally corrupt the user's password
     // when admin views/saves without entering a new password
 
     // Admin navigates to user edit page
     await adminPage.goto("/dashboard/users");
     await adminPage.waitForLoadState("networkidle");
-    await clickUserInTable(adminPage, TEST_USER.email);
+    await navigateToUserEdit(adminPage, TEST_USER.email);
     await waitForUserEditForm(adminPage);
 
     // Verify password field is empty (not pre-filled)
@@ -168,41 +245,14 @@ test.describe("Admin Change Password - Full E2E Flow", () => {
 test.describe("Admin Change Password - Edge Cases", () => {
   test.skip(({ browserName }) => browserName !== "chromium", "Chromium only");
 
-  test("saving without entering password keeps existing password", async ({ adminPage, browser }) => {
-    // Navigate to user edit page
-    await adminPage.goto("/dashboard/users");
-    await adminPage.waitForLoadState("networkidle");
-
-    await clickUserInTable(adminPage, TEST_USER.email);
-
-    await waitForUserEditForm(adminPage);
-
-    // Verify password field is empty
-    const passwordInput = adminPage.getByTestId("user-password-input");
-    await expect(passwordInput).toHaveValue("");
-
-    // Save WITHOUT entering a password (just click save - no changes needed)
-    const saveButton = adminPage.getByTestId("save-user-btn");
-    await saveButton.click();
-
-    // Wait for save (might redirect or show toast)
-    await adminPage.waitForURL(/\/dashboard\/users$/, { timeout: 15000 });
-
-    // Verify user can still login with ORIGINAL password
-    const verifyContext = await browser.newContext();
-    const verifyPage = await verifyContext.newPage();
-
-    const loginResult = await loginAndVerify(verifyPage, TEST_USER.email, ORIGINAL_PASSWORD);
-    expect(loginResult.success).toBe(true);
-
-    await verifyContext.close();
-  });
+  // Note: "saving without entering password keeps existing password" is tested in
+  // the Full E2E Flow serial tests to avoid race conditions with password state
 
   test("password field is only visible to platform admins", async ({ adminPage }) => {
     await adminPage.goto("/dashboard/users");
     await adminPage.waitForLoadState("networkidle");
 
-    await clickUserInTable(adminPage, TEST_USER.email);
+    await navigateToUserEdit(adminPage, TEST_USER.email);
 
     await waitForUserEditForm(adminPage);
 
