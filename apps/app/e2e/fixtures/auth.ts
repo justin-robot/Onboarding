@@ -167,8 +167,8 @@ export async function performLogin(
     const submitButton = page.getByRole("button", { name: /sign in/i });
     await submitButton.click();
 
-    // Wait for navigation to dashboard or workspace
-    await page.waitForURL(/\/(dashboard|workspace)/, { timeout: 30000 });
+    // Wait for navigation to dashboard, workspace, or admin panel
+    await page.waitForURL(/\/(dashboard|workspace|admin)/, { timeout: 30000 });
 
     return true;
   } catch (error) {
