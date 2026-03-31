@@ -1191,9 +1191,10 @@ function ESignTaskAction({
       }
 
       const { signingUrl } = await response.json();
-      window.location.href = signingUrl;
+      window.open(signingUrl, "_blank");
     } catch (error) {
       toast.error("Failed to start signing process");
+    } finally {
       setIsRedirecting(false);
     }
   };
