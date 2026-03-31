@@ -251,7 +251,7 @@ async function seed() {
 
     const existingUserMap = new Map(existingUsers.map((u) => [u.email, u.id]));
 
-    // Check for real user account to add to workspaces
+    // Check for real user accounts to add to workspaces
     const realUser = await db
       .selectFrom("user")
       .select(["id", "email"])
@@ -261,6 +261,18 @@ async function seed() {
     if (realUser) {
       (ids as Record<string, string>)["realUser"] = realUser.id;
       console.log(`  Found real user account: ${realUser.email}`);
+    }
+
+    // Check for wiley@n2o.com account
+    const wileyUser = await db
+      .selectFrom("user")
+      .select(["id", "email"])
+      .where("email", "=", "wiley@n2o.com")
+      .executeTakeFirst();
+
+    if (wileyUser) {
+      (ids as Record<string, string>)["wileyUser"] = wileyUser.id;
+      console.log(`  Found real user account: ${wileyUser.email}`);
     }
     const createdUsers: Array<{ id: string; email: string }> = [];
 
@@ -320,6 +332,17 @@ async function seed() {
       .set({ role: "user" })
       .where("id", "=", ids.accountManager)
       .execute();
+
+    // Set wiley@n2o.com as platform admin if they exist
+    const wileyId = (ids as Record<string, string>).wileyUser;
+    if (wileyId) {
+      await db
+        .updateTable("user")
+        .set({ isPlatformAdmin: true })
+        .where("id", "=", wileyId)
+        .execute();
+      console.log("  Set wiley@n2o.com as platform admin.");
+    }
 
     console.log("  Updated user roles and platform admin status.\n");
 
@@ -419,6 +442,25 @@ async function seed() {
           workspaceId: ids.workspace2,
           userId: realUserId,
           role: "admin" as const,
+        }
+      );
+    }
+
+    // Add wiley@n2o.com to both workspaces as manager
+    const wileyUserId = (ids as Record<string, string>).wileyUser as `${string}-${string}-${string}-${string}-${string}` | undefined;
+    if (wileyUserId) {
+      workspaceMembers.push(
+        {
+          id: uuid(),
+          workspaceId: ids.workspace1,
+          userId: wileyUserId,
+          role: "manager" as const,
+        },
+        {
+          id: uuid(),
+          workspaceId: ids.workspace2,
+          userId: wileyUserId,
+          role: "manager" as const,
         }
       );
     }
