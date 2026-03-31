@@ -453,15 +453,6 @@ export const UserEdit = ({ userId, isPlatformAdmin = false }: UserEditProps) => 
                       </Button>
                       <Button
                         type="button"
-                        variant="outline"
-                        onClick={() => router.push("/dashboard/users")}
-                        disabled={saving}
-                        data-testid="cancel-user-btn"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="button"
                         variant="destructive"
                         onClick={() => setDeleteDialogOpen(true)}
                         disabled={saving || deleting}
@@ -486,74 +477,6 @@ export const UserEdit = ({ userId, isPlatformAdmin = false }: UserEditProps) => 
                 )}
               </form>
             </Form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Assigned Tasks</CardTitle>
-            <CardDescription>
-              {tasks.length} task{tasks.length !== 1 ? "s" : ""} assigned
-              {tasks.length > 0 && (
-                <span className="ml-2">
-                  ({completedCount} completed, {pendingCount} pending)
-                </span>
-              )}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {tasksLoading ? (
-              <div className="flex items-center justify-center p-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                <span className="ml-2 text-muted-foreground">Loading tasks...</span>
-              </div>
-            ) : tasks.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                No tasks assigned to this user
-              </p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Task</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Workspace</TableHead>
-                    <TableHead>Section</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Due Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tasks.map((task) => (
-                    <TableRow
-                      key={task.taskId}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleTaskClick(task.workspaceId, task.taskId)}
-                    >
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {task.title}
-                          <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{formatTaskType(task.type)}</Badge>
-                      </TableCell>
-                      <TableCell>{task.workspaceName}</TableCell>
-                      <TableCell>{task.sectionTitle}</TableCell>
-                      <TableCell>
-                        {getStatusBadge(task.taskStatus, task.assigneeStatus)}
-                      </TableCell>
-                      <TableCell>
-                        {task.dueDate
-                          ? new Date(task.dueDate).toLocaleDateString()
-                          : "-"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
           </CardContent>
         </Card>
 
@@ -654,6 +577,74 @@ export const UserEdit = ({ userId, isPlatformAdmin = false }: UserEditProps) => 
                   );
                 })}
               </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Assigned Tasks</CardTitle>
+            <CardDescription>
+              {tasks.length} task{tasks.length !== 1 ? "s" : ""} assigned
+              {tasks.length > 0 && (
+                <span className="ml-2">
+                  ({completedCount} completed, {pendingCount} pending)
+                </span>
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {tasksLoading ? (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-muted-foreground">Loading tasks...</span>
+              </div>
+            ) : tasks.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                No tasks assigned to this user
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Task</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Workspace</TableHead>
+                    <TableHead>Section</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Due Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tasks.map((task) => (
+                    <TableRow
+                      key={task.taskId}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleTaskClick(task.workspaceId, task.taskId)}
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {task.title}
+                          <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{formatTaskType(task.type)}</Badge>
+                      </TableCell>
+                      <TableCell>{task.workspaceName}</TableCell>
+                      <TableCell>{task.sectionTitle}</TableCell>
+                      <TableCell>
+                        {getStatusBadge(task.taskStatus, task.assigneeStatus)}
+                      </TableCell>
+                      <TableCell>
+                        {task.dueDate
+                          ? new Date(task.dueDate).toLocaleDateString()
+                          : "-"}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>
