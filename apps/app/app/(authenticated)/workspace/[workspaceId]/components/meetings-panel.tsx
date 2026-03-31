@@ -36,6 +36,11 @@ import { Textarea } from "@repo/design/components/ui/textarea";
 import { ScrollArea } from "@repo/design/components/ui/scroll-area";
 import { Skeleton } from "@repo/design/components/ui/skeleton";
 import { Badge } from "@repo/design/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@repo/design/components/ui/tooltip";
 import { cn } from "@repo/design/lib/utils";
 import { toast } from "sonner";
 
@@ -440,9 +445,14 @@ export function MeetingsPanel({ workspaceId, onClose, hideHeader = false }: Meet
         {!hideHeader && (
           <div className="flex-shrink-0 flex items-center justify-between border-b px-4 py-3">
             <h2 className="text-lg font-semibold">Meetings</h2>
-            <Button size="sm" variant="ghost" onClick={fetchMeetings}>
-              <RefreshCw className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="sm" variant="ghost" onClick={fetchMeetings}>
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Refresh meetings</TooltipContent>
+            </Tooltip>
           </div>
         )}
         <div className="flex flex-1 min-h-0 flex-col items-center justify-center p-6 text-center overflow-auto">
@@ -464,9 +474,14 @@ export function MeetingsPanel({ workspaceId, onClose, hideHeader = false }: Meet
           <div className="flex items-center justify-between px-4 py-3">
             <h2 className="text-lg font-semibold">Meetings</h2>
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="ghost" onClick={fetchMeetings}>
-                <RefreshCw className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button size="sm" variant="ghost" onClick={fetchMeetings}>
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Refresh meetings</TooltipContent>
+              </Tooltip>
               <CreateMeetingDialog
                 workspaceId={workspaceId}
                 onMeetingCreated={fetchMeetings}
@@ -510,9 +525,14 @@ export function MeetingsPanel({ workspaceId, onClose, hideHeader = false }: Meet
                     </p>
                   )}
                   <div className="flex items-center justify-end gap-2">
-                    <Button size="sm" variant="ghost" onClick={fetchMeetings}>
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button size="sm" variant="ghost" onClick={fetchMeetings}>
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Refresh meetings</TooltipContent>
+                    </Tooltip>
                     <CreateMeetingDialog
                       workspaceId={workspaceId}
                       onMeetingCreated={fetchMeetings}
