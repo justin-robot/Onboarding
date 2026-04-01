@@ -114,9 +114,14 @@ export function CommentSection({
   }, [taskId]);
 
   // Merge and sort comments and activities chronologically
+  // Filter out comment.created/comment.added events since actual comments are displayed
+  const filteredActivities = activities.filter(
+    (a) => !["comment.created", "comment.added", "comment.deleted"].includes(a.eventType)
+  );
+
   const feedItems: FeedItem[] = [
     ...comments.map((c) => ({ ...c, type: "comment" as const })),
-    ...activities,
+    ...filteredActivities,
   ].sort((a, b) => {
     const dateA = new Date(a.createdAt).getTime();
     const dateB = new Date(b.createdAt).getTime();
