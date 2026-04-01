@@ -40,12 +40,11 @@ const createDb = (url?: string) => {
   });
 };
 
-// Lazy initialization for database and pool to allow migrations to run
+// Lazy initialization for database to allow migrations to run
 // without DATABASE_URL_DEV being set (migrations use DATABASE_URL_DEV_ADMIN)
 let _database: Kysely<Database> | null = null;
-let _pool: Pool | null = null;
 
-// Export main database instance (lazy)
+// Export main database instance (lazy via Proxy)
 export const database = new Proxy({} as Kysely<Database>, {
   get(_, prop) {
     if (!_database) {
@@ -55,13 +54,41 @@ export const database = new Proxy({} as Kysely<Database>, {
   },
 });
 
-// Export Pool for BetterAuth (HTTP mode, no WebSocket connections) (lazy)
-export const pool = new Proxy({} as Pool, {
-  get(_, prop) {
-    if (!_pool) {
-      _pool = new Pool({ connectionString: getDatabaseUrl() });
+// Export Pool for BetterAuth (HTTP mode, no WebSocket connections)
+// NOTE: BetterAuth requires a real Pool instance, not a Proxy wrapper.
+// We use Object.defineProperty for lazy initialization that returns the actual Pool.
+let _pool: Pool | null = null;
+
+const getPool = (): Pool => {
+  if (!_pool) {
+    const url = getDatabaseUrl();
+    if (!url) {
+      throw new Error(
+        `Database URL is not defined for Pool. Please set DATABASE_URL_${
+          process.env.NODE_ENV === "production" ? "PROD" : "DEV"
+        }`
+      );
     }
-    return (_pool as any)[prop];
+    _pool = new Pool({ connectionString: url });
+  }
+  return _pool;
+};
+
+// Export pool as a getter that returns the real Pool instance
+// This allows lazy initialization while giving BetterAuth an actual Pool object
+export const pool: Pool = new Proxy({} as Pool, {
+  get(_, prop) {
+    const realPool = getPool();
+    const value = (realPool as any)[prop];
+    // Bind methods to the real pool instance
+    return typeof value === "function" ? value.bind(realPool) : value;
+  },
+  // These traps help BetterAuth recognize this as a Pool-like object
+  getPrototypeOf() {
+    return Pool.prototype;
+  },
+  has(_, prop) {
+    return prop in getPool();
   },
 });
 
