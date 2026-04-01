@@ -40,59 +40,26 @@ const createDb = (url?: string) => {
   });
 };
 
-// Lazy initialization for database to allow migrations to run
-// without DATABASE_URL_DEV being set (migrations use DATABASE_URL_DEV_ADMIN)
-let _database: Kysely<Database> | null = null;
+// Get database URL - will throw if not set
+const dbUrl = getDatabaseUrl();
+if (!dbUrl) {
+  throw new Error(
+    `Database URL is not defined. Please set DATABASE_URL_${
+      process.env.NODE_ENV === "production" ? "PROD" : "DEV"
+    }`
+  );
+}
 
-// Export main database instance (lazy via Proxy)
-export const database = new Proxy({} as Kysely<Database>, {
-  get(_, prop) {
-    if (!_database) {
-      _database = createDb();
-    }
-    return (_database as any)[prop];
-  },
+// Export main database instance (direct, no proxy)
+export const database = new Kysely<Database>({
+  dialect: new NeonDialect({
+    neon: neon(dbUrl),
+  }),
 });
 
-// Export Pool for BetterAuth (HTTP mode, no WebSocket connections)
-// NOTE: BetterAuth requires a real Pool instance, not a Proxy wrapper.
-// We use Object.defineProperty for lazy initialization that returns the actual Pool.
-let _pool: Pool | null = null;
+// Export Pool for BetterAuth (direct, no proxy)
+export const pool = new Pool({ connectionString: dbUrl });
 
-const getPool = (): Pool => {
-  if (!_pool) {
-    const url = getDatabaseUrl();
-    if (!url) {
-      throw new Error(
-        `Database URL is not defined for Pool. Please set DATABASE_URL_${
-          process.env.NODE_ENV === "production" ? "PROD" : "DEV"
-        }`
-      );
-    }
-    _pool = new Pool({ connectionString: url });
-  }
-  return _pool;
-};
-
-// Export pool as a getter that returns the real Pool instance
-// This allows lazy initialization while giving BetterAuth an actual Pool object
-export const pool: Pool = new Proxy({} as Pool, {
-  get(_, prop) {
-    const realPool = getPool();
-    const value = (realPool as any)[prop];
-    // Bind methods to the real pool instance
-    return typeof value === "function" ? value.bind(realPool) : value;
-  },
-  // These traps help BetterAuth recognize this as a Pool-like object
-  getPrototypeOf() {
-    return Pool.prototype;
-  },
-  has(_, prop) {
-    return prop in getPool();
-  },
-});
-
-// Export createDb for migrations
+// Export createDb for migrations and seeds (they pass their own URL)
 export { createDb };
 export * from "./schemas/main";
-
