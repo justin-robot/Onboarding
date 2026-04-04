@@ -156,6 +156,7 @@ export function DashboardOverview() {
       value: stats?.invitations.pending || 0,
       icon: Mail,
       color: "text-blue-500",
+      description: "Invitations",
       href: "/dashboard/invitations",
       testId: "stat-card-invitations",
     },
