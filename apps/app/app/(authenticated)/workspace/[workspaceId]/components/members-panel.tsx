@@ -78,6 +78,7 @@ interface MembersPanelProps {
   onClose: () => void;
   currentUserRole?: string;
   isWorkspacePublished?: boolean;
+  currentUserId?: string;
 }
 
 
@@ -101,7 +102,7 @@ function formatRole(role: string): string {
   }
 }
 
-export function MembersPanel({ workspaceId, onClose, currentUserRole, isWorkspacePublished = true }: MembersPanelProps) {
+export function MembersPanel({ workspaceId, onClose, currentUserRole, isWorkspacePublished = true, currentUserId }: MembersPanelProps) {
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -490,6 +491,7 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole, isWorkspac
                         userId={member.userId}
                         imageUrl={member.image}
                         size="md"
+                        isCurrentUser={member.userId === currentUserId}
                       />
                       <div>
                         <p className="text-sm font-medium">
@@ -536,6 +538,7 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole, isWorkspac
                   userId={selectedMember.userId}
                   imageUrl={selectedMember.image}
                   size="xl"
+                  isCurrentUser={selectedMember.userId === currentUserId}
                 />
                 <div>
                   <h3 className="font-semibold text-lg">

@@ -266,6 +266,7 @@ function ActivityItem({ entry, isCurrentUser, compact }: ActivityItemProps) {
           userId={entry.actorId}
           imageUrl={entry.actorAvatarUrl}
           size="md"
+          isCurrentUser={isCurrentUser}
           className="shrink-0"
         />
       ) : (

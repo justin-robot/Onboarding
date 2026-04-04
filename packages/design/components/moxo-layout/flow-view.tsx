@@ -89,6 +89,8 @@ interface FlowViewProps {
   className?: string;
   /** Force compact mode (auto-detected from viewport if not set) */
   compact?: boolean;
+  /** Current user ID for highlighting their avatar */
+  currentUserId?: string;
 }
 
 /**
@@ -116,6 +118,7 @@ function SortableTaskCard({
   showTimelineIndicator,
   timelinePosition,
   isLastInSection,
+  currentUserId,
 }: {
   task: FlowTask;
   isSelected: boolean;
@@ -127,6 +130,7 @@ function SortableTaskCard({
   showTimelineIndicator?: boolean;
   timelinePosition?: number;
   isLastInSection?: boolean;
+  currentUserId?: string;
 }) {
   const {
     attributes,
@@ -175,6 +179,7 @@ function SortableTaskCard({
         timelineStatus={getTimelineStatus(task)}
         isLastInSection={isLastInSection}
         isDraft={task.isDraft}
+        currentUserId={currentUserId}
       />
     </div>
   );
@@ -317,6 +322,7 @@ export function FlowView({
   showTimeline = true,
   className,
   compact,
+  currentUserId,
 }: FlowViewProps) {
   const isDesktop = useIsDesktop();
   const isCompact = compact ?? !isDesktop;
@@ -502,6 +508,7 @@ export function FlowView({
                         showTimelineIndicator={showTimeline}
                         timelinePosition={index + 1}
                         isLastInSection={index === tasks.length - 1}
+                        currentUserId={currentUserId}
                       />
                     ))}
                   </SortableContext>
@@ -569,6 +576,7 @@ export function FlowView({
                     timelineStatus={getTimelineStatus(task)}
                     isLastInSection={index === tasks.length - 1}
                     isDraft={task.isDraft}
+                    currentUserId={currentUserId}
                   />
                 ))}
                 {onAddTask && (
@@ -623,6 +631,7 @@ export function FlowView({
                   dueDate={activeItem.item.dueDate}
                   createdAt={activeItem.item.createdAt}
                   isDraft={activeItem.item.isDraft}
+                  currentUserId={currentUserId}
                 />
               </div>
             )}

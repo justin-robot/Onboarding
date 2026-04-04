@@ -534,6 +534,7 @@ export function WorkspaceView({
       avatarUrl: undefined,
     })),
     totalMembers: members.length,
+    currentUserId,
     onMembersClick: handleMembersClick,
     onMoreClick: () => {
       // Close right panel sheet first to prevent z-index overlap on mobile
@@ -615,6 +616,7 @@ export function WorkspaceView({
           onSectionEdit={currentUserRole === "manager" ? handleSectionEditRequest : undefined}
           enableDragAndDrop={currentUserRole === "manager"}
           showTimeline={true}
+          currentUserId={currentUserId}
         />
       }
       filesContent={
@@ -661,6 +663,7 @@ export function WorkspaceView({
             onClose={() => setShowMembersPanel(false)}
             currentUserRole={currentUserRole}
             isWorkspacePublished={isPublished}
+            currentUserId={currentUserId}
           />
         ) : selectedTask ? (
           <TaskDetailsPanel

@@ -81,6 +81,8 @@ interface TaskCardProps {
   onReviewClick?: () => void;
   /** Whether task was created in draft mode (visible to managers only) */
   isDraft?: boolean;
+  /** Current user ID for highlighting their avatar */
+  currentUserId?: string;
 }
 
 // Type-specific styling configuration - using solid colors to match Add Task dialog
@@ -235,13 +237,15 @@ function TimelineIndicator({
  * Assignee avatar component - circular style
  * Shows green ring when assignee has completed their task
  */
-function AssigneeAvatar({ name, identifier, isCompleted }: { name: string; identifier?: string; isCompleted?: boolean }) {
+function AssigneeAvatar({ name, identifier, isCompleted, isCurrentUser }: { name: string; identifier?: string; isCompleted?: boolean; isCurrentUser?: boolean }) {
   const { initial, colorClass } = getAvatarProps(name, identifier);
+  // Use primary color for current user, otherwise use hash-based color
+  const bgClass = isCurrentUser ? "bg-primary text-primary-foreground" : cn(colorClass, "text-white");
   return (
     <div
       className={cn(
-        "flex h-8 w-8 items-center justify-center rounded-full text-white text-xs font-medium border-2 border-background",
-        colorClass,
+        "flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium border-2 border-background",
+        bgClass,
         isCompleted && "ring-2 ring-green-500 ring-offset-1 ring-offset-background"
       )}
     >
@@ -277,6 +281,7 @@ export function TaskCard({
   isLastInSection = false,
   onReviewClick,
   isDraft,
+  currentUserId,
 }: TaskCardProps) {
   const config = typeConfig[type];
   const Icon = config.icon;
@@ -401,7 +406,7 @@ export function TaskCard({
           {assignees && assignees.length > 0 && (
             <div className="flex -space-x-1">
               {assignees.slice(0, 3).map((assignee, i) => (
-                <AssigneeAvatar key={assignee.id || i} name={assignee.name} identifier={assignee.id} isCompleted={assignee.isCompleted} />
+                <AssigneeAvatar key={assignee.id || i} name={assignee.name} identifier={assignee.id} isCompleted={assignee.isCompleted} isCurrentUser={assignee.id === currentUserId} />
               ))}
               {assignees.length > 3 && (
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-400 text-white text-xs font-medium border-2 border-background">

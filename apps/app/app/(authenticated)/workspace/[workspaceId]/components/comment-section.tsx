@@ -496,6 +496,7 @@ function CommentItem({
         userId={comment.userId}
         imageUrl={comment.userImage}
         size="md"
+        isCurrentUser={isOwn}
         className="shrink-0"
       />
       <div className="flex-1 min-w-0">
@@ -568,6 +569,7 @@ function CompactCommentItem({
         userId={comment.userId}
         imageUrl={comment.userImage}
         size="md"
+        isCurrentUser={isOwn}
         className="shrink-0"
       />
       <div className="flex-1 min-w-0">

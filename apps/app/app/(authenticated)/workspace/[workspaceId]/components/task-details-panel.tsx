@@ -821,6 +821,7 @@ export function TaskDetailsPanel({
                           email={assignee.userEmail}
                           userId={assignee.userId}
                           size="md"
+                          isCurrentUser={assignee.userId === currentUserId}
                         />
                         {assignee.status === "completed" && (
                           <CheckCircle2 className="absolute -bottom-0.5 -right-0.5 h-4 w-4 text-green-500 bg-background rounded-full" />
