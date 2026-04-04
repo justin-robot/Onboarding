@@ -26,7 +26,7 @@ import {
   FormMessage,
   FormDescription,
 } from "@repo/design/components/ui/form";
-import { Loader2 } from "lucide-react";
+import { Loader2, Info } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -166,6 +166,18 @@ export const DuplicateDialog = ({
             All sections, tasks, and configurations will be copied.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Draft mode info */}
+        <div className="flex gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-900/50 dark:bg-blue-950/30">
+          <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+          <div className="text-blue-800 dark:text-blue-200">
+            <p className="font-medium">The new workspace will be created as a draft.</p>
+            <p className="mt-1 text-blue-700 dark:text-blue-300">
+              No invitations or notifications will be sent until you publish the workspace.
+              This gives you time to review and customize before going live.
+            </p>
+          </div>
+        </div>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
