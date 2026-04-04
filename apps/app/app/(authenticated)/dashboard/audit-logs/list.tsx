@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@repo/design/components/ui/table";
 import { Badge } from "@repo/design/components/ui/badge";
+import { Button } from "@repo/design/components/ui/button";
 import { Card, CardContent, CardHeader } from "@repo/design/components/ui/card";
 import {
   Select,
@@ -18,8 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/design/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+
+const PAGE_SIZE = 25;
 
 interface AuditLog {
   id: string;
@@ -59,39 +62,57 @@ export const AuditLogList = () => {
   const [loading, setLoading] = useState(true);
   const [eventTypeFilter, setEventTypeFilter] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
+  const [eventTypes, setEventTypes] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  const fetchLogs = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        limit: PAGE_SIZE.toString(),
+        offset: ((page - 1) * PAGE_SIZE).toString(),
+      });
+
+      if (eventTypeFilter) {
+        params.set("eventType", eventTypeFilter);
+      }
+      if (sourceFilter) {
+        params.set("source", sourceFilter);
+      }
+
+      const response = await fetch(`/api/admin/audit-logs?${params}`, {
+        credentials: "include",
+      });
+      if (!response.ok) throw new Error("Failed to fetch audit logs");
+
+      const result = await response.json();
+      setLogs(result.data || []);
+      setTotal(result.total || 0);
+      setEventTypes(result.filters?.eventTypes || []);
+    } catch (error) {
+      console.error("Error fetching audit logs:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, eventTypeFilter, sourceFilter]);
 
   useEffect(() => {
-    const fetchLogs = async () => {
-      try {
-        const response = await fetch("/api/admin/audit-logs", {
-          credentials: "include",
-        });
-        if (!response.ok) throw new Error("Failed to fetch audit logs");
-
-        const result = await response.json();
-        setLogs(result.data || []);
-      } catch (error) {
-        console.error("Error fetching audit logs:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchLogs();
-  }, []);
+  }, [fetchLogs]);
 
-  let filteredData = logs;
+  // Reset to page 1 when filters change
+  const handleEventTypeChange = (value: string) => {
+    setEventTypeFilter(value === "all" ? "" : value);
+    setPage(1);
+  };
 
-  if (eventTypeFilter) {
-    filteredData = filteredData.filter((log) => log.eventType === eventTypeFilter);
-  }
-
-  if (sourceFilter) {
-    filteredData = filteredData.filter((log) => log.source === sourceFilter);
-  }
-
-  // Extract unique event types from data
-  const eventTypes = Array.from(new Set(logs.map((log) => log.eventType))).sort();
+  const handleSourceChange = (value: string) => {
+    setSourceFilter(value === "all" ? "" : value);
+    setPage(1);
+  };
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -103,32 +124,38 @@ export const AuditLogList = () => {
       </div>
       <Card>
         <CardHeader>
-          <div className="flex gap-4">
-            <Select value={eventTypeFilter || "all"} onValueChange={(v) => setEventTypeFilter(v === "all" ? "" : v)}>
-              <SelectTrigger className="w-60">
-                <SelectValue placeholder="All event types" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All event types</SelectItem>
-                {eventTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={sourceFilter || "all"} onValueChange={(v) => setSourceFilter(v === "all" ? "" : v)}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="All sources" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All sources</SelectItem>
-                <SelectItem value="web">Web</SelectItem>
-                <SelectItem value="api">API</SelectItem>
-                <SelectItem value="system">System</SelectItem>
-                <SelectItem value="signnow">SignNow</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex items-center justify-between">
+            <div className="flex gap-4">
+              <Select value={eventTypeFilter || "all"} onValueChange={handleEventTypeChange}>
+                <SelectTrigger className="w-60">
+                  <SelectValue placeholder="All event types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All event types</SelectItem>
+                  {eventTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={sourceFilter || "all"} onValueChange={handleSourceChange}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="All sources" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All sources</SelectItem>
+                  <SelectItem value="web">Web</SelectItem>
+                  <SelectItem value="api">API</SelectItem>
+                  <SelectItem value="system">System</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="signnow">SignNow</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {total.toLocaleString()} {total === 1 ? "entry" : "entries"}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -138,6 +165,7 @@ export const AuditLogList = () => {
               <span className="ml-2 text-muted-foreground">Loading audit logs...</span>
             </div>
           ) : (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -150,14 +178,14 @@ export const AuditLogList = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {!filteredData || filteredData.length === 0 ? (
+                {logs.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                       No audit logs found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredData.map((log) => (
+                  logs.map((log) => (
                     <TableRow key={log.id}>
                       <TableCell className="whitespace-nowrap">
                         <div className="text-sm">
@@ -199,6 +227,41 @@ export const AuditLogList = () => {
                 )}
               </TableBody>
             </Table>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between border-t pt-4 mt-4">
+                <div className="text-sm text-muted-foreground">
+                  Showing {((page - 1) * PAGE_SIZE) + 1} to {Math.min(page * PAGE_SIZE, total)} of {total.toLocaleString()}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1 || loading}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Previous
+                  </Button>
+                  <div className="flex items-center gap-1 px-2">
+                    <span className="text-sm">
+                      Page {page} of {totalPages}
+                    </span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages || loading}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            )}
+            </>
           )}
         </CardContent>
       </Card>
