@@ -63,8 +63,8 @@ interface TaskCardProps {
   dueDate?: Date | string;
   /** When the task was created */
   createdAt?: Date | string;
-  /** Assignee names */
-  assignees?: string[];
+  /** Assignee info including name, id for color coding, and completion status */
+  assignees?: Array<{ name: string; id?: string; isCompleted?: boolean }>;
   /** Click handler */
   onClick?: () => void;
   /** Optional class name */
@@ -233,11 +233,18 @@ function TimelineIndicator({
 
 /**
  * Assignee avatar component - rounded rectangle style matching Moxo
+ * Shows green ring when assignee has completed their task
  */
-function AssigneeAvatar({ name, identifier }: { name: string; identifier?: string }) {
+function AssigneeAvatar({ name, identifier, isCompleted }: { name: string; identifier?: string; isCompleted?: boolean }) {
   const { initial, colorClass } = getAvatarProps(name, identifier);
   return (
-    <div className={cn("flex h-9 w-9 items-center justify-center rounded-lg text-white text-xs font-medium", colorClass)}>
+    <div
+      className={cn(
+        "flex h-9 w-9 items-center justify-center rounded-lg text-white text-xs font-medium",
+        colorClass,
+        isCompleted && "ring-2 ring-green-500 ring-offset-1 ring-offset-background"
+      )}
+    >
       {initial}
     </div>
   );
@@ -393,8 +400,8 @@ export function TaskCard({
           )}
           {assignees && assignees.length > 0 && (
             <div className="flex -space-x-1">
-              {assignees.slice(0, 3).map((name, i) => (
-                <AssigneeAvatar key={i} name={name} />
+              {assignees.slice(0, 3).map((assignee, i) => (
+                <AssigneeAvatar key={assignee.id || i} name={assignee.name} identifier={assignee.id} isCompleted={assignee.isCompleted} />
               ))}
               {assignees.length > 3 && (
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-400 text-white text-xs font-medium border-2 border-background">

@@ -48,7 +48,7 @@ interface FlowTask {
   description?: string;
   dueDate?: Date | string;
   createdAt?: Date | string;
-  assignees?: string[];
+  assignees?: Array<{ name: string; id?: string; isCompleted?: boolean }>;
   isDraft?: boolean; // Tasks created while workspace is in draft mode
 }
 

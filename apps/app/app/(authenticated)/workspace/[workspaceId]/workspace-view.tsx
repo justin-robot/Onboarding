@@ -89,7 +89,7 @@ interface WorkspaceData {
       isCompleted: boolean;
       isLocked: boolean;
       lockedByTasks?: Array<{ id: string; title: string }>;
-      assignees?: string[];
+      assignees?: Array<{ name: string; id?: string; isCompleted?: boolean }>;
       description: string | null;
       dueDate?: string;
       dueDateType?: "absolute" | "relative";

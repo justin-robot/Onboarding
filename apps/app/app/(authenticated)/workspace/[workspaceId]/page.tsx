@@ -79,7 +79,7 @@ export default async function WorkspacePage({ params }: PageProps) {
 
   // Get assignees per task for "your turn" detection and display
   // Get blocking dependencies for locked tasks
-  const taskAssignments = new Map<string, { userIds: string[]; names: string[] }>();
+  const taskAssignments = new Map<string, { userIds: string[]; assignees: Array<{ name: string; isCompleted: boolean }> }>();
   const taskBlockingDeps = new Map<string, Array<{ id: string; title: string }>>();
 
   for (const section of (workspace.sections || [])) {
@@ -87,7 +87,7 @@ export default async function WorkspacePage({ params }: PageProps) {
       const assignees = await assigneeService.getByTaskIdWithUserInfo(task.id);
       taskAssignments.set(task.id, {
         userIds: assignees.map(a => a.userId),
-        names: assignees.map(a => a.name),
+        assignees: assignees.map(a => ({ name: a.name, id: a.userId, isCompleted: a.isCompleted })),
       });
 
       // Fetch blocking dependencies for locked tasks
@@ -146,7 +146,7 @@ export default async function WorkspacePage({ params }: PageProps) {
         description: null,
         status,
         tasks: tasks.map((task, index) => {
-          const assigneeData = taskAssignments.get(task.id) || { userIds: [], names: [] };
+          const assigneeData = taskAssignments.get(task.id) || { userIds: [], assignees: [] };
           const isYourTurn = assigneeData.userIds.includes(session.user.id) && task.status !== "completed" && !task.locked;
           const lockedByTasks = taskBlockingDeps.get(task.id);
 
@@ -159,7 +159,7 @@ export default async function WorkspacePage({ params }: PageProps) {
             isCompleted: task.status === "completed",
             isLocked: task.locked,
             lockedByTasks,
-            assignees: assigneeData.names,
+            assignees: assigneeData.assignees,
             description: task.description,
             dueDate: task.dueDateValue?.toISOString(),
             dueDateType: task.dueDateType as "absolute" | "relative" | undefined,

@@ -225,19 +225,20 @@ export const assigneeService = {
   },
 
   /**
-   * Get all assignees for a task with their user info (name)
+   * Get all assignees for a task with their user info (name and completion status)
    */
-  async getByTaskIdWithUserInfo(taskId: string): Promise<Array<{ userId: string; name: string }>> {
+  async getByTaskIdWithUserInfo(taskId: string): Promise<Array<{ userId: string; name: string; isCompleted: boolean }>> {
     const results = await database
       .selectFrom("task_assignee")
       .innerJoin("user", "user.id", "task_assignee.userId")
-      .select(["task_assignee.userId", "user.name", "user.email"])
+      .select(["task_assignee.userId", "task_assignee.status", "user.name", "user.email"])
       .where("task_assignee.taskId", "=", taskId)
       .execute();
 
     return results.map((r) => ({
       userId: r.userId,
       name: r.name || r.email || "Unknown",
+      isCompleted: r.status === "completed",
     }));
   },
 
