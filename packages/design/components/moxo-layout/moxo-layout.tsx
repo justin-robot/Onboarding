@@ -149,7 +149,7 @@ function WorkspaceHeader({
           {/* Member avatars (fewer on mobile) */}
           <HoverCard openDelay={200} closeDelay={100}>
             <HoverCardTrigger asChild>
-              <div className="flex -space-x-1.5 mr-1 cursor-pointer">
+              <div className="flex -space-x-1.5 mr-1 cursor-default">
                 {displayMembers.map((member) => (
                   <UserAvatar
                     key={member.id}
@@ -174,7 +174,7 @@ function WorkspaceHeader({
                 </p>
                 <div className="space-y-1.5">
                   {members.map((member) => (
-                    <div key={member.id} className="flex items-center gap-2">
+                    <div key={member.id} className="flex items-center gap-2 cursor-default">
                       <UserAvatar
                         name={member.name}
                         userId={member.id}
@@ -247,7 +247,7 @@ function WorkspaceHeader({
             {/* Member avatars */}
             <HoverCard openDelay={200} closeDelay={100}>
               <HoverCardTrigger asChild>
-                <div className="flex -space-x-2 cursor-pointer">
+                <div className="flex -space-x-2 cursor-default">
                   {displayMembers.map((member) => (
                     <UserAvatar
                       key={member.id}
@@ -272,7 +272,7 @@ function WorkspaceHeader({
                   </p>
                   <div className="space-y-1.5">
                     {members.map((member) => (
-                      <div key={member.id} className="flex items-center gap-2">
+                      <div key={member.id} className="flex items-center gap-2 cursor-default">
                         <UserAvatar
                           name={member.name}
                           userId={member.id}
