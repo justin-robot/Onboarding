@@ -54,6 +54,7 @@ export function UserMenu() {
             email={user?.email}
             imageUrl={user?.image}
             size="lg"
+            variant="primary"
             className="pointer-events-none"
           />
         </Button>

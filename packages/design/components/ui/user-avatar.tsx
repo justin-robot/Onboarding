@@ -11,6 +11,8 @@ export interface UserAvatarProps {
   userId?: string | null;
   imageUrl?: string | null;
   size?: "xs" | "sm" | "md" | "lg" | "xl";
+  /** Use "primary" for the current user's avatar (uses theme primary color) */
+  variant?: "default" | "primary";
   className?: string;
 }
 
@@ -36,16 +38,20 @@ export function UserAvatar({
   userId,
   imageUrl,
   size = "md",
+  variant = "default",
   className,
 }: UserAvatarProps) {
   const identifier = userId || email;
   const { initial, colorClass } = getAvatarProps(name || email, identifier);
 
+  // Use theme primary color for "primary" variant (current user's avatar)
+  const bgColorClass = variant === "primary" ? "bg-primary text-primary-foreground" : cn(colorClass, "text-white");
+
   return (
     <Avatar className={cn(sizeClasses[size], className)}>
       {imageUrl && <AvatarImage src={imageUrl} alt={name || "User"} />}
       <AvatarFallback
-        className={cn(colorClass, "text-white font-medium", textSizeClasses[size])}
+        className={cn(bgColorClass, "font-medium", textSizeClasses[size])}
       >
         {initial}
       </AvatarFallback>
