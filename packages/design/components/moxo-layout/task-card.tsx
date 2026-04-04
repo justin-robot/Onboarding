@@ -3,6 +3,7 @@
 import * as React from "react";
 import { cn } from "../../lib/utils";
 import { formatTaskTimestamp } from "../../lib/date-utils";
+import { getAvatarProps } from "../../lib/avatar-utils";
 import { Button } from "../ui/button";
 import { format, differenceInDays, isPast } from "date-fns";
 import {
@@ -125,17 +126,6 @@ const typeConfig: Record<
   },
 };
 
-/**
- * Get initials from a name
- */
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
 
 /**
  * Get due date badge info
@@ -244,10 +234,11 @@ function TimelineIndicator({
 /**
  * Assignee avatar component - rounded rectangle style matching Moxo
  */
-function AssigneeAvatar({ name }: { name: string }) {
+function AssigneeAvatar({ name, identifier }: { name: string; identifier?: string }) {
+  const { initial, colorClass } = getAvatarProps(name, identifier);
   return (
-    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-500 text-white text-xs font-medium">
-      {getInitials(name)}
+    <div className={cn("flex h-9 w-9 items-center justify-center rounded-lg text-white text-xs font-medium", colorClass)}>
+      {initial}
     </div>
   );
 }

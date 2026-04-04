@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@repo/design/components/ui/button";
 import { Input } from "@repo/design/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@repo/design/components/ui/avatar";
+import { UserAvatar } from "@repo/design/components/ui/user-avatar";
 import { ScrollArea } from "@repo/design/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/design/components/ui/tabs";
 import {
@@ -543,12 +543,13 @@ function MessageBubble({
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Avatar always on left */}
-      <Avatar className="h-8 w-8 shrink-0">
-        <AvatarImage src={message.senderAvatarUrl} alt={message.senderName} />
-        <AvatarFallback className="text-xs">
-          {message.senderName.charAt(0).toUpperCase()}
-        </AvatarFallback>
-      </Avatar>
+      <UserAvatar
+        name={message.senderName}
+        userId={message.senderId}
+        imageUrl={message.senderAvatarUrl}
+        size="md"
+        className="shrink-0"
+      />
 
       <div className="flex-1 max-w-[80%]">
         {/* Name and timestamp - Moxo format: "Name Today, Time" */}
@@ -569,12 +570,12 @@ function MessageBubble({
               Re: <span className="text-primary font-medium">{message.replyToMessage.senderName}</span>
             </p>
             <div className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2">
-              <Avatar className="h-6 w-6 shrink-0">
-                <AvatarImage src={message.replyToMessage.senderAvatarUrl} />
-                <AvatarFallback className="text-[10px]">
-                  {message.replyToMessage.senderName.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                name={message.replyToMessage.senderName}
+                imageUrl={message.replyToMessage.senderAvatarUrl}
+                size="sm"
+                className="shrink-0"
+              />
               <span className="text-lg text-muted-foreground font-serif">"</span>
               <p className="text-sm text-muted-foreground truncate flex-1">
                 {message.replyToMessage.content}
@@ -731,12 +732,14 @@ function MeetingCard({
         <div className="flex items-center gap-1.5 mt-2">
           <div className="flex -space-x-1.5">
             {meeting.participants.slice(0, 3).map((p) => (
-              <Avatar key={p.id} className="h-5 w-5 border border-background">
-                <AvatarImage src={p.avatarUrl} alt={p.name} />
-                <AvatarFallback className="text-[8px]">
-                  {p.name.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                key={p.id}
+                name={p.name}
+                userId={p.id}
+                imageUrl={p.avatarUrl}
+                size="xs"
+                className="border border-background"
+              />
             ))}
           </div>
           <span className="text-xs text-muted-foreground">

@@ -9,7 +9,7 @@ import {
 } from "react-resizable-panels";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { UserAvatar } from "../ui/user-avatar";
 import {
   HoverCard,
   HoverCardContent,
@@ -151,12 +151,14 @@ function WorkspaceHeader({
             <HoverCardTrigger asChild>
               <div className="flex -space-x-1.5 mr-1 cursor-pointer">
                 {displayMembers.map((member) => (
-                  <Avatar key={member.id} className="h-6 w-6 border-2 border-background">
-                    <AvatarImage src={member.avatarUrl} alt={member.name} />
-                    <AvatarFallback className="text-[10px]">
-                      {member.name.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                  <UserAvatar
+                    key={member.id}
+                    name={member.name}
+                    userId={member.id}
+                    imageUrl={member.avatarUrl}
+                    size="sm"
+                    className="border-2 border-background"
+                  />
                 ))}
                 {remainingCount > 0 && (
                   <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-muted text-[10px] font-medium">
@@ -173,12 +175,12 @@ function WorkspaceHeader({
                 <div className="space-y-1.5">
                   {members.map((member) => (
                     <div key={member.id} className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={member.avatarUrl} alt={member.name} />
-                        <AvatarFallback className="text-[10px]">
-                          {member.name.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+                      <UserAvatar
+                        name={member.name}
+                        userId={member.id}
+                        imageUrl={member.avatarUrl}
+                        size="sm"
+                      />
                       <span className="text-sm truncate">{member.name}</span>
                     </div>
                   ))}
@@ -247,12 +249,14 @@ function WorkspaceHeader({
               <HoverCardTrigger asChild>
                 <div className="flex -space-x-2 cursor-pointer">
                   {displayMembers.map((member) => (
-                    <Avatar key={member.id} className="h-7 w-7 border-2 border-background">
-                      <AvatarImage src={member.avatarUrl} alt={member.name} />
-                      <AvatarFallback className="text-xs">
-                        {member.name.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <UserAvatar
+                      key={member.id}
+                      name={member.name}
+                      userId={member.id}
+                      imageUrl={member.avatarUrl}
+                      size="sm"
+                      className="h-7 w-7 border-2 border-background"
+                    />
                   ))}
                   {remainingCount > 0 && (
                     <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-muted text-xs font-medium">
@@ -269,12 +273,12 @@ function WorkspaceHeader({
                   <div className="space-y-1.5">
                     {members.map((member) => (
                       <div key={member.id} className="flex items-center gap-2">
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage src={member.avatarUrl} alt={member.name} />
-                          <AvatarFallback className="text-[10px]">
-                            {member.name.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        <UserAvatar
+                          name={member.name}
+                          userId={member.id}
+                          imageUrl={member.avatarUrl}
+                          size="sm"
+                        />
                         <span className="text-sm truncate">{member.name}</span>
                       </div>
                     ))}

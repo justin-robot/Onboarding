@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@repo/design/components/ui/button";
 import { Textarea } from "@repo/design/components/ui/textarea";
 import { ScrollArea } from "@repo/design/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@repo/design/components/ui/avatar";
+import { UserAvatar } from "@repo/design/components/ui/user-avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -228,16 +228,6 @@ export function CommentSection({
     e.target.value = "";
   };
 
-  // Get initials from name
-  const getInitials = (name?: string) => {
-    if (!name) return "?";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-  };
 
   // Format date like Moxo: "Friday, 3:34 AM" or "Today, 11:16 PM"
   const formatMoxoDate = (date: Date | string) => {
@@ -292,7 +282,6 @@ export function CommentSection({
                   currentUserId={currentUserId}
                   isDeleting={deletingId === item.id}
                   onDelete={() => handleDelete(item.id)}
-                  getInitials={getInitials}
                   formatDate={formatMoxoDate}
                 />
               )
@@ -425,7 +414,6 @@ export function CommentSection({
                   currentUserId={currentUserId}
                   isDeleting={deletingId === item.id}
                   onDelete={() => handleDelete(item.id)}
-                  getInitials={getInitials}
                   formatDate={formatDate}
                 />
               )
@@ -491,26 +479,25 @@ function CommentItem({
   currentUserId,
   isDeleting,
   onDelete,
-  getInitials,
   formatDate,
 }: {
   comment: Comment;
   currentUserId: string;
   isDeleting: boolean;
   onDelete: () => void;
-  getInitials: (name?: string) => string;
   formatDate: (date: Date | string) => string;
 }) {
   const isOwn = comment.userId === currentUserId;
 
   return (
     <div className="flex gap-3 group">
-      <Avatar className="h-8 w-8 shrink-0">
-        <AvatarImage src={comment.userImage} />
-        <AvatarFallback className="text-xs">
-          {getInitials(comment.userName)}
-        </AvatarFallback>
-      </Avatar>
+      <UserAvatar
+        name={comment.userName}
+        userId={comment.userId}
+        imageUrl={comment.userImage}
+        size="md"
+        className="shrink-0"
+      />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium truncate">
@@ -564,26 +551,25 @@ function CompactCommentItem({
   currentUserId,
   isDeleting,
   onDelete,
-  getInitials,
   formatDate,
 }: {
   comment: Comment;
   currentUserId: string;
   isDeleting: boolean;
   onDelete: () => void;
-  getInitials: (name?: string) => string;
   formatDate: (date: Date | string) => string;
 }) {
   const isOwn = comment.userId === currentUserId;
 
   return (
     <div className="flex items-start gap-3 group">
-      <Avatar className="h-8 w-8 shrink-0">
-        <AvatarImage src={comment.userImage} />
-        <AvatarFallback className="text-xs">
-          {getInitials(comment.userName)}
-        </AvatarFallback>
-      </Avatar>
+      <UserAvatar
+        name={comment.userName}
+        userId={comment.userId}
+        imageUrl={comment.userImage}
+        size="md"
+        className="shrink-0"
+      />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">{comment.userName || "Unknown"}</span>

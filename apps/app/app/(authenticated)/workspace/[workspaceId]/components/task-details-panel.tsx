@@ -57,6 +57,7 @@ import {
 } from "@repo/design/components/ui/select";
 import { Input } from "@repo/design/components/ui/input";
 import { Avatar, AvatarFallback } from "@repo/design/components/ui/avatar";
+import { UserAvatar } from "@repo/design/components/ui/user-avatar";
 import { Mail } from "lucide-react";
 import { cn } from "@repo/design/lib/utils";
 import { toast } from "sonner";
@@ -815,11 +816,12 @@ export function TaskDetailsPanel({
                   >
                     <div className="flex items-center gap-2">
                       <div className="relative">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="text-xs bg-muted">
-                            {(assignee.userName || assignee.userEmail || "?")[0].toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
+                        <UserAvatar
+                          name={assignee.userName}
+                          email={assignee.userEmail}
+                          userId={assignee.userId}
+                          size="md"
+                        />
                         {assignee.status === "completed" && (
                           <CheckCircle2 className="absolute -bottom-0.5 -right-0.5 h-4 w-4 text-green-500 bg-background rounded-full" />
                         )}

@@ -19,7 +19,7 @@ import {
   CardTitle,
 } from "@repo/design/components/ui/card";
 import { Badge } from "@repo/design/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@repo/design/components/ui/avatar";
+import { UserAvatar } from "@repo/design/components/ui/user-avatar";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -80,14 +80,6 @@ interface MembersPanelProps {
   isWorkspacePublished?: boolean;
 }
 
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-}
 
 function getRoleBadgeVariant(role: string): "default" | "secondary" | "outline" {
   switch (role) {
@@ -492,12 +484,13 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole, isWorkspac
                     className="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   >
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={member.image} />
-                        <AvatarFallback className="text-xs">
-                          {getInitials(member.name || member.email)}
-                        </AvatarFallback>
-                      </Avatar>
+                      <UserAvatar
+                        name={member.name}
+                        email={member.email}
+                        userId={member.userId}
+                        imageUrl={member.image}
+                        size="md"
+                      />
                       <div>
                         <p className="text-sm font-medium">
                           {member.name || member.email}
@@ -537,12 +530,13 @@ export function MembersPanel({ workspaceId, onClose, currentUserRole, isWorkspac
             <div className="space-y-6">
               {/* Member info */}
               <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src={selectedMember.image} />
-                  <AvatarFallback className="text-lg">
-                    {getInitials(selectedMember.name || selectedMember.email)}
-                  </AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  name={selectedMember.name}
+                  email={selectedMember.email}
+                  userId={selectedMember.userId}
+                  imageUrl={selectedMember.image}
+                  size="xl"
+                />
                 <div>
                   <h3 className="font-semibold text-lg">
                     {selectedMember.name || "No name"}

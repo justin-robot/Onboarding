@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "../../lib/utils";
 import { ScrollArea } from "../ui/scroll-area";
 import { Button } from "../ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { UserAvatar } from "../ui/user-avatar";
 import { formatDistanceToNow, format, isToday, isYesterday } from "date-fns";
 import {
   CheckCircle,
@@ -260,13 +260,14 @@ function ActivityItem({ entry, isCurrentUser, compact }: ActivityItemProps) {
   return (
     <div className="flex gap-3 rounded-md px-2 py-2 hover:bg-muted/50 transition-colors">
       {/* Avatar or Icon */}
-      {entry.actorAvatarUrl ? (
-        <Avatar className="h-8 w-8 shrink-0">
-          <AvatarImage src={entry.actorAvatarUrl} alt={entry.actorName || ""} />
-          <AvatarFallback className="text-xs">
-            {(entry.actorName || "?").charAt(0).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
+      {entry.actorAvatarUrl || entry.actorName ? (
+        <UserAvatar
+          name={entry.actorName}
+          userId={entry.actorId}
+          imageUrl={entry.actorAvatarUrl}
+          size="md"
+          className="shrink-0"
+        />
       ) : (
         <div
           className={cn(

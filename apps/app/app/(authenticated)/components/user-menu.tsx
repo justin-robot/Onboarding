@@ -16,7 +16,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@repo/design/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@repo/design/components/ui/avatar";
+import { UserAvatar } from "@repo/design/components/ui/user-avatar";
 import { Button } from "@repo/design/components/ui/button";
 import { LogOut, Settings, Sun, Moon, Monitor, Check } from "lucide-react";
 
@@ -27,15 +27,6 @@ export function UserMenu() {
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   const user = session?.user;
-
-  const initials = user?.name
-    ? user.name
-        .split(" ")
-        .map((n: string) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : user?.email?.charAt(0).toUpperCase() ?? "?";
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -58,12 +49,13 @@ export function UserMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full cursor-pointer p-0">
-          <Avatar className="h-10 w-10 pointer-events-none">
-            {user?.image && <AvatarImage src={user.image} alt={user?.name ?? "User"} />}
-            <AvatarFallback className="bg-slate-800 text-white text-sm font-medium">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
+          <UserAvatar
+            name={user?.name}
+            email={user?.email}
+            imageUrl={user?.image}
+            size="lg"
+            className="pointer-events-none"
+          />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="start" side="top" forceMount>
