@@ -115,6 +115,13 @@ export default function InvitePage() {
     router.push("/sign-in");
   };
 
+  // Handle sign up redirect
+  const handleSignUp = () => {
+    // Store the invite token in sessionStorage to use after sign-up
+    sessionStorage.setItem("pendingInviteToken", token);
+    router.push("/sign-up");
+  };
+
   // Loading state
   if (loading || sessionLoading) {
     return (
@@ -260,9 +267,12 @@ export default function InvitePage() {
               </Button>
               <p className="text-xs text-muted-foreground text-center">
                 Don't have an account?{" "}
-                <a href="/sign-up" className="underline hover:text-foreground">
+                <button
+                  onClick={handleSignUp}
+                  className="underline hover:text-foreground"
+                >
                   Sign up
-                </a>
+                </button>
               </p>
             </>
           )}

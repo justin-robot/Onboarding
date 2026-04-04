@@ -193,12 +193,21 @@ export const InvitationList = () => {
     }
   };
 
-  const handleCopyLink = (token: string, id: string) => {
+  const handleCopyLink = async (token: string, id: string) => {
+    if (!token) {
+      toast.error("No invitation token available");
+      return;
+    }
     const url = `${window.location.origin}/invite/${token}`;
-    navigator.clipboard.writeText(url);
-    setCopiedId(id);
-    toast.success("Invite link copied to clipboard");
-    setTimeout(() => setCopiedId(null), 2000);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(id);
+      toast.success("Invite link copied to clipboard");
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (err) {
+      // Fallback: show the URL in the toast for manual copying
+      toast.error(`Failed to copy. URL: ${url}`);
+    }
   };
 
   return (
