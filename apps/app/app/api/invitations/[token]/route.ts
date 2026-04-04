@@ -50,11 +50,11 @@ export async function GET(_request: NextRequest, { params }: Params) {
       .where("id", "=", invitation.invitedBy)
       .executeTakeFirst();
 
-    // Check if an account exists for the invited email
+    // Check if an account exists for the invited email (case-insensitive)
     const existingUser = await database
       .selectFrom("user")
       .select(["id"])
-      .where("email", "=", invitation.email.toLowerCase())
+      .where((eb) => eb(eb.fn("lower", ["email"]), "=", invitation.email.toLowerCase()))
       .executeTakeFirst();
 
     return json({
