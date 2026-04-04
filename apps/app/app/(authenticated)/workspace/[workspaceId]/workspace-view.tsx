@@ -529,7 +529,7 @@ export function WorkspaceView({
       </Badge>
     ) : undefined,
     members: members.map((m) => ({
-      id: m.id,
+      id: m.userId,
       name: m.name,
       avatarUrl: undefined,
     })),
