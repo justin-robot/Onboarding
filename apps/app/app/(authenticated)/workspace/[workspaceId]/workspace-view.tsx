@@ -554,6 +554,7 @@ export function WorkspaceView({
               router.push(`/workspace/${workspaceId}`);
             }
           }}
+          onSettingsClick={() => router.push("/settings?tab=notifications")}
         />
       </WorkspaceNotificationsProvider>
     ),

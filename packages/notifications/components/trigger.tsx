@@ -5,7 +5,7 @@ import {
   NotificationCell,
   useKnockFeed,
 } from "@knocklabs/react";
-import { Bell, Check, CheckCheck, Archive, Inbox } from "lucide-react";
+import { Bell, Check, CheckCheck, Archive, Inbox, Settings } from "lucide-react";
 import type { RefObject } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -30,10 +30,16 @@ interface NotificationsTriggerProps {
    * Receives workspaceId and optional taskId for navigation.
    */
   onNotificationClick?: (data: { workspaceId: string; taskId?: string }) => void;
+  /**
+   * Callback when settings button is clicked.
+   * Used to navigate to notification preferences.
+   */
+  onSettingsClick?: () => void;
 }
 
 export const NotificationsTrigger = ({
   onNotificationClick,
+  onSettingsClick,
 }: NotificationsTriggerProps = {}) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -212,7 +218,22 @@ export const NotificationsTrigger = ({
         renderHeader={() => (
           <div className="rnf-notification-feed-header">
             <div className="flex items-center justify-between w-full px-4 py-3 border-b border-border">
-              <span className="font-semibold text-sm">Notifications</span>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-sm">Notifications</span>
+                {onSettingsClick && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsVisible(false);
+                      onSettingsClick();
+                    }}
+                    className="p-1 rounded-md hover:bg-accent transition-colors"
+                    title="Notification settings"
+                  >
+                    <Settings className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                )}
+              </div>
               <div className="flex items-center gap-3">
                 {feedView === "inbox" && unreadItems.length > 0 && (
                   <button

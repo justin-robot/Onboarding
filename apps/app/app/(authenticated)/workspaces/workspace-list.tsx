@@ -102,6 +102,7 @@ export function WorkspaceList({ workspaces, userId, userEmail, userRole, pending
                 : `/workspace/${workspaceId}`;
               router.push(url);
             }}
+            onSettingsClick={() => router.push("/settings?tab=notifications")}
           />
           <UserMenu />
         </div>

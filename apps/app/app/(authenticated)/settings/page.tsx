@@ -11,7 +11,12 @@ export const metadata: Metadata = {
   description: "Manage your account settings",
 };
 
-export default async function SettingsPage() {
+interface PageProps {
+  searchParams: Promise<{ tab?: string }>;
+}
+
+export default async function SettingsPage({ searchParams }: PageProps) {
+  const params = await searchParams;
   const h = await headers();
   const session = await auth.api.getSession({ headers: h });
 
@@ -40,6 +45,7 @@ export default async function SettingsPage() {
         <SettingsTabs
           profile={profile}
           notificationPreferences={notificationPreferences}
+          defaultTab={params.tab === "notifications" ? 1 : 0}
         />
       </div>
     </div>

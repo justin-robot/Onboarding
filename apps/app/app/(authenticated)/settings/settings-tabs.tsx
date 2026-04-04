@@ -11,11 +11,13 @@ import type { NotificationPreferences as NotificationPrefsType } from "@repo/not
 interface SettingsTabsProps {
   profile: UserProfile;
   notificationPreferences: NotificationPrefsType;
+  defaultTab?: number;
 }
 
 export function SettingsTabs({
   profile,
   notificationPreferences,
+  defaultTab = 0,
 }: SettingsTabsProps) {
   return (
     <div className="space-y-6">
@@ -27,7 +29,7 @@ export function SettingsTabs({
         Back to Workspaces
       </Link>
 
-      <TabGroup>
+      <TabGroup defaultIndex={defaultTab}>
         <TabList variant="line">
           <Tab>Profile</Tab>
           <Tab>Notifications</Tab>
