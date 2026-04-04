@@ -13,6 +13,8 @@ interface RealtimeChatProps {
   workspaceId: string;
   currentUserId: string;
   initialMessages: Message[];
+  activeTab?: "chat" | "meetings";
+  onTabChange?: (tab: "chat" | "meetings") => void;
 }
 
 /**
@@ -23,6 +25,8 @@ export function RealtimeChatImpl({
   workspaceId,
   currentUserId,
   initialMessages,
+  activeTab,
+  onTabChange,
 }: RealtimeChatProps) {
   return (
     <AblyProvider workspaceId={workspaceId}>
@@ -30,6 +34,8 @@ export function RealtimeChatImpl({
         workspaceId={workspaceId}
         currentUserId={currentUserId}
         initialMessages={initialMessages}
+        activeTab={activeTab}
+        onTabChange={onTabChange}
       />
     </AblyProvider>
   );
@@ -42,6 +48,8 @@ function RealtimeChatInner({
   workspaceId,
   currentUserId,
   initialMessages,
+  activeTab,
+  onTabChange,
 }: RealtimeChatProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
 
@@ -188,6 +196,8 @@ function RealtimeChatInner({
       workspaceId={workspaceId}
       onSendMessage={handleSendMessage}
       meetingsContent={<MeetingsPanel workspaceId={workspaceId} hideHeader />}
+      activeTab={activeTab}
+      onTabChange={onTabChange}
     />
   );
 }

@@ -94,6 +94,10 @@ interface ChatPanelProps {
   onDeleteMessage?: (messageId: string) => Promise<void>;
   /** Optional custom content for the Meetings tab (e.g., MeetingsPanel component) */
   meetingsContent?: React.ReactNode;
+  /** Initial/controlled active tab */
+  activeTab?: "chat" | "meetings";
+  /** Callback when tab changes */
+  onTabChange?: (tab: "chat" | "meetings") => void;
 }
 
 export function ChatPanel({
@@ -106,8 +110,17 @@ export function ChatPanel({
   onEditMessage,
   onDeleteMessage,
   meetingsContent,
+  activeTab: controlledActiveTab,
+  onTabChange,
 }: ChatPanelProps) {
-  const [activeTab, setActiveTab] = useState<"chat" | "meetings">("chat");
+  const [internalActiveTab, setInternalActiveTab] = useState<"chat" | "meetings">("chat");
+
+  // Use controlled tab if provided, otherwise use internal state
+  const activeTab = controlledActiveTab ?? internalActiveTab;
+  const setActiveTab = (tab: "chat" | "meetings") => {
+    setInternalActiveTab(tab);
+    onTabChange?.(tab);
+  };
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -354,7 +367,9 @@ export function ChatPanel({
               />
 
               {isSending && (
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mr-2" />
+                <div className="p-1.5 flex items-center justify-center">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
               )}
 
               {/* Emoji picker */}

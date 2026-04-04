@@ -9,6 +9,10 @@ interface RealtimeChatProps {
   workspaceId: string;
   currentUserId: string;
   initialMessages: Message[];
+  /** Initial/controlled active tab */
+  activeTab?: "chat" | "meetings";
+  /** Callback when tab changes */
+  onTabChange?: (tab: "chat" | "meetings") => void;
 }
 
 // Dynamically import the realtime implementation with SSR disabled
@@ -31,12 +35,16 @@ export function RealtimeChat({
   workspaceId,
   currentUserId,
   initialMessages,
+  activeTab,
+  onTabChange,
 }: RealtimeChatProps) {
   return (
     <RealtimeChatImpl
       workspaceId={workspaceId}
       currentUserId={currentUserId}
       initialMessages={initialMessages}
+      activeTab={activeTab}
+      onTabChange={onTabChange}
     />
   );
 }
@@ -49,6 +57,8 @@ export function ChatPanelWithPolling({
   workspaceId,
   currentUserId,
   initialMessages,
+  activeTab,
+  onTabChange,
 }: RealtimeChatProps) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
 
@@ -193,6 +203,8 @@ export function ChatPanelWithPolling({
       workspaceId={workspaceId}
       onSendMessage={handleSendMessage}
       meetingsContent={<MeetingsPanel workspaceId={workspaceId} hideHeader />}
+      activeTab={activeTab}
+      onTabChange={onTabChange}
     />
   );
 }

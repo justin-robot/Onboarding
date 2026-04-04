@@ -15,7 +15,6 @@ import type { SectionStatus } from "@repo/design/components/moxo-layout";
 import { TaskDetailsPanel } from "./components/task-details-panel";
 import { FilesView, type FileItem } from "./components/files-view";
 import { MembersPanel } from "./components/members-panel";
-import { MeetingsPanel } from "./components/meetings-panel";
 import { RealtimeChat } from "./components/realtime-chat";
 import { RealtimeWorkspaceEvents } from "./components/realtime-workspace-events";
 import type { Message } from "./components/chat-panel";
@@ -152,7 +151,7 @@ export function WorkspaceView({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(!!initialTaskId);
   const [showMembersPanel, setShowMembersPanel] = useState(false);
-  const [showMeetingsPanel, setShowMeetingsPanel] = useState(false);
+  const [chatActiveTab, setChatActiveTab] = useState<"chat" | "meetings">("chat");
   const [addTaskDialogOpen, setAddTaskDialogOpen] = useState(false);
   const [addSectionDialogOpen, setAddSectionDialogOpen] = useState(false);
   const [deleteSectionDialog, setDeleteSectionDialog] = useState<{
@@ -198,8 +197,8 @@ export function WorkspaceView({
 
     if (success === "google_connected") {
       toast.success("Google Calendar connected successfully");
-      // Open meetings panel to show the result
-      setShowMeetingsPanel(true);
+      // Open meetings tab to show the result
+      setChatActiveTab("meetings");
       setShowMembersPanel(false);
       setSelectedTaskId(null);
       setRightPanelOpen(true);
@@ -276,8 +275,8 @@ export function WorkspaceView({
             name: string;
             mimeType: string;
             size?: number;
-            url?: string;
-            thumbnailUrl?: string;
+            storageKey?: string;
+            thumbnailKey?: string;
             uploadedBy?: string;
             createdAt?: string;
           }) => ({
@@ -286,8 +285,8 @@ export function WorkspaceView({
             type: file.mimeType === "application/x-folder" ? "folder" as const : "file" as const,
             mimeType: file.mimeType,
             size: file.size,
-            url: file.url,
-            thumbnailUrl: file.thumbnailUrl,
+            url: file.storageKey ? `/api/files/${file.id}/download` : undefined,
+            thumbnailUrl: file.thumbnailKey ? `/api/files/${file.id}/thumbnail` : undefined,
             uploadedBy: file.uploadedBy,
             uploadedAt: file.createdAt ? new Date(file.createdAt) : undefined,
           }));
@@ -347,7 +346,6 @@ export function WorkspaceView({
   const handleTaskSelect = (taskId: string) => {
     setSelectedTaskId(taskId);
     setShowMembersPanel(false);
-    setShowMeetingsPanel(false);
     setRightPanelOpen(true);
   };
 
@@ -355,15 +353,14 @@ export function WorkspaceView({
   const handleMembersClick = () => {
     setSelectedTaskId(null);
     setShowMembersPanel(true);
-    setShowMeetingsPanel(false);
     setRightPanelOpen(true);
   };
 
-  // Handle meetings panel
+  // Handle meetings panel - opens chat panel with meetings tab
   const handleMeetingsClick = () => {
     setSelectedTaskId(null);
     setShowMembersPanel(false);
-    setShowMeetingsPanel(true);
+    setChatActiveTab("meetings");
     setRightPanelOpen(true);
   };
 
@@ -664,11 +661,6 @@ export function WorkspaceView({
             currentUserRole={currentUserRole}
             isWorkspacePublished={isPublished}
           />
-        ) : showMeetingsPanel ? (
-          <MeetingsPanel
-            workspaceId={currentWorkspaceId}
-            onClose={() => setShowMeetingsPanel(false)}
-          />
         ) : selectedTask ? (
           <TaskDetailsPanel
             task={selectedTask}
@@ -702,6 +694,8 @@ export function WorkspaceView({
             workspaceId={currentWorkspaceId}
             currentUserId={currentUserId}
             initialMessages={initialMessages}
+            activeTab={chatActiveTab}
+            onTabChange={setChatActiveTab}
           />
         ) : (
           <div className="flex h-full items-center justify-center">
@@ -714,7 +708,7 @@ export function WorkspaceView({
       onTabChange={setActiveTab}
       showRightPanel={true}
       sidebarTitle="Workspaces"
-      rightPanelTitle={showMembersPanel ? "Members" : showMeetingsPanel ? "Meetings" : selectedTask ? selectedTask.title : "Chat"}
+      rightPanelTitle={showMembersPanel ? "Members" : selectedTask ? selectedTask.title : chatActiveTab === "meetings" ? "Meetings" : "Chat"}
       sidebarOpen={sidebarOpen}
       onSidebarOpenChange={setSidebarOpen}
       rightPanelOpen={rightPanelOpen}
