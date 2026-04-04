@@ -1,5 +1,6 @@
 import { invitationService } from "@/lib/services";
 import { database } from "@repo/database";
+import { sql } from "kysely";
 import { json, errorResponse, withErrorHandler } from "../../_lib/api-utils";
 import type { NextRequest } from "next/server";
 
@@ -54,7 +55,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
     const existingUser = await database
       .selectFrom("user")
       .select(["id"])
-      .where((eb) => eb(eb.fn("lower", ["email"]), "=", invitation.email.toLowerCase()))
+      .where(sql`lower(email) = ${invitation.email.toLowerCase()}`)
       .executeTakeFirst();
 
     return json({
