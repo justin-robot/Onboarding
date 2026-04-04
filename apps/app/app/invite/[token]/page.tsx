@@ -29,6 +29,7 @@ interface InvitationDetails {
   workspaceName: string;
   inviterName: string;
   expiresAt: string;
+  accountExists: boolean;
 }
 
 function formatRole(role: string): string {
@@ -214,7 +215,7 @@ export default function InvitePage() {
           </div>
         </CardContent>
 
-        <CardFooter className="flex flex-col gap-2">
+        <CardFooter className="flex flex-col gap-3">
           {session?.user ? (
             // Check if logged-in email matches invitation email
             session.user.email?.toLowerCase() === invitation?.email?.toLowerCase() ? (
@@ -232,6 +233,13 @@ export default function InvitePage() {
                   ) : (
                     "Accept Invitation"
                   )}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => router.push("/")}
+                >
+                  Decline
                 </Button>
                 <p className="text-xs text-muted-foreground text-center">
                   Signed in as {session.user.email}
@@ -260,19 +268,27 @@ export default function InvitePage() {
               </>
             )
           ) : (
+            // Not logged in - show Accept/Decline buttons
             <>
-              <Button className="w-full" onClick={handleSignIn}>
-                <LogIn className="mr-2 h-4 w-4" />
-                Sign in to Accept
+              <Button
+                className="w-full"
+                onClick={invitation?.accountExists ? handleSignIn : handleSignUp}
+              >
+                Accept Invitation
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => router.push("/")}
+              >
+                Decline
               </Button>
               <p className="text-xs text-muted-foreground text-center">
-                Don't have an account?{" "}
-                <button
-                  onClick={handleSignUp}
-                  className="underline hover:text-foreground"
-                >
-                  Sign up
-                </button>
+                {invitation?.accountExists ? (
+                  <>You'll be asked to sign in to complete acceptance</>
+                ) : (
+                  <>You'll need to create an account to join</>
+                )}
               </p>
             </>
           )}

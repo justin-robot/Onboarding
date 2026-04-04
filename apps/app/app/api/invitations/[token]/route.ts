@@ -50,6 +50,13 @@ export async function GET(_request: NextRequest, { params }: Params) {
       .where("id", "=", invitation.invitedBy)
       .executeTakeFirst();
 
+    // Check if an account exists for the invited email
+    const existingUser = await database
+      .selectFrom("user")
+      .select(["id"])
+      .where("email", "=", invitation.email.toLowerCase())
+      .executeTakeFirst();
+
     return json({
       email: invitation.email,
       role: invitation.role,
@@ -57,6 +64,7 @@ export async function GET(_request: NextRequest, { params }: Params) {
       workspaceName: workspace.name,
       inviterName: inviter?.name || inviter?.email || "Someone",
       expiresAt: invitation.expiresAt,
+      accountExists: !!existingUser,
     });
   });
 }
