@@ -178,9 +178,11 @@ export const InvitationList = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      const response = await fetch(`/api/admin/invitations/${id}`, {
+      const response = await fetch("/api/admin/invitations", {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
+        body: JSON.stringify({ id }),
       });
       if (!response.ok) throw new Error("Failed to delete invitation");
 
