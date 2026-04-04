@@ -232,7 +232,7 @@ function TimelineIndicator({
 }
 
 /**
- * Assignee avatar component - rounded rectangle style matching Moxo
+ * Assignee avatar component - circular style
  * Shows green ring when assignee has completed their task
  */
 function AssigneeAvatar({ name, identifier, isCompleted }: { name: string; identifier?: string; isCompleted?: boolean }) {
@@ -240,7 +240,7 @@ function AssigneeAvatar({ name, identifier, isCompleted }: { name: string; ident
   return (
     <div
       className={cn(
-        "flex h-9 w-9 items-center justify-center rounded-lg text-white text-xs font-medium",
+        "flex h-8 w-8 items-center justify-center rounded-full text-white text-xs font-medium border-2 border-background",
         colorClass,
         isCompleted && "ring-2 ring-green-500 ring-offset-1 ring-offset-background"
       )}
@@ -404,7 +404,7 @@ export function TaskCard({
                 <AssigneeAvatar key={assignee.id || i} name={assignee.name} identifier={assignee.id} isCompleted={assignee.isCompleted} />
               ))}
               {assignees.length > 3 && (
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-400 text-white text-xs font-medium border-2 border-background">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-400 text-white text-xs font-medium border-2 border-background">
                   +{assignees.length - 3}
                 </div>
               )}
