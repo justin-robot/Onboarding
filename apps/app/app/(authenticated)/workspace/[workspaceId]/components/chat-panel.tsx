@@ -349,7 +349,7 @@ export function ChatPanel({
             />
 
             {/* Input container with embedded icons */}
-            <div className="flex items-end rounded-lg border border-border bg-background px-3 py-1.5 focus-within:ring-1 focus-within:ring-ring">
+            <div className="flex items-center rounded-lg border border-border bg-background px-3 py-2 focus-within:ring-1 focus-within:ring-ring">
               <textarea
                 ref={inputRef}
                 placeholder="Send message... (Shift + Enter for new line)"
@@ -363,11 +363,11 @@ export function ChatPanel({
                 onKeyDown={handleKeyDown}
                 disabled={isSending}
                 rows={1}
-                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed resize-none min-h-[24px] max-h-[120px] py-0.5"
+                className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed resize-none min-h-[24px] max-h-[120px] self-center"
               />
 
               {isSending && (
-                <div className="p-1.5 flex items-center justify-center">
+                <div className="ml-2 flex items-center justify-center">
                   <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 </div>
               )}
@@ -377,10 +377,10 @@ export function ChatPanel({
                 <PopoverTrigger asChild>
                   <button
                     type="button"
-                    className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                    className="ml-2 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                     disabled={isSending}
                   >
-                    <Smile className="h-4 w-4" />
+                    <Smile className="h-5 w-5" />
                   </button>
                 </PopoverTrigger>
                 <PopoverContent className="w-72 p-2" align="end">
@@ -410,11 +410,11 @@ export function ChatPanel({
               {/* Attachment button */}
               <button
                 type="button"
-                className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                className="ml-1 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isSending}
               >
-                <Paperclip className="h-4 w-4" />
+                <Paperclip className="h-5 w-5" />
               </button>
             </div>
           </div>
