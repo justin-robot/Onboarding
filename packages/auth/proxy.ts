@@ -22,6 +22,7 @@ export function authMiddleware(
       "/forgot-password",
       "/reset-password",
       "/verify-email",
+      "/invite",
     ];
 
     // Check if current path is a public route
