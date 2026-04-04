@@ -72,6 +72,8 @@ interface WorkspaceHeaderProps {
   compact?: boolean;
   /** Custom action elements to render in header (e.g., notification bell) */
   actions?: React.ReactNode;
+  /** Current user ID for highlighting their avatar */
+  currentUserId?: string;
 }
 
 interface MoxoLayoutProps {
@@ -122,6 +124,7 @@ function WorkspaceHeader({
   onMoreClick,
   compact = false,
   actions,
+  currentUserId,
 }: WorkspaceHeaderProps) {
   const displayMembers = members.slice(0, compact ? 3 : 4);
   const remainingCount = (totalMembers || members.length) - displayMembers.length;
@@ -157,6 +160,7 @@ function WorkspaceHeader({
                     userId={member.id}
                     imageUrl={member.avatarUrl}
                     size="sm"
+                    isCurrentUser={member.id === currentUserId}
                     className="border-2 border-background"
                   />
                 ))}
@@ -180,6 +184,7 @@ function WorkspaceHeader({
                         userId={member.id}
                         imageUrl={member.avatarUrl}
                         size="sm"
+                        isCurrentUser={member.id === currentUserId}
                       />
                       <span className="text-sm truncate">{member.name}</span>
                     </div>
@@ -255,6 +260,7 @@ function WorkspaceHeader({
                       userId={member.id}
                       imageUrl={member.avatarUrl}
                       size="sm"
+                      isCurrentUser={member.id === currentUserId}
                       className="h-7 w-7 border-2 border-background"
                     />
                   ))}
@@ -278,6 +284,7 @@ function WorkspaceHeader({
                           userId={member.id}
                           imageUrl={member.avatarUrl}
                           size="sm"
+                          isCurrentUser={member.id === currentUserId}
                         />
                         <span className="text-sm truncate">{member.name}</span>
                       </div>

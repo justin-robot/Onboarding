@@ -13,6 +13,8 @@ export interface UserAvatarProps {
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   /** Use "primary" for the current user's avatar (uses theme primary color) */
   variant?: "default" | "primary";
+  /** When true, automatically uses "primary" variant (convenience prop) */
+  isCurrentUser?: boolean;
   className?: string;
 }
 
@@ -39,13 +41,15 @@ export function UserAvatar({
   imageUrl,
   size = "md",
   variant = "default",
+  isCurrentUser = false,
   className,
 }: UserAvatarProps) {
   const identifier = userId || email;
   const { initial, colorClass } = getAvatarProps(name || email, identifier);
 
-  // Use theme primary color for "primary" variant (current user's avatar)
-  const bgColorClass = variant === "primary" ? "bg-primary text-primary-foreground" : cn(colorClass, "text-white");
+  // Use theme primary color for "primary" variant or when isCurrentUser is true
+  const usePrimary = variant === "primary" || isCurrentUser;
+  const bgColorClass = usePrimary ? "bg-primary text-primary-foreground" : cn(colorClass, "text-white");
 
   return (
     <Avatar className={cn(sizeClasses[size], className)}>
