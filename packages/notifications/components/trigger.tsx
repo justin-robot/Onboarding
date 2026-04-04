@@ -130,7 +130,23 @@ export const NotificationsTrigger = ({
       const isArchived = !!item.archived_at;
 
       return (
-        <div className="rnf-notification-cell-wrapper group relative">
+        <div
+          className="rnf-notification-cell-wrapper group relative cursor-pointer"
+          onClick={(e) => {
+            // Prevent any default anchor behavior
+            e.preventDefault();
+            e.stopPropagation();
+            handleNotificationClick(item);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleNotificationClick(item);
+            }
+          }}
+          role="button"
+          tabIndex={0}
+        >
           <NotificationCell {...props} item={item}>
             {/* Action buttons overlay */}
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -162,7 +178,7 @@ export const NotificationsTrigger = ({
         </div>
       );
     },
-    [handleMarkAsRead, handleUnarchive]
+    [handleMarkAsRead, handleUnarchive, handleNotificationClick]
   );
 
   // Don't render anything during SSR or if Knock is not configured
