@@ -136,6 +136,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         replyToMessage = {
           id: originalMessage.id,
           content: originalMessage.content,
+          senderId: originalMessage.userId,
           senderName: sender?.name || "Unknown",
           senderAvatarUrl: sender?.image || undefined,
         };

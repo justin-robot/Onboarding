@@ -59,6 +59,7 @@ interface Message {
   replyToMessage?: {
     id: string;
     content: string;
+    senderId: string;
     senderName: string;
     senderAvatarUrl?: string;
   };
@@ -572,6 +573,7 @@ function MessageBubble({
             <div className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2">
               <UserAvatar
                 name={message.replyToMessage.senderName}
+                userId={message.replyToMessage.senderId}
                 imageUrl={message.replyToMessage.senderAvatarUrl}
                 size="sm"
                 className="shrink-0"

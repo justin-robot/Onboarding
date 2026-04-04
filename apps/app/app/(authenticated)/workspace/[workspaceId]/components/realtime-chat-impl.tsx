@@ -59,6 +59,7 @@ function RealtimeChatInner({
     replyToMessage?: {
       id: string;
       content: string;
+      senderId: string;
       senderName: string;
       senderAvatarUrl?: string;
     };

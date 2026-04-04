@@ -30,6 +30,7 @@ export interface SendMessageOptions {
 export interface ReplyToMessageInfo {
   id: string;
   content: string;
+  senderId: string;
   senderName: string;
   senderAvatarUrl?: string;
 }
@@ -246,6 +247,7 @@ export const chatService = {
           .select([
             "message.id",
             "message.content",
+            "message.userId",
             "user.name as senderName",
             "user.image as senderAvatarUrl",
           ])
@@ -256,6 +258,7 @@ export const chatService = {
           replyToMessagesMap.set(m.id, {
             id: m.id,
             content: m.content,
+            senderId: m.userId,
             senderName: m.senderName || "Unknown",
             senderAvatarUrl: m.senderAvatarUrl || undefined,
           });
