@@ -441,6 +441,7 @@ export function ChatPanel({
                     <MeetingCard
                       key={meeting.id}
                       meeting={meeting}
+                      currentUserId={currentUserId}
                       onJoin={() => onJoinMeeting?.(meeting.id)}
                     />
                   ))}
@@ -549,6 +550,7 @@ function MessageBubble({
         userId={message.senderId}
         imageUrl={message.senderAvatarUrl}
         size="md"
+        isCurrentUser={message.senderId === currentUserId}
         className="shrink-0"
       />
 
@@ -576,6 +578,7 @@ function MessageBubble({
                 userId={message.replyToMessage.senderId}
                 imageUrl={message.replyToMessage.senderAvatarUrl}
                 size="sm"
+                isCurrentUser={message.replyToMessage.senderId === currentUserId}
                 className="shrink-0"
               />
               <span className="text-lg text-muted-foreground font-serif">"</span>
@@ -664,7 +667,7 @@ function MessageBubble({
 
       {/* Hover actions - positioned at top-right of message */}
       {isHovered && (
-        <div className="absolute right-0 -top-2 flex items-center gap-0.5 bg-background border border-border rounded-md shadow-sm px-1 py-0.5">
+        <div className="absolute right-0 top-1 flex items-center gap-0.5 bg-background border border-border rounded-md shadow-sm px-1 py-0.5">
           {/* Reply button */}
           <button
             className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
@@ -709,9 +712,11 @@ function MessageBubble({
 
 function MeetingCard({
   meeting,
+  currentUserId,
   onJoin,
 }: {
   meeting: Meeting;
+  currentUserId: string;
   onJoin: () => void;
 }) {
   const timeStr = `${format(meeting.startTime, "h:mm a")} - ${format(meeting.endTime, "h:mm a")}`;
@@ -740,6 +745,7 @@ function MeetingCard({
                 userId={p.id}
                 imageUrl={p.avatarUrl}
                 size="xs"
+                isCurrentUser={p.id === currentUserId}
                 className="border border-background"
               />
             ))}
