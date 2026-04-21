@@ -544,7 +544,27 @@ export function WorkspaceView({
     actions: (
       <WorkspaceNotificationsProvider workspaceId={currentWorkspaceId}>
         <NotificationsTrigger
-          onNotificationClick={({ workspaceId, taskId }) => {
+          onNotificationClick={async ({ workspaceId, taskId }) => {
+            // Check if workspace exists
+            const workspaceResponse = await fetch(`/api/workspaces/${workspaceId}`, { method: "HEAD" });
+            if (!workspaceResponse.ok) {
+              toast.error("This workspace no longer exists");
+              return;
+            }
+
+            // If task is specified, check if it exists
+            if (taskId) {
+              const taskResponse = await fetch(`/api/tasks/${taskId}`, { method: "HEAD" });
+              if (!taskResponse.ok) {
+                toast.error("This task no longer exists");
+                // Still navigate to workspace if it's a different workspace
+                if (workspaceId !== currentWorkspaceId) {
+                  router.push(`/workspace/${workspaceId}`);
+                }
+                return;
+              }
+            }
+
             if (workspaceId === currentWorkspaceId && taskId) {
               // Same workspace - just select the task
               handleTaskSelect(taskId);

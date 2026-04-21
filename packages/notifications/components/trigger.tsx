@@ -28,8 +28,9 @@ interface NotificationsTriggerProps {
   /**
    * Callback when a notification is clicked.
    * Receives workspaceId and optional taskId for navigation.
+   * Can be async for validation before navigation.
    */
-  onNotificationClick?: (data: { workspaceId: string; taskId?: string }) => void;
+  onNotificationClick?: (data: { workspaceId: string; taskId?: string }) => void | Promise<void>;
   /**
    * Callback when settings button is clicked.
    * Used to navigate to notification preferences.

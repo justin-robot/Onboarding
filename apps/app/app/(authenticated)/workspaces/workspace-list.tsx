@@ -31,6 +31,7 @@ import { PendingInvitations, type PendingInvitationData } from "./pending-invita
 import { formatDistanceToNow } from "date-fns";
 import { UserMenu } from "../components/user-menu";
 import { NotificationsTrigger } from "@repo/notifications";
+import { toast } from "sonner";
 
 interface WorkspaceData {
   id: string;
@@ -96,7 +97,25 @@ export function WorkspaceList({ workspaces, userId, userEmail, userRole, pending
             Create Workspace
           </Button>
           <NotificationsTrigger
-            onNotificationClick={({ workspaceId, taskId }) => {
+            onNotificationClick={async ({ workspaceId, taskId }) => {
+              // Check if workspace exists
+              const workspaceResponse = await fetch(`/api/workspaces/${workspaceId}`, { method: "HEAD" });
+              if (!workspaceResponse.ok) {
+                toast.error("This workspace no longer exists");
+                return;
+              }
+
+              // If task is specified, check if it exists
+              if (taskId) {
+                const taskResponse = await fetch(`/api/tasks/${taskId}`, { method: "HEAD" });
+                if (!taskResponse.ok) {
+                  toast.error("This task no longer exists");
+                  // Still navigate to workspace
+                  router.push(`/workspace/${workspaceId}`);
+                  return;
+                }
+              }
+
               const url = taskId
                 ? `/workspace/${workspaceId}?task=${taskId}`
                 : `/workspace/${workspaceId}`;
