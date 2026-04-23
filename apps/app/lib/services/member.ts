@@ -268,14 +268,16 @@ export const memberService = {
   },
 
   /**
-   * Check if a user is a manager in any workspace
+   * Check if a user is a manager in any workspace (excludes deleted workspaces)
    */
   async isManagerInAnyWorkspace(userId: string): Promise<boolean> {
     const result = await database
       .selectFrom("workspace_member")
-      .select("id")
-      .where("userId", "=", userId)
-      .where("role", "=", "manager")
+      .innerJoin("workspace", "workspace.id", "workspace_member.workspaceId")
+      .select("workspace_member.id")
+      .where("workspace_member.userId", "=", userId)
+      .where("workspace_member.role", "=", "manager")
+      .where("workspace.deletedAt", "is", null)
       .limit(1)
       .executeTakeFirst();
 
@@ -283,14 +285,16 @@ export const memberService = {
   },
 
   /**
-   * Get all workspace IDs where a user is a manager
+   * Get all workspace IDs where a user is a manager (excludes deleted workspaces)
    */
   async getWorkspaceIdsWhereManager(userId: string): Promise<string[]> {
     const results = await database
       .selectFrom("workspace_member")
-      .select("workspaceId")
-      .where("userId", "=", userId)
-      .where("role", "=", "manager")
+      .innerJoin("workspace", "workspace.id", "workspace_member.workspaceId")
+      .select("workspace_member.workspaceId")
+      .where("workspace_member.userId", "=", userId)
+      .where("workspace_member.role", "=", "manager")
+      .where("workspace.deletedAt", "is", null)
       .execute();
 
     return results.map((r) => r.workspaceId);
