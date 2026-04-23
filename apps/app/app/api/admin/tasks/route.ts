@@ -54,7 +54,9 @@ export async function GET(request: NextRequest) {
           .whereRef("task_assignee.taskId", "=", "task.id")
           .as("assigneeCount"),
       ])
-      .where("task.deletedAt", "is", null);
+      .where("task.deletedAt", "is", null)
+      .where("section.deletedAt", "is", null)
+      .where("workspace.deletedAt", "is", null);
 
     // Scope by workspace IDs if not platform admin
     if (workspaceIds !== null) {
@@ -92,7 +94,9 @@ export async function GET(request: NextRequest) {
       .innerJoin("section", "section.id", "task.sectionId")
       .innerJoin("workspace", "workspace.id", "section.workspaceId")
       .select((eb) => eb.fn.count("task.id").as("total"))
-      .where("task.deletedAt", "is", null);
+      .where("task.deletedAt", "is", null)
+      .where("section.deletedAt", "is", null)
+      .where("workspace.deletedAt", "is", null);
 
     // Apply workspace scope to count query
     if (workspaceIds !== null) {
