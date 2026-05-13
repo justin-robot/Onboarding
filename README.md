@@ -1,48 +1,44 @@
-# Platform
+# Moxo
 
-**Production-grade monorepo application built with Next.js and Turborepo.**
+**Workflow and task management platform for client onboarding and structured collaboration.**
 
 ## Overview
-edit
-Platform is a full-stack application built with modern web technologies, designed for scalability and developer experience. It uses a monorepo structure managed by [Turborepo](https://turborepo.com) and [Next.js](https://nextjs.org/) for the frontend and API layers.
 
-### Philosophy
+Moxo is a full-stack application for managing structured workflows, client onboarding, and task completion. It enables teams to create workspaces with sequential tasks that guide users through multi-step processes like document collection, form submissions, approvals, and e-signatures.
 
-Platform is built around core principles:
-
-- **Fast** — Quick to build, run, deploy, and iterate on
-- **Type-Safe** — End-to-end type safety with TypeScript
-- **Modern** — Latest stable features with healthy community support
-- **Scalable** — Monorepo structure that scales with your team
+Built with [Next.js](https://nextjs.org/) and [Turborepo](https://turborepo.com) in a monorepo structure.
 
 ## Features
 
-Platform comes with a comprehensive set of features:
+### Core Workflow Engine
 
-### Apps
+- **Workspaces** — Containers for client engagements with sections and tasks
+- **Sequential Tasks** — Tasks unlock in order as previous tasks complete
+- **Multiple Task Types** — Acknowledgement, approval, form submission, file request, e-signature, time booking
+- **Due Dates** — Absolute dates or relative dates anchored to task completion
+- **Role-Based Access** — Admin, Account Manager, and User roles with appropriate permissions
 
-- **Web** — Marketing website (port 3001)
-- **App** — Main application with authentication, database integration, and API routes (port 3000)
-- **Email** — Email templates with React Email
+### Task Types
 
-### Packages
+- **Acknowledgement** — User reviews content and confirms understanding
+- **Approval** — Submit work for review; approvers can approve or reject
+- **Form** — Drag-and-drop form builder with 14 element types
+- **File Request** — Upload files with optional review workflow
+- **E-Sign** — SignNow integration for document signatures
+- **Time Booking** — Schedule meetings via linked calendars
 
-- **Authentication** — Powered by [Better Auth](https://www.better-auth.com)
-- **Database** — Type-safe database access with [Kysely](https://kysely.dev) and [Neon](https://neon.tech) or [Planetscale](https://planetscale.com)
-- **Design System** — Comprehensive component library built on [shadcn/ui](https://ui.shadcn.com) with dark mode support
-- **Email** — Transactional emails via [Resend](https://resend.com)
-- **Analytics** — Product analytics with [PostHog](https://posthog.com) and web analytics with [Google Analytics](https://developers.google.com/analytics)
-- **Observability** — Error tracking and logging via PostHog
-- **Administration** — Admin dashboard with ra-core
-- **SEO** — Metadata management, sitemaps, and JSON-LD
-- **AI** — AI integration utilities with OpenAI
-- **Payments** — Payment processing with [Polar](https://polar.sh) (checkout, subscriptions)
-- **Notifications** — In-app notifications with [Knock](https://knock.app)
-- **Realtime** — Real-time messaging and pub/sub with [Ably](https://ably.com)
-- **Storage** — Platform-agnostic file storage (S3, Cloudflare R2, or custom endpoints)
-- **Internationalization** — Multi-language support with locale detection and RTL support
-- **Testing** — Shared [Vitest](https://vitest.dev) configuration with [MSW](https://mswjs.io) integration for API mocking
-- **Webhooks** — Webhook handling and verification
+### Collaboration
+
+- **Real-time Updates** — Live task status and activity via [Ably](https://ably.com)
+- **Workspace Chat** — Messaging with annotations and system messages
+- **Activity Feed** — Audit log of all workspace events
+- **Notifications** — In-app and email notifications via [Knock](https://knock.app)
+
+### File Management
+
+- **S3-Compatible Storage** — Upload files with presigned URLs
+- **Thumbnails** — Auto-generated previews for images and PDFs
+- **Versioning** — Track file history with version chains
 
 ## Getting Started
 
@@ -50,14 +46,14 @@ Platform comes with a comprehensive set of features:
 
 - Node.js 18+
 - [pnpm](https://pnpm.io) (recommended) or npm/yarn/bun
-- Database: [Neon](https://neon.tech) or [Planetscale](https://planetscale.com) PostgreSQL database
+- Database: [Neon](https://neon.tech) PostgreSQL database
 - Service accounts for:
   - [Better Auth](https://www.better-auth.com) (authentication)
   - [Resend](https://resend.com) (email)
-  - [PostHog](https://posthog.com) (analytics)
-  - [Polar](https://polar.sh) (payments) - optional
-  - [Knock](https://knock.app) (notifications) - optional
-  - [Ably](https://ably.com) (realtime) - optional
+  - [Knock](https://knock.app) (notifications)
+  - [Ably](https://ably.com) (real-time)
+  - [SignNow](https://www.signnow.com) (e-signatures) - optional
+  - [PostHog](https://posthog.com) (analytics) - optional
 
 ### Installation
 
@@ -118,37 +114,25 @@ This will start all apps:
 
 ## Structure
 
-Platform uses a monorepo structure managed by Turborepo:
+Moxo uses a monorepo structure managed by Turborepo:
 
 ```
 platform/
-├── apps/                    # Deployable applications
-│   ├── app/                 # Main application with API routes (port 3000)
+├── apps/
+│   ├── app/                 # Main Moxo application (port 3000)
 │   ├── web/                 # Marketing website (port 3001)
 │   └── email/               # Email templates
-└── packages/                # Shared packages
-    ├── ai/                  # AI integration utilities
-    ├── analytics/            # Analytics providers (PostHog, Google Analytics)
+└── packages/
     ├── auth/                 # Authentication (Better Auth)
-    ├── database/             # Database access (Kysely + Planetscale PG/Neon)
-    ├── design/               # UI component library (shadcn/ui)
-    ├── email/                # Email templates (React Email)
-    ├── internationalization/ # i18n support with locale detection
-    ├── next-config/          # Shared Next.js configuration
+    ├── database/             # Database schema and queries (Kysely + Neon)
+    ├── design/               # UI components (shadcn/ui)
     ├── notifications/        # Notifications (Knock)
-    ├── observability/        # Error tracking and logging
-    ├── payments/             # Payment processing (Polar)
-    ├── realtime/             # Real-time messaging (Ably)
-    ├── seo/                  # SEO utilities (metadata, sitemaps)
-    ├── storage/              # File storage (S3, R2, custom)
-    ├── typescript-config/    # Shared TypeScript configurations
-    ├── vitest/               # Testing utilities (Vitest + MSW)
-    └── webhooks/             # Webhook handling
+    ├── realtime/             # Real-time events (Ably)
+    ├── storage/              # File storage (S3-compatible)
+    └── ...                   # Additional shared packages
 ```
 
-Each app is self-contained and independently deployable. Packages are shared across apps for consistency and maintainability.
-
-**Note:** All packages provide SDK/client initialization only. Specific usage and business logic should be implemented in the apps themselves.
+The main application (`apps/app`) contains the Moxo-specific business logic: workspace management, task flow engine, form builder, and integrations.
 
 ## Environment Variables
 
